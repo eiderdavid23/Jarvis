@@ -3,7 +3,7 @@ import re
 import json
 import tempfile
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import requests
@@ -30,8 +30,9 @@ GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
 GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
 # --- Memoria simple, un solo usuario (vos), archivo local ---
-MEMORIA_PATH = os.path.join(os.path.dirname(__file__), 'memoria_local.json')
-MEMORIA_PERSISTENTE_PATH = os.path.join(os.path.dirname(__file__), 'memoria_persistente.json')
+_DIR_DATOS = '/tmp' if os.environ.get('VERCEL') else os.path.dirname(__file__)
+MEMORIA_PATH = os.path.join(_DIR_DATOS, 'memoria_local.json')
+MEMORIA_PERSISTENTE_PATH = os.path.join(_DIR_DATOS, 'memoria_persistente.json')
 
 
 def cargar_memoria_persistente():
@@ -51,13 +52,6 @@ def agregar_recuerdo(texto):
     if texto not in datos:
         datos.append(texto)
         guardar_memoria_persistente(datos)
-
-
-def procesar_recuerdos(respuesta):
-    def _guardar(m):
-        agregar_recuerdo(m.group(1).strip())
-        return ''
-    return re.sub(r'\[RECORDAR:\s*(.*?)\]', _guardar, respuesta).strip()
 
 
 def cargar_memoria():
@@ -110,29 +104,170 @@ def generar_audio(texto):
             os.remove(tmp_path)
 
 
+# =========================================================================
+# HERRAMIENTAS (function calling)
+# Una sola fuente de verdad: de aqui se arma el formato que pide Gemini
+# y el formato que pide Groq (son distintos, pero el contenido es el mismo).
+# =========================================================================
+
+HERRAMIENTAS = [
+    {
+        'name': 'abrir_url',
+        'description': (
+            'Abre una pagina web, app web o enlace en el navegador del usuario. '
+            'Usar cuando el usuario pida abrir YouTube, Google Maps, WhatsApp Web, '
+            'una busqueda, o cualquier sitio.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'description': 'URL completa a abrir, incluyendo https://'}
+            },
+            'required': ['url']
+        }
+    },
+    {
+        'name': 'encender_linterna',
+        'description': 'Enciende la linterna fisica del telefono del usuario.',
+        'parameters': {'type': 'object', 'properties': {}}
+    },
+    {
+        'name': 'apagar_linterna',
+        'description': 'Apaga la linterna fisica del telefono del usuario.',
+        'parameters': {'type': 'object', 'properties': {}}
+    },
+    {
+        'name': 'vibrar',
+        'description': 'Hace vibrar el telefono del usuario brevemente, para llamar su atencion.',
+        'parameters': {'type': 'object', 'properties': {}}
+    },
+    {
+        'name': 'consultar_bateria',
+        'description': (
+            'Consulta el porcentaje REAL de bateria del telefono del usuario y si '
+            'esta cargando en este momento. Usar siempre que pregunten por la '
+            'bateria - nunca inventar el dato sin llamar a esta herramienta.'
+        ),
+        'parameters': {'type': 'object', 'properties': {}}
+    },
+    {
+        'name': 'guardar_recuerdo',
+        'description': (
+            'Guarda un dato importante y permanente sobre el usuario (su nombre, '
+            'proyectos, preferencias, datos personales relevantes) para recordarlo '
+            'siempre en conversaciones futuras. No usar para cosas triviales de un '
+            'solo mensaje.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'dato': {'type': 'string', 'description': 'El dato a recordar, en una frase corta y clara'}
+            },
+            'required': ['dato']
+        }
+    },
+]
+
+
+def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
+    """Ejecuta una herramienta real y devuelve un dict con el resultado para el modelo.
+    acciones_frontend se va llenando con cosas que el NAVEGADOR debe hacer
+    (como abrir una pestana), porque el backend no puede hacerlo directamente.
+    """
+    if nombre == 'abrir_url':
+        url = (argumentos.get('url') or '').strip()
+        if not url:
+            return {'ok': False, 'error': 'no se dio una url'}
+        acciones_frontend['urls_abrir'].append(url)
+        return {'ok': True, 'mensaje': f'Se abrira {url} en una pestana nueva del navegador del usuario.'}
+
+    if nombre == 'encender_linterna':
+        ok = encender_linterna()
+        return {'ok': ok}
+
+    if nombre == 'apagar_linterna':
+        ok = apagar_linterna()
+        return {'ok': ok}
+
+    if nombre == 'vibrar':
+        ok = vibrar()
+        return {'ok': ok}
+
+    if nombre == 'consultar_bateria':
+        bateria = estado_bateria()
+        if bateria:
+            return {'ok': True, 'porcentaje': bateria['porcentaje'], 'cargando': bateria['cargando']}
+        return {'ok': False, 'error': 'no se pudo leer la bateria en este momento'}
+
+    if nombre == 'guardar_recuerdo':
+        dato = (argumentos.get('dato') or '').strip()
+        if dato:
+            agregar_recuerdo(dato)
+            return {'ok': True}
+        return {'ok': False, 'error': 'dato vacio'}
+
+    return {'ok': False, 'error': f'herramienta desconocida: {nombre}'}
+
+
+def construir_tools_gemini():
+    return [{'functionDeclarations': HERRAMIENTAS}]
+
+
+def construir_tools_groq():
+    return [{'type': 'function', 'function': h} for h in HERRAMIENTAS]
+
+
+MAX_VUELTAS_HERRAMIENTAS = 5
+
+
 def generar_gemini(system_prompt, turnos, api_key):
     contenidos = []
     for h in turnos:
         rol = 'user' if h['role'] == 'user' else 'model'
         contenidos.append({'role': rol, 'parts': [{'text': h['texto']}]})
 
-    print(f'[GEMINI] Llamando a {GEMINI_URL} con modelo {GEMINI_MODEL}...')
-    resp = requests.post(
-        GEMINI_URL,
-        params={'key': api_key},
-        json={
-            'system_instruction': {'parts': [{'text': system_prompt}]},
-            'contents': contenidos,
-            'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 500}
-        },
-        timeout=30
-    )
-    print(f'[GEMINI] Respuesta HTTP: {resp.status_code}')
-    if resp.status_code != 200:
-        print(f'[GEMINI] Cuerpo del error: {resp.text[:2000]}')
-    resp.raise_for_status()
-    data = resp.json()
-    return data['candidates'][0]['content']['parts'][0]['text'].strip()
+    acciones = {'urls_abrir': []}
+
+    for _ in range(MAX_VUELTAS_HERRAMIENTAS):
+        print(f'[GEMINI] Llamando a {GEMINI_URL} con modelo {GEMINI_MODEL}...')
+        resp = requests.post(
+            GEMINI_URL,
+            params={'key': api_key},
+            json={
+                'system_instruction': {'parts': [{'text': system_prompt}]},
+                'contents': contenidos,
+                'tools': construir_tools_gemini(),
+                'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 500}
+            },
+            timeout=30
+        )
+        print(f'[GEMINI] Respuesta HTTP: {resp.status_code}')
+        if resp.status_code != 200:
+            print(f'[GEMINI] Cuerpo del error: {resp.text[:2000]}')
+        resp.raise_for_status()
+        data = resp.json()
+
+        contenido_modelo = data['candidates'][0]['content']
+        contenidos.append(contenido_modelo)
+
+        partes = contenido_modelo.get('parts', [])
+        llamadas = [p['functionCall'] for p in partes if 'functionCall' in p]
+
+        if not llamadas:
+            texto = ''.join(p.get('text', '') for p in partes)
+            return texto.strip(), acciones
+
+        partes_respuesta = []
+        for llamada in llamadas:
+            nombre = llamada.get('name', '')
+            args = llamada.get('args', {}) or {}
+            print(f'[GEMINI] Herramienta solicitada: {nombre}({args})')
+            resultado = ejecutar_herramienta(nombre, args, acciones)
+            partes_respuesta.append({'functionResponse': {'name': nombre, 'response': resultado}})
+
+        contenidos.append({'role': 'user', 'parts': partes_respuesta})
+
+    return 'Me enrede pensando demasiado en eso, señor. ¿Puede reformularlo?', acciones
 
 
 def generar_groq(system_prompt, turnos, api_key):
@@ -141,27 +276,55 @@ def generar_groq(system_prompt, turnos, api_key):
         rol = 'user' if h['role'] == 'user' else 'assistant'
         mensajes.append({'role': rol, 'content': h['texto']})
 
-    print(f'[GROQ] Llamando a {GROQ_URL} con modelo {GROQ_MODEL}...')
-    resp = requests.post(
-        GROQ_URL,
-        headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
-        json={
-            'model': GROQ_MODEL,
-            'messages': mensajes,
-            'temperature': 0.7,
-            'max_tokens': 500
-        },
-        timeout=30
-    )
-    print(f'[GROQ] Respuesta HTTP: {resp.status_code}')
-    if resp.status_code != 200:
-        print(f'[GROQ] Cuerpo del error: {resp.text[:2000]}')
-    resp.raise_for_status()
-    data = resp.json()
-    return data['choices'][0]['message']['content'].strip()
+    acciones = {'urls_abrir': []}
+    tools = construir_tools_groq()
+
+    for _ in range(MAX_VUELTAS_HERRAMIENTAS):
+        print(f'[GROQ] Llamando a {GROQ_URL} con modelo {GROQ_MODEL}...')
+        resp = requests.post(
+            GROQ_URL,
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={
+                'model': GROQ_MODEL,
+                'messages': mensajes,
+                'temperature': 0.7,
+                'max_tokens': 500,
+                'tools': tools,
+                'tool_choice': 'auto'
+            },
+            timeout=30
+        )
+        print(f'[GROQ] Respuesta HTTP: {resp.status_code}')
+        if resp.status_code != 200:
+            print(f'[GROQ] Cuerpo del error: {resp.text[:2000]}')
+        resp.raise_for_status()
+        data = resp.json()
+
+        msg = data['choices'][0]['message']
+        mensajes.append(msg)
+
+        tool_calls = msg.get('tool_calls') or []
+        if not tool_calls:
+            return (msg.get('content') or '').strip(), acciones
+
+        for tc in tool_calls:
+            nombre = tc['function']['name']
+            try:
+                args = json.loads(tc['function'].get('arguments') or '{}')
+            except json.JSONDecodeError:
+                args = {}
+            print(f'[GROQ] Herramienta solicitada: {nombre}({args})')
+            resultado = ejecutar_herramienta(nombre, args, acciones)
+            mensajes.append({
+                'role': 'tool',
+                'tool_call_id': tc['id'],
+                'content': json.dumps(resultado, ensure_ascii=False)
+            })
+
+    return 'Me enrede pensando demasiado en eso, señor. ¿Puede reformularlo?', acciones
 
 
-# --- El cerebro: llama al modelo local en vez de Gemini/Groq ---
+# --- Modelo local (llama-server): sin herramientas por ahora, modo simple ---
 def generar_local(system_prompt, turnos):
     mensajes = [{'role': 'system', 'content': system_prompt}]
     for h in turnos:
@@ -175,7 +338,7 @@ def generar_local(system_prompt, turnos):
     )
     resp.raise_for_status()
     data = resp.json()
-    return data['choices'][0]['message']['content'].strip()
+    return data['choices'][0]['message']['content'].strip(), {'urls_abrir': []}
 
 
 SYSTEM_PROMPT_BASE = (
@@ -185,35 +348,14 @@ SYSTEM_PROMPT_BASE = (
     'seco e ironico sutil. Te diriges siempre al usuario como "señor". Das '
     'respuestas concisas salvo que se te pida detalle. Nunca dices que eres un '
     'modelo de lenguaje. '
-    'Cuando el usuario pida abrir una app o sitio web, responde de forma natural '
-    'y al FINAL agrega en una linea aparte exactamente: [ACCION:abrir:URL_COMPLETA]. '
-    'Cuando el usuario pida encender la linterna, agrega al final: [ACCION:linterna:on]. '
-    'Para apagarla: [ACCION:linterna:off]. '
-    'Cuando el usuario pida vibrar el celular o le pida tu atencion fisica, agrega: '
-    '[ACCION:vibrar]. '
-    'Cuando el usuario pregunte por la bateria del celular, agrega exactamente: '
-    '[CONSULTAR_BATERIA], y en tu respuesta hablada di que estas revisando, sin '
-    'inventar el porcentaje - se te va a dar el dato real despues. '
-    'Nunca menciones estas etiquetas de forma literal en tu respuesta hablada. '
-    'Cuando en la charla surja algo importante para recordar siempre (nombre, '
-    'proyectos, preferencias, datos personales del usuario), agrega en una linea '
-    'aparte exactamente: [RECORDAR: el dato en una frase corta]. Usalo solo para '
-    'datos que valga la pena recordar para siempre, no para cada mensaje.'
+    'Tienes herramientas reales conectadas a este telefono: abrir paginas web, '
+    'encender/apagar la linterna, vibrar el telefono, consultar la bateria real '
+    'y guardar datos importantes del usuario para recordarlos siempre. Usalas '
+    'cuando el usuario lo pida o cuando sea evidente que corresponde, y luego '
+    'responde de forma natural con el resultado real que te devuelven. Nunca '
+    'inventes un dato (como el porcentaje de bateria) sin haber llamado antes '
+    'a la herramienta correspondiente.'
 )
-
-
-def ejecutar_acciones_dispositivo(respuesta):
-    """Ejecuta acciones de hardware que estan en la respuesta y las quita del texto."""
-    if '[ACCION:linterna:on]' in respuesta:
-        encender_linterna()
-        respuesta = respuesta.replace('[ACCION:linterna:on]', '').strip()
-    if '[ACCION:linterna:off]' in respuesta:
-        apagar_linterna()
-        respuesta = respuesta.replace('[ACCION:linterna:off]', '').strip()
-    if '[ACCION:vibrar]' in respuesta:
-        vibrar()
-        respuesta = respuesta.replace('[ACCION:vibrar]', '').strip()
-    return respuesta
 
 
 @app.route('/')
@@ -241,7 +383,6 @@ def chat():
         data = request.get_json()
         mensaje_usuario = data.get('mensaje', '')
         zona_horaria = data.get('zona_horaria', '') or 'UTC'
-        imagen_base64 = data.get('imagen', '')  # el modelo local de texto no la usa por ahora
 
         proveedor = (request.headers.get('X-Proveedor', '') or 'gemini').strip().lower()
         if proveedor not in ('gemini', 'groq'):
@@ -278,30 +419,18 @@ def chat():
         turnos.append({'role': 'user', 'texto': mensaje_usuario})
 
         if proveedor == 'groq':
-            respuesta = generar_groq(system_prompt, turnos, api_key)
+            respuesta, acciones = generar_groq(system_prompt, turnos, api_key)
         else:
-            respuesta = generar_gemini(system_prompt, turnos, api_key)
+            respuesta, acciones = generar_gemini(system_prompt, turnos, api_key)
 
         if not respuesta.strip():
             respuesta = 'Parece que mis circuitos se distrajeron un instante, señor. ¿Podría repetirlo?'
-
-        if '[CONSULTAR_BATERIA]' in respuesta:
-            bateria = estado_bateria()
-            respuesta = respuesta.replace('[CONSULTAR_BATERIA]', '').strip()
-            if bateria:
-                texto_bateria = f"{bateria['porcentaje']}%, {'cargando' if bateria['cargando'] else 'sin cargar'}"
-                respuesta += f' Bateria al {texto_bateria}, señor.'
-            else:
-                respuesta += ' No pude leer la bateria en este momento, señor.'
-
-        respuesta = ejecutar_acciones_dispositivo(respuesta)
-        respuesta = procesar_recuerdos(respuesta)
 
         historial.append({'role': 'user', 'texto': mensaje_usuario})
         historial.append({'role': 'assistant', 'texto': respuesta})
         guardar_memoria(historial)
 
-        return jsonify({'respuesta': respuesta})
+        return jsonify({'respuesta': respuesta, 'urls_abrir': acciones.get('urls_abrir', [])})
 
     except requests.exceptions.Timeout as e:
         print('[ERROR] Timeout esperando respuesta del proveedor de IA:', e)
@@ -333,5 +462,5 @@ logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
-    print(f'Jarvis (modelo local) corriendo en http://localhost:{port}')
+    print(f'Jarvis (motor de herramientas) corriendo en http://localhost:{port}')
     app.run(host='0.0.0.0', port=port)

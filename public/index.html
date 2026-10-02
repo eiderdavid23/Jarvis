@@ -474,17 +474,24 @@ async function hablar(txt) {
     const blob = await res.blob();
     audioPlayer.src = URL.createObjectURL(blob);
     audioPlayer.play();
-  } catch (err) {}
+  } catch (err) {
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(txt.replace(/[*_#`]/g, ''));
+      u.lang = 'es-ES';
+      u.onstart = () => setEstado('hablando', 'Hablando');
+      u.onend = () => setEstado('reposo', 'En reposo');
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
+  }
 }
 
 function detenerHabla() { audioPlayer.pause(); audioPlayer.currentTime = 0; setEstado('reposo', 'En reposo'); }
 
 function procesarAcciones(texto) {
-  const regex = /\[ACCION:abrir:(.*?)\]/g;
-  let match; let urls = [];
-  while ((match = regex.exec(texto)) !== null) { urls.push(match[1].trim()); }
-  const textoLimpio = texto.replace(regex, '').trim();
-  return { textoLimpio, urls };
+  // Ya no se parsean etiquetas en el texto: las acciones vienen reales
+  // desde el backend (data.urls_abrir), producto de una herramienta ejecutada.
+  return { textoLimpio: (texto || '').trim(), urls: [] };
 }
 
 async function enviarMensaje() {
@@ -519,10 +526,10 @@ async function enviarMensaje() {
       return;
     }
     incrementarUso(proveedor);
-    const { textoLimpio, urls } = procesarAcciones(data.respuesta || '');
+    const textoLimpio = (data.respuesta || '').trim();
     agregarMensaje(textoLimpio, 'jarvis');
     hablar(textoLimpio);
-    urls.forEach(url => window.open(url, '_blank'));
+    (data.urls_abrir || []).forEach(url => window.open(url, '_blank'));
   } catch (err) {
     ultimoMsg.remove();
     agregarMensaje('Error de conexion, señor.', 'jarvis');
