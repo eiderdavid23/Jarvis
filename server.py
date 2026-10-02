@@ -10,11 +10,13 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-from flask import Flask, request, jsonify, send_from_directory, Response
+from flask import Flask, request, jsonify, send_from_directory, Response, g
 
 from comandos_dispositivo import encender_linterna, apagar_linterna, vibrar, estado_bateria
+import supa
 
 app = Flask(__name__, static_folder='public', static_url_path='')
+app.register_blueprint(supa.bp)
 
 # --- Modelo local (llama-server corriendo en el mismo Termux) ---
 MODELO_LOCAL_URL = os.environ.get('MODELO_LOCAL_URL', 'http://localhost:8081/v1/chat/completions')
@@ -28,43 +30,6 @@ GEMINI_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_M
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 GROQ_MODEL = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
 GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
-
-# --- Memoria simple, un solo usuario (vos), archivo local ---
-_DIR_DATOS = '/tmp' if os.environ.get('VERCEL') else os.path.dirname(__file__)
-MEMORIA_PATH = os.path.join(_DIR_DATOS, 'memoria_local.json')
-MEMORIA_PERSISTENTE_PATH = os.path.join(_DIR_DATOS, 'memoria_persistente.json')
-
-
-def cargar_memoria_persistente():
-    if not os.path.exists(MEMORIA_PERSISTENTE_PATH):
-        return []
-    with open(MEMORIA_PERSISTENTE_PATH, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-
-def guardar_memoria_persistente(datos):
-    with open(MEMORIA_PERSISTENTE_PATH, 'w', encoding='utf-8') as f:
-        json.dump(datos, f, ensure_ascii=False, indent=2)
-
-
-def agregar_recuerdo(texto):
-    datos = cargar_memoria_persistente()
-    if texto not in datos:
-        datos.append(texto)
-        guardar_memoria_persistente(datos)
-
-
-def cargar_memoria():
-    if not os.path.exists(MEMORIA_PATH):
-        return []
-    with open(MEMORIA_PATH, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-
-def guardar_memoria(historial):
-    with open(MEMORIA_PATH, 'w', encoding='utf-8') as f:
-        json.dump(historial, f, ensure_ascii=False, indent=2)
-
 
 # --- Voz (Piper), igual que antes ---
 BASE_DIR = os.path.dirname(__file__)
@@ -161,9 +126,21 @@ HERRAMIENTAS = [
         'parameters': {
             'type': 'object',
             'properties': {
+                'tema': {'type': 'string', 'description': 'Tema corto en minusculas, ej: nombre, ciudad, mascota. Si el tema ya existe, se actualiza en vez de duplicarse'},
                 'dato': {'type': 'string', 'description': 'El dato a recordar, en una frase corta y clara'}
             },
-            'required': ['dato']
+            'required': ['tema', 'dato']
+        }
+    },
+    {
+        'name': 'olvidar_recuerdo',
+        'description': 'Borra un dato guardado del usuario cuando el pida que lo olvides. Usa el mismo tema con el que se guardo.',
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'tema': {'type': 'string', 'description': 'El tema a olvidar'}
+            },
+            'required': ['tema']
         }
     },
 ]
@@ -200,11 +177,25 @@ def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         return {'ok': False, 'error': 'no se pudo leer la bateria en este momento'}
 
     if nombre == 'guardar_recuerdo':
+        tema = (argumentos.get('tema') or '').strip()
         dato = (argumentos.get('dato') or '').strip()
-        if dato:
-            agregar_recuerdo(dato)
+        if not tema or not dato:
+            return {'ok': False, 'error': 'falta tema o dato'}
+        try:
+            supa.guardar_recuerdo(tema, dato)
             return {'ok': True}
-        return {'ok': False, 'error': 'dato vacio'}
+        except supa.SupaError as e:
+            return {'ok': False, 'error': str(e)}
+
+    if nombre == 'olvidar_recuerdo':
+        tema = (argumentos.get('tema') or '').strip()
+        if not tema:
+            return {'ok': False, 'error': 'falta el tema'}
+        try:
+            supa.olvidar_recuerdo(tema)
+            return {'ok': True}
+        except supa.SupaError as e:
+            return {'ok': False, 'error': str(e)}
 
     return {'ok': False, 'error': f'herramienta desconocida: {nombre}'}
 
@@ -378,11 +369,15 @@ def voz():
 
 
 @app.route('/chat', methods=['POST'])
+@supa.requiere_login
 def chat():
     try:
         data = request.get_json()
         mensaje_usuario = data.get('mensaje', '')
         zona_horaria = data.get('zona_horaria', '') or 'UTC'
+        chat_id = (data.get('chat_id') or '').strip()
+        if not chat_id:
+            chat_id = supa.crear_chat()['id']
 
         proveedor = (request.headers.get('X-Proveedor', '') or 'gemini').strip().lower()
         if proveedor not in ('gemini', 'groq'):
@@ -400,7 +395,7 @@ def chat():
             if not api_key:
                 return jsonify({'respuesta': 'No tengo una llave de Gemini configurada, señor. Agreguela en Ajustes o en el archivo .env.'}), 400
 
-        historial = cargar_memoria()
+        historial = supa.mensajes_de(chat_id)
 
         try:
             ahora = datetime.now(ZoneInfo(zona_horaria))
@@ -408,10 +403,11 @@ def chat():
             ahora = datetime.now()
         fecha_hora_str = ahora.strftime('%A %d de %B de %Y, %H:%M')
 
-        recuerdos = cargar_memoria_persistente()
+        recuerdos = supa.cargar_recuerdos()
         texto_recuerdos = ''
         if recuerdos:
-            texto_recuerdos = ' Datos importantes que ya sabes del usuario: ' + '; '.join(recuerdos) + '.'
+            texto_recuerdos = ' Datos importantes que ya sabes del usuario: ' + '; '.join(
+                f"{r['clave']}: {r['valor']}" for r in recuerdos) + '.'
 
         system_prompt = SYSTEM_PROMPT_BASE + f' La fecha y hora ACTUAL es: {fecha_hora_str}.' + texto_recuerdos
 
@@ -426,11 +422,13 @@ def chat():
         if not respuesta.strip():
             respuesta = 'Parece que mis circuitos se distrajeron un instante, señor. ¿Podría repetirlo?'
 
-        historial.append({'role': 'user', 'texto': mensaje_usuario})
-        historial.append({'role': 'assistant', 'texto': respuesta})
-        guardar_memoria(historial)
+        era_nuevo = len(historial) == 0
+        supa.guardar_intercambio(chat_id, mensaje_usuario, respuesta)
+        if era_nuevo:
+            supa.renombrar_chat(chat_id, mensaje_usuario)
 
-        return jsonify({'respuesta': respuesta, 'urls_abrir': acciones.get('urls_abrir', [])})
+        return jsonify({'respuesta': respuesta, 'chat_id': chat_id,
+                        'urls_abrir': acciones.get('urls_abrir', [])})
 
     except requests.exceptions.Timeout as e:
         print('[ERROR] Timeout esperando respuesta del proveedor de IA:', e)
@@ -450,6 +448,10 @@ def chat():
         print('[ERROR] ConnectionError hablando con el proveedor de IA:', e)
         traceback.print_exc()
         return jsonify({'respuesta': 'No logro conectarme en este momento, señor. Verifique la conexion a internet o la clave de API.'}), 500
+
+    except supa.SupaError as e:
+        print('[ERROR] Supabase en /chat:', e)
+        return jsonify({'respuesta': 'No puedo acceder a su historial en este momento, señor.', 'error': str(e)}), 502
 
     except Exception as e:
         print('[ERROR] Excepcion inesperada en /chat:', e)
