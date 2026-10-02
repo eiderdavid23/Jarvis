@@ -20,6 +20,7 @@ David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y 
 7. **Respuestas cortas**: se lee en pantalla de celular.
 8. **Antes de cada deploy**: `git status` para confirmar que todo está subido (ya falló una vez porque `requirements.txt` no se había subido).
 9. **Si algo se corrigió en `.env` y sigue fallando igual**: sospechar primero que el servidor no se reinició (Flask lee el `.env` solo al arrancar).
+10. **Cambios grandes en un archivo**: se escribe como archivo nuevo (ej. `public/nuevo.html`) por partes con `cat >>`, con el conteo acumulado de `wc -l` en cada parte. Solo cuando coincide se reemplaza el original, guardando antes una copia fuera del repo (`cp public/index.html ~/index_anterior.html`).
 
 ---
 
@@ -28,12 +29,13 @@ David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y 
 Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man: dice "señor", es conciso salvo que se pida detalle y nunca dice que es un modelo de lenguaje.
 
 - **Backend**: Python + Flask, `server.py` (~337 líneas), un solo usuario, sin login.
-- **Frontend**: `public/index.html` (~576 líneas), con orbe animado en canvas, estados (reposo / escuchando / hablando) y panel de Ajustes (llaves, proveedor activo, contador de uso, acerca de).
+- **Frontend**: `public/index.html` (~1014 líneas), estilo Claude: sidebar deslizable (Nuevo chat, Modo voz, Ajustes; en "Próximamente": Historial de chats, Buscar, Recordatorios), burbujas de chat con animaciones y panel de Ajustes (llaves, proveedor activo, voz, uso, acerca de).
+- **Orbe animado** (canvas) con 3 modos y transición animada: grande al centro en el inicio y en el modo voz (llamada con escucha continua), y pequeño arriba, estilo Siri, cuando hay chat. Estados: reposo / escuchando / pensando / hablando. Tocar el orbe interrumpe a Jarvis.
 - **PWA**: `public/manifest.json`, `public/sw.js`, `public/icon.svg`.
 - **IA**: Gemini por defecto (`GEMINI_MODEL`, hoy `gemini-3.5-flash-lite`) y Groq como alternativa (`openai/gpt-oss-120b`). Las llaves pueden venir del navegador (headers `X-Gemini-Key`, `X-Groq-Key`, `X-Proveedor`) o del `.env`.
 - **Memoria actual**: historial en `memoria_local.json` (se mandan los últimos 20 turnos) y datos permanentes en `memoria_persistente.json` (el modelo los emite con `[RECORDAR: dato]`).
 - **Acciones por etiquetas** que el backend ejecuta y limpia del texto: `[ACCION:abrir:URL]`, `[ACCION:linterna:on/off]`, `[ACCION:vibrar]`, `[CONSULTAR_BATERIA]` (las de hardware usan Termux:API, `comandos_dispositivo.py`).
-- **Voz**: Piper TTS local (`/voz`).
+- **Voz**: Piper TTS local (`/voz`). Si falla, el frontend usa la voz del navegador y no vuelve a intentar Piper en esa sesión. Ajuste para hablar o no las respuestas del chat (en modo voz siempre habla).
 - **requirements.txt**: flask, flask-cors, python-dotenv, requests, pypdf, beautifulsoup4, fpdf2, gunicorn, cryptography (`piper-tts` se quita para Vercel).
 
 **Repo**: https://github.com/eiderdavidgarcia23/Jarvis
@@ -49,6 +51,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **29 ago 2026**: retomado el proyecto desde el zip `Jarvis-main` (versión anterior a Firebase/login). Limpieza del repo: borrados `_archivado/`, `__pycache__/`, `package.json`, `package-lock.json`, backup viejo del index y logs; sacados del tracking `memoria_local.json`, `recordatorios.json` y `preferencias/`; `.gitignore` actualizado. No se reescribió el historial viejo de git.
 - **30 ago 2026**: arreglada la voz (Piper daba timeout). La causa era que el servidor no se había reiniciado tras corregir el `.env`.
 - **2 oct 2026**: Jarvis desplegado en Vercel e instalado como app en el celular. Se entregó `parche_vercel.py` (memoria en `/tmp` cuando corre en Vercel, voz del navegador si `/voz` falla, quitar `piper-tts` de `requirements.txt`).
+- **2 oct 2026**: nuevo frontend estilo Claude (`public/index.html` reemplazado; la copia anterior quedó fuera del repo): sidebar, burbujas, animaciones, orbe con 3 modos (centro / chat / voz), modo voz continuo y ajuste de voz del chat. Se entregó en 6 partes (1014 líneas) y se desplegó en Vercel. David confirmó que se ve bien.
 
 ---
 
@@ -57,6 +60,8 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - Piper no corre (la voz es la del navegador, más robótica; Piper sigue funcionando solo corriendo local en Termux).
 - Linterna, vibrar y batería dependen de Termux: solo funcionan corriendo local.
 - El disco es temporal: sin base de datos, la memoria se borra.
+- "Nuevo chat" solo limpia la pantalla: la memoria del servidor sigue igual hasta tener memoria permanente.
+- En Android, el navegador puede sonar un bip cada vez que reinicia la escucha del modo voz (es del navegador).
 
 ---
 
@@ -68,6 +73,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 4. **Resumen automático** de la charla vieja, siempre presente en el contexto (hoy solo se recuerdan 20 turnos).
 5. Modelo por defecto más grande (Gemini Flash normal en vez de flash-lite).
 6. Reponer las funciones quitadas en Vercel (voz de mejor calidad; acciones de dispositivo si hay forma).
+7. Funciones del sidebar marcadas "Próximamente": historial de chats (necesita la memoria permanente), buscar y recordatorios.
 
 **Meta principal**: que Jarvis tenga buena memoria, entienda de qué se habla y no lo confunda con otra cosa cuando David cambia una palabra.
 
