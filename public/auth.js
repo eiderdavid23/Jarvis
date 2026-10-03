@@ -1,6 +1,6 @@
 /* Login y chats por usuario. Habla con /auth/* y /chats del backend. */
 (function () {
-  const K = { acc: 'jarvisAcceso', ref: 'jarvisRefresco', mail: 'jarvisCorreo' };
+  const K = { acc: 'jarvisAcceso', ref: 'jarvisRefresco', mail: 'jarvisCorreo', nom: 'jarvisNombre' };
   const fetchOrig = window.fetch.bind(window);
   let chatId = null;
   let refrescando = null;
@@ -25,6 +25,8 @@
     .chatTit { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .chatDel { color: var(--suave); padding: 0 6px; font-size: 18px; }
     .sbVacio { padding: 8px 12px; font-size: 13px; color: var(--suave); }
+    #authCaja button#authGoogle { background: #fff; border-color: #fff; color: #1f1f1f; margin-top: 0; }
+    .authSep { margin: 14px 0; font-size: 12px; color: var(--suave); }
   `;
   document.head.appendChild(st);
 
@@ -105,13 +107,13 @@
       const res = await fetchOrig('/auth/' + ruta, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, nombre: document.getElementById('authNombre').value.trim() })
       });
       const d = await res.json();
       if (!res.ok) { mensaje(traducir(d.error)); return; }
       if (d.confirmar_correo) { mensaje('Revise su correo para confirmar la cuenta, señor.'); return; }
       guardarSesion(d);
-      textoSalir();
+      cargarPerfil();
       mensaje('');
       document.getElementById('authOverlay').remove();
       reiniciarVista();
@@ -120,34 +122,79 @@
       mensaje('No logro conectar con el servidor, señor.');
     }
   }
-  function mostrarLogin() {
+  function mostrarLogin(aviso) {
     let o = document.getElementById('authOverlay');
     if (!o) {
       o = document.createElement('div');
       o.id = 'authOverlay';
       o.innerHTML =
         '<div id="authCaja"><h1>J.A.R.V.I.S.</h1><p>Inicie sesión para continuar</p>' +
+        '<button id="authGoogle">Continuar con Google</button><div class="authSep">o con correo</div>' +
         '<input id="authMail" type="email" placeholder="Correo" autocomplete="off">' +
         '<input id="authPass" type="password" placeholder="Contraseña" autocomplete="new-password">' +
+        '<input id="authNombre" type="text" placeholder="Nombre (solo al crear cuenta)" autocomplete="off">' +
         '<div id="authMsg"></div>' +
         '<button id="authEntrar">Entrar</button>' +
         '<button id="authCrear" class="sec">Crear cuenta</button></div>';
       document.body.appendChild(o);
       document.getElementById('authEntrar').addEventListener('click', () => autenticar('login'));
+      document.getElementById('authGoogle').addEventListener('click', () => {
+        location.href = '/auth/google?redirect=' + encodeURIComponent(location.origin);
+      });
       document.getElementById('authCrear').addEventListener('click', () => autenticar('registro'));
       document.getElementById('authPass').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') autenticar('login');
       });
     }
     o.style.display = 'flex';
+    if (aviso) mensaje(aviso);
   }
   function reiniciarVista() {
     chatId = null;
+    nombre = localStorage.getItem(K.nom) || '';
     chatInner.innerHTML = '';
     cambiarModo('inicio');
     actualizarSaludo();
     const lista = document.getElementById('listaChats');
     if (lista) lista.innerHTML = '';
+  }
+
+  /* ---------- perfil (nombre) y saludo ---------- */
+  let nombre = localStorage.getItem(K.nom) || '';
+  const saludoOrig = window.actualizarSaludo;
+  window.actualizarSaludo = function () {
+    saludoOrig();
+    if (nombre) {
+      const el = document.getElementById('saludo');
+      el.textContent = el.textContent.replace(/, señor$/, ', ' + nombre);
+    }
+  };
+  window.actualizarSaludo();
+  async function cargarPerfil() {
+    try {
+      const res = await api('/auth/yo');
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d.email) localStorage.setItem(K.mail, d.email);
+      nombre = (d.nombre || '').split(' ')[0];
+      if (nombre) localStorage.setItem(K.nom, nombre); else localStorage.removeItem(K.nom);
+      textoSalir();
+      window.actualizarSaludo();
+    } catch (e) {}
+  }
+  /* al volver de Google, los tokens llegan en el # de la direccion */
+  function leerRetornoGoogle() {
+    const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+    if (h.get('access_token')) {
+      guardarSesion({ access_token: h.get('access_token'), refresh_token: h.get('refresh_token') });
+      history.replaceState(null, '', location.pathname);
+      return '';
+    }
+    if (h.get('error_description')) {
+      history.replaceState(null, '', location.pathname);
+      return 'Google no pudo iniciar sesión: ' + h.get('error_description');
+    }
+    return '';
   }
 
   /* ---------- lista de chats en el sidebar ---------- */
@@ -252,6 +299,7 @@
   });
 
   /* ---------- arranque ---------- */
-  if (!localStorage.getItem(K.acc)) mostrarLogin();
-  else cargarChats();
+  const avisoGoogle = leerRetornoGoogle();
+  if (!localStorage.getItem(K.acc)) mostrarLogin(avisoGoogle);
+  else { cargarPerfil(); cargarChats(); }
 })();

@@ -1,9 +1,10 @@
 import os
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+from urllib.parse import urlencode
 
 import requests
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, redirect
 
 bp = Blueprint('supa', __name__)
 
@@ -70,7 +71,11 @@ def registro():
     email, pw = _credenciales()
     if not email or len(pw) < 6:
         return jsonify({'error': 'Correo y contraseña de al menos 6 caracteres'}), 400
-    return _auth('signup', {'email': email, 'password': pw})
+    nombre = ((request.get_json(silent=True) or {}).get('nombre') or '').strip()[:60]
+    cuerpo = {'email': email, 'password': pw}
+    if nombre:
+        cuerpo['data'] = {'full_name': nombre}
+    return _auth('signup', cuerpo)
 
 
 @bp.route('/auth/login', methods=['POST'])
@@ -103,8 +108,12 @@ def requiere_login(f):
             return jsonify({'error': 'No logro conectar con Supabase'}), 503
         if r.status_code != 200:
             return jsonify({'error': 'sesion invalida', 'respuesta': 'Su sesion expiro, señor.'}), 401
+        u = r.json()
+        meta = u.get('user_metadata') or {}
         g.token = token
-        g.usuario_id = r.json().get('id')
+        g.usuario_id = u.get('id')
+        g.email = u.get('email')
+        g.nombre = (meta.get('full_name') or meta.get('name') or '').strip()
         return f(*a, **k)
     return envoltura
 
@@ -206,3 +215,20 @@ def api_mensajes(chat_id):
 def api_borrar(chat_id):
     borrar_chat(chat_id)
     return jsonify({'ok': True})
+
+
+# ---------- Google y perfil ----------
+
+@bp.route('/auth/google')
+def google():
+    if not _url():
+        return jsonify({'error': 'Supabase no esta configurado en el servidor'}), 500
+    destino = request.args.get('redirect', '')
+    return redirect(_url() + '/auth/v1/authorize?' +
+                    urlencode({'provider': 'google', 'redirect_to': destino}))
+
+
+@bp.route('/auth/yo', methods=['GET'])
+@requiere_login
+def perfil():
+    return jsonify({'email': g.email, 'nombre': g.nombre})

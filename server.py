@@ -409,7 +409,11 @@ def chat():
             texto_recuerdos = ' Datos importantes que ya sabes del usuario: ' + '; '.join(
                 f"{r['clave']}: {r['valor']}" for r in recuerdos) + '.'
 
-        system_prompt = SYSTEM_PROMPT_BASE + f' La fecha y hora ACTUAL es: {fecha_hora_str}.' + texto_recuerdos
+        nombre = (g.get('nombre') or '').split(' ')[0]
+        texto_nombre = ''
+        if nombre:
+            texto_nombre = f' El usuario se llama {nombre}; puedes usar su nombre de vez en cuando, ademas de "señor".'
+        system_prompt = SYSTEM_PROMPT_BASE + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.' + texto_recuerdos
 
         turnos = list(historial[-20:])  # ultimos turnos, para no saturar el contexto del modelo chico
         turnos.append({'role': 'user', 'texto': mensaje_usuario})
