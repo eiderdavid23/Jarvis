@@ -445,6 +445,16 @@
   }
   #toastAdj.on { opacity: 1; transform: translate(-50%, 0); }
 
+  #btnFlotar.on { background: rgba(0,229,255,.18); box-shadow: 0 0 14px rgba(0,229,255,.35); }
+  /* --- Tarjeta de resultados de busqueda --- */
+  .tarjetaBusq { margin: 4px 0 6px 32px; max-width: calc(100% - 32px); background: var(--panel2); border: 1px solid var(--linea); border-radius: 16px; padding: 10px 12px; animation: subir .38s var(--ease) both; }
+  .tarjetaBusq h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--cian); font-weight: 600; }
+  .resBusq { display: block; padding: 8px 0; border-top: 1px solid var(--linea); text-decoration: none; color: var(--texto); }
+  .resBusq:first-of-type { border-top: 0; }
+  .resBusq b { display: inline-block; font-size: 11px; padding: 1px 8px; margin-bottom: 3px; border-radius: 10px; border: 1px solid var(--linea); color: var(--cian); }
+  .resBusq span { display: block; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+  .resBusq small { display: block; margin-top: 2px; font-size: 12px; opacity: .6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   /* --- Tema claro --- */
   [data-tema="claro"] .hoja { box-shadow: 0 -10px 40px rgba(20,60,80,.2); }
   [data-tema="claro"] #hojaVelo { background: rgba(0,0,0,.32); }
@@ -462,6 +472,9 @@
   <button id="btnSilencio" class="btnIcono" aria-label="Voz de Jarvis">
     <svg class="icoOn" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>
     <svg class="icoOff" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+  </button>
+  <button id="btnFlotar" class="btnIcono" aria-label="Orbita flotante" style="display:none">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><rect x="12" y="11" width="7" height="5" rx="1" fill="currentColor"/></svg>
   </button>
   <button id="btnNuevoTop" class="btnIcono" aria-label="Nuevo chat">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1169,6 +1182,208 @@ function quitarAdjunto(id) {
   renderAdjuntos();
 }
 
+/* ========== Orbita flotante (PC: Document Picture-in-Picture) ========== */
+const btnFlotar = document.getElementById('btnFlotar');
+let pipWin = null, pipObs = null, pipRec = null;
+if ('documentPictureInPicture' in window) btnFlotar.style.display = '';
+
+const PIP_CSS = `
+  html, body { height: 100%; }
+  #pipRaiz { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+  #pipTop { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  #pipOrb { width: 56px; height: 56px; }
+  #pipNombre { font-size: 14px; font-weight: 700; letter-spacing: 4px; color: var(--cian); }
+  #pipEstado { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--suave); }
+  #pipLog { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+  #pipIn { display: flex; gap: 6px; align-items: flex-end; flex-shrink: 0; }
+  #pipTxt { flex: 1; resize: none; min-height: 40px; max-height: 96px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--linea); background: var(--panel2); color: var(--texto); font: inherit; font-size: 14px; outline: none; }
+  #pipTxt:focus { border-color: var(--cian); }
+  .pipBtn { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--linea); background: transparent; color: var(--cian); display: flex; align-items: center; justify-content: center; }
+  #pipEnviar { background: var(--cian); color: #05222a; border-color: var(--cian); }
+  #pipMic.on { background: rgba(0,255,180,.2); border-color: #00ffb4; }
+`;
+const PIP_HTML = `
+  <div id="pipRaiz">
+    <div id="pipTop">
+      <canvas id="pipOrb" width="112" height="112"></canvas>
+      <div><div id="pipNombre">JARVIS</div><div id="pipEstado">En reposo</div></div>
+    </div>
+    <div id="pipLog"></div>
+    <div id="pipIn">
+      <textarea id="pipTxt" rows="1" placeholder="Habla con Jarvis..." autocomplete="off"></textarea>
+      <button id="pipMic" class="pipBtn" type="button" aria-label="Dictar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></button>
+      <button id="pipEnviar" class="pipBtn" type="button" aria-label="Enviar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button>
+    </div>
+  </div>
+`;
+
+function pipColor() {
+  let c = '0,229,255';
+  if (estadoActual === 'escuchando') c = '0,255,180';
+  else if (estadoActual === 'pensando') c = '140,170,255';
+  if (document.documentElement.getAttribute('data-tema') === 'claro') {
+    c = ({ '0,229,255': '0,140,180', '0,255,180': '0,155,105', '140,170,255': '85,100,225' })[c] || c;
+  }
+  return c;
+}
+
+function pipOrbe(win) {
+  const cv = win.document.getElementById('pipOrb');
+  const lbl = win.document.getElementById('pipEstado');
+  const ctx = cv.getContext('2d');
+  const parts = Array.from({ length: 16 }, (_, i) => ({ ang: i * 0.4, r: 0.8 + (i % 4) * 0.12, alt: i }));
+  let t = 0;
+  function paso() {
+    if (pipWin !== win) return;
+    const w = cv.width, h = cv.height, cx = w / 2, cy = h / 2;
+    ctx.clearRect(0, 0, w, h);
+    let vel = 0.01, amp = 1;
+    if (estadoActual === 'escuchando') { vel = 0.03; amp = 1.2; }
+    if (estadoActual === 'pensando') { vel = 0.035; amp = 1.1 + Math.sin(t * 0.25) * 0.1; }
+    if (estadoActual === 'hablando') { vel = 0.05; amp = 1.4 + Math.sin(t * 0.3) * 0.12; }
+    const col = pipColor();
+    t += vel * 10;
+    const base = Math.min(w, h) * 0.28, nr = base * 0.35 * amp;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, nr * 1.8);
+    grad.addColorStop(0, 'rgba(' + col + ',0.9)'); grad.addColorStop(1, 'rgba(' + col + ',0)');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx, cy, nr * 1.8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, nr, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fill();
+    parts.forEach((p) => {
+      p.ang += vel * (0.5 + p.r * 0.5);
+      const rad = base * amp * p.r;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(p.ang) * rad, cy + Math.sin(p.ang) * rad * Math.cos(p.alt + t * 0.02), Math.max(1.5, w * 0.02), 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(' + col + ',' + (0.5 + 0.5 * p.r) + ')'; ctx.fill();
+    });
+    if (lbl.textContent !== estadoLabel.textContent) lbl.textContent = estadoLabel.textContent;
+    win.requestAnimationFrame(paso);
+  }
+  win.requestAnimationFrame(paso);
+}
+
+let pipSyncT = null;
+function pipSync() {
+  const w = pipWin;
+  if (!w) return;
+  w.clearTimeout(pipSyncT);
+  pipSyncT = w.setTimeout(() => {
+    if (pipWin !== w) return;
+    const log = w.document.getElementById('pipLog');
+    if (!log) return;
+    log.textContent = '';
+    Array.from(chatInner.children).slice(-6).forEach((n) => log.appendChild(w.document.importNode(n, true)));
+    log.scrollTop = log.scrollHeight;
+  }, 60);
+}
+
+function abrirPip(w) {
+  pipWin = w;
+  const d = w.document;
+  document.querySelectorAll('style').forEach((st) => d.head.appendChild(st.cloneNode(true)));
+  const est = d.createElement('style'); est.textContent = PIP_CSS; d.head.appendChild(est);
+  d.title = 'Jarvis';
+  d.documentElement.setAttribute('data-tema', document.documentElement.getAttribute('data-tema') || '');
+  d.body.className = '';
+  d.body.innerHTML = PIP_HTML;
+  btnFlotar.classList.add('on');
+
+  const txt = d.getElementById('pipTxt');
+  const enviar = () => {
+    const v = txt.value.trim();
+    if (!v || procesando) return;
+    texto.value = v; txt.value = '';
+    actualizarBotonAccion();
+    enviarMensaje(false);
+  };
+  d.getElementById('pipEnviar').addEventListener('click', enviar);
+  txt.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } });
+
+  const mic = d.getElementById('pipMic');
+  const SRp = w.SpeechRecognition || w.webkitSpeechRecognition || SR;
+  if (!SRp) { mic.style.display = 'none'; }
+  else {
+    let on = false;
+    pipRec = new SRp(); pipRec.lang = 'es-ES'; pipRec.interimResults = true;
+    pipRec.onstart = () => { on = true; mic.classList.add('on'); };
+    pipRec.onend = () => { on = false; mic.classList.remove('on'); };
+    pipRec.onerror = () => { on = false; mic.classList.remove('on'); };
+    pipRec.onresult = (ev) => {
+      let fin = '', inte = '';
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const r = ev.results[i];
+        if (r.isFinal) fin += r[0].transcript; else inte += r[0].transcript;
+      }
+      if (inte) txt.value = inte;
+      if (fin.trim()) { txt.value = fin.trim(); enviar(); }
+    };
+    mic.addEventListener('click', () => {
+      try { if (on) pipRec.stop(); else { if (hablando) detenerHabla(); pipRec.start(); } } catch (e) {}
+    });
+  }
+
+  pipObs = new MutationObserver(pipSync);
+  pipObs.observe(chatInner, { childList: true, subtree: true, characterData: true });
+  pipSync();
+  pipOrbe(w);
+  w.addEventListener('pagehide', () => {
+    if (pipObs) pipObs.disconnect();
+    pipObs = null;
+    try { if (pipRec) pipRec.abort(); } catch (e) {}
+    pipRec = null; pipWin = null;
+    btnFlotar.classList.remove('on');
+  });
+}
+
+btnFlotar.addEventListener('click', async () => {
+  if (pipWin) { pipWin.close(); return; }
+  try {
+    const w = await window.documentPictureInPicture.requestWindow({ width: 340, height: 460 });
+    abrirPip(w);
+  } catch (e) {
+    avisoAdj('No pude abrir la ventana flotante, señor.');
+  }
+});
+
+/* ========== Resultados de busqueda ========== */
+function urlSegura(u) {
+  try { const x = new URL(u); return (x.protocol === 'http:' || x.protocol === 'https:') ? x.href : ''; }
+  catch (e) { return ''; }
+}
+function urlPrincipal(resultados) {
+  const r = resultados.find((x) => x.red && x.red !== 'Google' && urlSegura(x.url)) || resultados.find((x) => urlSegura(x.url));
+  return r ? r.url : '';
+}
+function mostrarBusqueda(b) {
+  const caja = document.createElement('div');
+  caja.className = 'tarjetaBusq';
+  const h = document.createElement('h4');
+  h.textContent = 'Resultados: ' + (b.consulta || '');
+  caja.appendChild(h);
+  b.resultados.slice(0, 8).forEach((r) => {
+    const url = urlSegura(r.url);
+    if (!url) return;
+    const a = document.createElement('a');
+    a.className = 'resBusq';
+    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    const red = document.createElement('b'); red.textContent = r.red || 'Web';
+    const tit = document.createElement('span'); tit.textContent = r.titulo || url;
+    const enl = document.createElement('small'); enl.textContent = url.replace(/^https?:\/\/(www\.)?/, '');
+    a.appendChild(red); a.appendChild(tit); a.appendChild(enl);
+    caja.appendChild(a);
+  });
+  chatInner.appendChild(caja);
+  bajarChat();
+}
+function abrirEnlaces(urls) {
+  let bloqueado = false;
+  urls.map(urlSegura).filter(Boolean).forEach((u) => {
+    let w = null;
+    try { w = window.open(u, '_blank'); } catch (e) {}
+    if (!w) bloqueado = true;
+  });
+  if (bloqueado) avisoAdj('El navegador bloqueó la pestaña, señor. Toque un resultado para abrirlo.');
+}
+
 /* ========== Enviar mensaje ========== */
 let procesando = false;
 
@@ -1226,9 +1441,13 @@ async function enviarMensaje(desdeVoz) {
     } else {
       cargarUso();
       const { textoLimpio, urls } = procesarAcciones(data.respuesta || '');
-      textoFinal = textoLimpio;
-      agregarMensaje(textoLimpio, 'jarvis');
-      urls.forEach((url) => window.open(url, '_blank'));
+      textoFinal = textoLimpio.replace(/`/g, '');
+      agregarMensaje(textoFinal, 'jarvis');
+      const busq = (data.busqueda && Array.isArray(data.busqueda.resultados) && data.busqueda.resultados.length) ? data.busqueda : null;
+      if (busq) mostrarBusqueda(busq);
+      const aAbrir = Array.from(new Set(urls.concat(data.urls_abrir || [])));
+      if (busq && !aAbrir.length) aAbrir.push(urlPrincipal(busq.resultados));
+      abrirEnlaces(aAbrir);
       hablarAhora = desdeVoz || hablarChat();
       if (!hablarAhora) setEstado('reposo', 'En reposo');
     }

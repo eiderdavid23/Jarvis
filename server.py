@@ -96,6 +96,24 @@ HERRAMIENTAS = [
         }
     },
     {
+        'name': 'buscar_persona',
+        'description': (
+            'Busca en la web publica informacion sobre una persona o tema, y tambien en '
+            'redes sociales (Instagram, Facebook, TikTok, X, LinkedIn). Usar cuando el '
+            'usuario pida buscar, investigar o consultar sobre alguien. Solo devuelve '
+            'paginas publicas. Despues de usarla, di en que sitios encontraste algo '
+            '(Google, Instagram, Facebook...) y resume lo mas relevante.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'consulta': {'type': 'string', 'description': 'Nombre o tema a buscar, con el contexto que dio el usuario (ciudad, trabajo, etc.)'},
+                'redes': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Redes a incluir: instagram, facebook, tiktok, x, linkedin. Si el usuario no dice, omitir y se usan instagram, facebook y linkedin.'}
+            },
+            'required': ['consulta']
+        }
+    },
+    {
         'name': 'encender_linterna',
         'description': 'Enciende la linterna fisica del telefono del usuario.',
         'parameters': {'type': 'object', 'properties': {}}
@@ -150,6 +168,66 @@ HERRAMIENTAS = [
 ]
 
 
+TAVILY_API_KEY = os.environ.get('TAVILY_API_KEY', '')
+REDES_DOMINIOS = {
+    'instagram': 'instagram.com', 'facebook': 'facebook.com', 'tiktok': 'tiktok.com',
+    'x': 'x.com', 'twitter': 'x.com', 'linkedin': 'linkedin.com',
+}
+REDES_NOMBRE = {
+    'instagram.com': 'Instagram', 'facebook.com': 'Facebook', 'tiktok.com': 'TikTok',
+    'x.com': 'X', 'linkedin.com': 'LinkedIn',
+}
+
+
+def _tavily(consulta, dominios=None, max_resultados=4):
+    cuerpo = {'query': consulta, 'max_results': max_resultados, 'search_depth': 'basic'}
+    if dominios:
+        cuerpo['include_domains'] = dominios
+    r = requests.post('https://api.tavily.com/search', json=cuerpo, timeout=20,
+                      headers={'Authorization': 'Bearer ' + TAVILY_API_KEY})
+    r.raise_for_status()
+    return r.json().get('results', [])
+
+
+def buscar_persona(consulta, redes=None):
+    """Devuelve (lista_de_resultados, error). Cada resultado: red, titulo, url, extracto."""
+    if not TAVILY_API_KEY:
+        return [], 'Falta TAVILY_API_KEY (llave gratis en tavily.com) en el .env o en Vercel.'
+    dominios = []
+    for r in (redes or ['instagram', 'facebook', 'linkedin']):
+        d = REDES_DOMINIOS.get(str(r).strip().lower())
+        if d and d not in dominios:
+            dominios.append(d)
+    resultados, vistos = [], set()
+
+    def agregar(lista, red_forzada=None):
+        for x in lista:
+            url = x.get('url') or ''
+            if not url or url in vistos:
+                continue
+            vistos.add(url)
+            red = red_forzada
+            if not red:
+                red = 'Google'
+                for d, n in REDES_NOMBRE.items():
+                    if d in url:
+                        red = n
+            resultados.append({'red': red, 'titulo': (x.get('title') or url)[:120], 'url': url,
+                               'extracto': (x.get('content') or '')[:220]})
+
+    try:
+        agregar(_tavily(consulta, None, 4))
+        for d in dominios:
+            try:
+                agregar(_tavily(consulta, [d], 2), REDES_NOMBRE.get(d))
+            except Exception as e:
+                print(f'[BUSQUEDA] Fallo en {d}:', e)
+    except Exception as e:
+        print('[BUSQUEDA] Error:', e)
+        return [], 'La busqueda fallo en este momento.'
+    return resultados, None
+
+
 def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
     """Ejecuta una herramienta real y devuelve un dict con el resultado para el modelo.
     acciones_frontend se va llenando con cosas que el NAVEGADOR debe hacer
@@ -161,6 +239,19 @@ def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
             return {'ok': False, 'error': 'no se dio una url'}
         acciones_frontend['urls_abrir'].append(url)
         return {'ok': True, 'mensaje': f'Se abrira {url} en una pestana nueva del navegador del usuario.'}
+
+    if nombre == 'buscar_persona':
+        consulta = (argumentos.get('consulta') or '').strip()
+        if not consulta:
+            return {'ok': False, 'error': 'falta la consulta'}
+        resultados, error = buscar_persona(consulta, argumentos.get('redes'))
+        if error:
+            return {'ok': False, 'error': error}
+        if not resultados:
+            return {'ok': True, 'resultados': [], 'mensaje': 'No se encontro nada publico.'}
+        acciones_frontend['busqueda'] = {'consulta': consulta, 'resultados': resultados}
+        return {'ok': True, 'resultados': resultados,
+                'mensaje': 'Los resultados ya se muestran al usuario en un panel; el primero se abre solo.'}
 
     if nombre == 'encender_linterna':
         ok = encender_linterna()
@@ -441,7 +532,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
         partes_h = list(h.get('partes_gemini') or []) + [{'text': h['texto']}]
         contenidos.append({'role': rol, 'parts': partes_h})
 
-    acciones = {'urls_abrir': []}
+    acciones = {'urls_abrir': [], 'busqueda': None}
     gen_config = config_gemini(nivel)
 
     for _ in range(MAX_VUELTAS_HERRAMIENTAS):
@@ -487,7 +578,7 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
         rol = 'user' if h['role'] == 'user' else 'assistant'
         mensajes.append({'role': rol, 'content': h['texto']})
 
-    acciones = {'urls_abrir': []}
+    acciones = {'urls_abrir': [], 'busqueda': None}
     tools = construir_tools_groq()
     cfg_groq = {'max_tokens': TOKENS_GROQ[nivel], 'reasoning_effort': NIVEL_EN[nivel]}
 
@@ -622,7 +713,8 @@ SYSTEM_PROMPT_BASE = (
     'cuando el usuario lo pida o cuando sea evidente que corresponde, y luego '
     'responde de forma natural con el resultado real que te devuelven. Nunca '
     'inventes un dato (como el porcentaje de bateria) sin haber llamado antes '
-    'a la herramienta correspondiente.'
+    'a la herramienta correspondiente. Para buscar personas usa buscar_persona: '
+    'solo informacion publica, sin inventar datos que no aparezcan en los resultados.'
 )
 
 
@@ -769,7 +861,8 @@ def chat():
                 print('[RESUMEN] No pude actualizar el resumen (el chat sigue normal):', e)
 
         return jsonify({'respuesta': respuesta, 'chat_id': chat_id,
-                        'urls_abrir': acciones.get('urls_abrir', [])})
+                        'urls_abrir': acciones.get('urls_abrir', []),
+                        'busqueda': acciones.get('busqueda')})
 
     except requests.exceptions.Timeout as e:
         print('[ERROR] Timeout esperando respuesta del proveedor de IA:', e)
