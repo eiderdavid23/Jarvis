@@ -339,8 +339,66 @@
       marcarActivo();
     } catch (e) {}
   }
+  /* ---------- confirmacion estilo Jarvis (reemplaza al confirm() del navegador) ---------- */
+  const st3 = document.createElement('style');
+  st3.textContent = `
+    #cjOverlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(0,0,0,.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility 0s linear .3s; }
+    #cjOverlay.abierto { opacity: 1; visibility: visible; transition: opacity .3s ease; }
+    #cjOverlay.abierto .syCard { transform: none; }
+    .cjNombre { color: var(--texto); font-weight: 600; overflow-wrap: anywhere; }
+    [data-tema="claro"] #cjOverlay { background: rgba(0,0,0,.4); }
+  `;
+  document.head.appendChild(st3);
+
+  const cj = document.createElement('div');
+  cj.id = 'cjOverlay';
+  cj.innerHTML = '<div class="syCard" role="alertdialog" aria-modal="true" aria-labelledby="cjTit">'
+    + '<div class="syOrb"><i class="r1"></i><i class="r2"></i><b></b></div>'
+    + '<h3 id="cjTit"></h3><p id="cjTxt"></p>'
+    + '<div class="syBtns"><button class="syNo" id="cjNo"></button><button class="syOk" id="cjOk"></button></div>'
+    + '</div>';
+  document.body.appendChild(cj);
+  let cjResolver = null;
+
+  function cerrarCj(valor) {
+    cj.classList.remove('abierto');
+    if (cjResolver) { const r = cjResolver; cjResolver = null; r(valor); }
+  }
+  function confirmarJarvis(o) {
+    return new Promise((resolver) => {
+      if (cjResolver) cjResolver(false);
+      cjResolver = resolver;
+      document.getElementById('cjTit').textContent = o.titulo;
+      const t = document.getElementById('cjTxt');
+      t.textContent = '';
+      if (o.nombre) {
+        t.append('«');
+        const n = document.createElement('span');
+        n.className = 'cjNombre';
+        n.textContent = o.nombre;
+        t.append(n, '» ');
+      }
+      t.append(o.texto);
+      document.getElementById('cjNo').textContent = o.cancelar || 'Cancelar';
+      document.getElementById('cjOk').textContent = o.aceptar || 'Aceptar';
+      cj.classList.add('abierto');
+    });
+  }
+  document.getElementById('cjNo').addEventListener('click', () => cerrarCj(false));
+  document.getElementById('cjOk').addEventListener('click', () => cerrarCj(true));
+  cj.addEventListener('click', (e) => { if (e.target === cj) cerrarCj(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cj.classList.contains('abierto')) cerrarCj(false); });
+
   async function borrarChat(id) {
-    if (!confirm('¿Borrar este chat, señor?')) return;
+    const itemChat = document.querySelector('#listaChats .chatItem[data-id="' + id + '"] .chatTit');
+    const quiere = await confirmarJarvis({
+      titulo: '¿Borrar este chat?',
+      nombre: itemChat ? itemChat.textContent : '',
+      texto: 'se eliminará con todos sus mensajes. No se puede deshacer.',
+      cancelar: 'Conservar',
+      aceptar: 'Borrar'
+    });
+    if (!quiere) return;
     const res = await api('/chats/' + id, { method: 'DELETE' });
     if (!res.ok) return;
     if (chatId === id) { chatId = null; nuevoChat(); }
