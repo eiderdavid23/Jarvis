@@ -601,48 +601,111 @@ const hablarChat = () => localStorage.getItem('jarvisHablarChat') !== '0';
 
 audioPlayer.addEventListener('play', () => { hablando = true; setEstado('hablando', 'Hablando'); });
 
-function hablarNavegador(txt, fin) {
-  if (!('speechSynthesis' in window)) { fin(); return; }
-  const u = new SpeechSynthesisUtterance(txt.replace(/[*_#`]/g, ''));
-  u.lang = 'es-ES';
-  u.onstart = () => { hablando = true; setEstado('hablando', 'Hablando'); };
-  u.onend = fin;
-  u.onerror = fin;
-  speechSynthesis.cancel();
-  speechSynthesis.speak(u);
+function dividirFrases(txt) {
+  const limpio = String(txt || '').replace(/[*_#`]/g, '').replace(/^\s*[-•]\s+/gm, '').replace(/\s+/g, ' ').trim();
+  if (!limpio) return [];
+  const frases = limpio.match(/\S.*?(?:[.!?…]+(?=\s|$)|$)/g) || [limpio];
+  const partes = [];
+  let acum = '';
+  frases.forEach((f) => {
+    acum = acum ? acum + ' ' + f : f;
+    if (acum.length >= (partes.length === 0 ? 12 : 50)) { partes.push(acum); acum = ''; }
+  });
+  if (acum) { if (partes.length) partes[partes.length - 1] += ' ' + acum; else partes.push(acum); }
+  const salida = [];
+  partes.forEach((p) => {
+    let resto = p;
+    while (resto.length > 240) {
+      let corte = resto.lastIndexOf(', ', 240);
+      if (corte < 60) corte = resto.lastIndexOf(' ', 240);
+      if (corte < 1) corte = 240;
+      salida.push(resto.slice(0, corte + 1).trim());
+      resto = resto.slice(corte + 1).trim();
+    }
+    if (resto) salida.push(resto);
+  });
+  return salida;
+}
+
+function hablarNavegador(partes, cancelado, ponerLiberar) {
+  return new Promise((resolve) => {
+    if (!('speechSynthesis' in window)) { resolve(); return; }
+    let i = 0;
+    ponerLiberar(resolve);
+    speechSynthesis.cancel();
+    const siguiente = () => {
+      if (cancelado() || i >= partes.length) { resolve(); return; }
+      const u = new SpeechSynthesisUtterance(partes[i++]);
+      u.lang = 'es-ES';
+      u.onstart = () => { hablando = true; setEstado('hablando', 'Hablando'); };
+      u.onend = siguiente;
+      u.onerror = siguiente;
+      speechSynthesis.speak(u);
+    };
+    siguiente();
+  });
 }
 
 function hablar(txt) {
   return new Promise((resolve) => {
-    if (!txt) { resolve(); return; }
+    const partes = dividirFrases(txt);
+    if (!partes.length) { resolve(); return; }
     let terminado = false;
+    let liberar = null;
     const fin = () => {
       if (terminado) return;
       terminado = true;
       hablando = false;
       finHablaActual = null;
+      if (liberar) liberar();
       if (estadoActual === 'hablando' || estadoActual === 'pensando') setEstado('reposo', 'En reposo');
       resolve();
     };
     finHablaActual = fin;
-    if (!vozServidorOK) { hablarNavegador(txt, fin); return; }
-    fetch('/voz', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto: txt })
-    })
-      .then((res) => { if (!res.ok) throw new Error('voz'); return res.blob(); })
-      .then((blob) => {
-        if (terminado) return;
-        audioPlayer.onended = fin;
-        audioPlayer.onerror = fin;
-        audioPlayer.src = URL.createObjectURL(blob);
-        return audioPlayer.play();
-      })
-      .catch(() => {
-        vozServidorOK = false;
-        if (!terminado) hablarNavegador(txt, fin);
-      });
+    const pedidos = [];
+    const pedir = (i) => {
+      if (!pedidos[i]) {
+        pedidos[i] = fetch('/voz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texto: partes[i] })
+        }).then((res) => { if (!res.ok) throw new Error('voz'); return res.blob(); });
+        pedidos[i].catch(() => {});
+      }
+      return pedidos[i];
+    };
+    const reproducir = (blob) => new Promise((ok, mal) => {
+      const url = URL.createObjectURL(blob);
+      const limpiar = () => { audioPlayer.onended = null; audioPlayer.onerror = null; URL.revokeObjectURL(url); };
+      liberar = () => { limpiar(); ok(); };
+      audioPlayer.onended = () => { limpiar(); ok(); };
+      audioPlayer.onerror = () => { limpiar(); mal(new Error('audio')); };
+      audioPlayer.src = url;
+      audioPlayer.play().catch((e) => { limpiar(); mal(e); });
+    });
+    (async () => {
+      let i = 0;
+      if (vozServidorOK) {
+        try {
+          pedir(0);
+          for (; i < partes.length; i++) {
+            const blob = await pedir(i);
+            if (terminado) return;
+            if (i + 1 < partes.length) pedir(i + 1);
+            await reproducir(blob);
+            if (terminado) return;
+          }
+          fin();
+          return;
+        } catch (e) {
+          if (terminado) return;
+          vozServidorOK = false;
+        }
+      }
+      if (terminado) return;
+      await hablarNavegador(partes.slice(i), () => terminado, (f) => { liberar = f; });
+      fin();
+    })();
   });
 }
 

@@ -29,14 +29,15 @@ David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y 
 Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man: dice "señor", es conciso salvo que se pida detalle y nunca dice que es un modelo de lenguaje. Ahora es multiusuario: cada persona tiene su cuenta, sus chats y su memoria.
 
 - **Backend**: Python + Flask. `server.py` (~472 líneas) y `supa.py` (~234 líneas: login, chats y memoria en Supabase por REST con el token del usuario; no usa supabase-py). `/chat` exige sesión (decorador `requiere_login`, header `Authorization: Bearer`).
-- **Frontend**: `public/index.html` (~1015 líneas, estilo Claude) y `public/auth.js` (~305 líneas): pantalla de login, lista de chats en el sidebar (sustituyó a "Historial de chats"), "Cerrar sesión" y saludo con el nombre del usuario. En "Próximamente" quedan Buscar y Recordatorios.
+- **Frontend**: `public/index.html` (~1104 líneas, estilo Claude) y `public/auth.js` (~305 líneas): pantalla de login, lista de chats en el sidebar (sustituyó a "Historial de chats"), "Cerrar sesión" y saludo con el nombre del usuario. En "Próximamente" quedan Buscar y Recordatorios.
 - **Login (Supabase Auth)**: "Continuar con Google" y correo + contraseña (con campo Nombre al crear cuenta). Rutas: `/auth/registro`, `/auth/login`, `/auth/refresh`, `/auth/google`, `/auth/yo`. Google devuelve la sesión en el `#` de la URL y `auth.js` la lee. Los tokens van en el `localStorage` del navegador y se renuevan solos.
 - **Memoria (Supabase, con RLS por usuario)**: tablas `chats`, `mensajes` y `memorias` (clave/valor). Se mandan al modelo los últimos 20 mensajes del chat actual. Los datos permanentes se guardan **por tema** (se actualizan, no se duplican). Ya no se usan `memoria_local.json` ni `memoria_persistente.json`.
 - **Herramientas** (function calling, definidas en `server.py`): `abrir_url`, `encender_linterna`, `apagar_linterna`, `vibrar`, `consultar_bateria`, `guardar_recuerdo` (tema + dato) y `olvidar_recuerdo`. Las de hardware usan Termux:API (`comandos_dispositivo.py`).
 - **Orbe animado** (canvas) con 3 modos: grande al centro en el inicio y en el modo voz (llamada con escucha continua), y pequeño arriba cuando hay chat. Estados: reposo / escuchando / pensando / hablando. Tocar el orbe interrumpe a Jarvis.
 - **PWA**: `public/manifest.json`, `public/sw.js`, `public/icon.svg`.
 - **IA**: Gemini por defecto (`GEMINI_MODEL`, hoy `gemini-3.5-flash-lite`) y Groq como alternativa (`openai/gpt-oss-120b`). Las llaves pueden venir del navegador (headers `X-Gemini-Key`, `X-Groq-Key`, `X-Proveedor`) o del `.env`.
-- **Voz**: Piper TTS local (`/voz`). Si falla, el frontend usa la voz del navegador y no vuelve a intentar Piper en esa sesión.
+- **Voz**: Piper TTS local (`/voz`). El frontend divide la respuesta en frases (`dividirFrases`): pide el audio de la primera y, mientras suena, pide la siguiente (no espera el audio completo). Si `/voz` falla, sigue con la voz del navegador, también frase por frase, y no vuelve a intentar Piper en esa sesión.
+- **Silenciar la voz**: botón de altavoz en la barra superior (junto al "+") y interruptor en Ajustes → Voz. Activa o silencia la voz de las respuestas del chat; se guarda en `localStorage` (`jarvisHablarChat`), por defecto activada. Al silenciar calla al instante, incluso si el audio aún se estaba generando. El modo voz siempre habla.
 - **requirements.txt**: flask, flask-cors, python-dotenv, requests, pypdf, beautifulsoup4, fpdf2, gunicorn, cryptography (`piper-tts` se quita para Vercel).
 
 **Repo**: https://github.com/eiderdavidgarcia23/Jarvis
@@ -60,6 +61,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **30 ago 2026**: arreglada la voz (Piper daba timeout). La causa era que el servidor no se había reiniciado tras corregir el `.env`.
 - **2 oct 2026**: Jarvis desplegado en Vercel e instalado como app en el celular. Se entregó `parche_vercel.py` (voz del navegador si `/voz` falla, quitar `piper-tts` de `requirements.txt`).
 - **2 oct 2026**: nuevo frontend estilo Claude (`public/index.html` reemplazado; la copia anterior quedó fuera del repo): sidebar, burbujas, animaciones, orbe con 3 modos y modo voz continuo. Se entregó en 6 partes (1014 líneas) y se desplegó en Vercel.
+- **3 oct 2026**: botón para silenciar la voz del chat (barra superior, sincronizado con Ajustes; calla al instante y no afecta al modo voz) y voz por frases (empieza a hablar con la primera frase sin esperar todo el audio). Se entregaron como `parche_silencio.py` y `parche_frases.py`. Probado en Chrome headless con audio simulado; no se probó con Piper real en el celular. Se decidió dejar por ahora la voz Piper local.
 - **3 oct 2026**: cuentas por usuario con Supabase. Se creó `supa.py` y `public/auth.js`, y se parchó `server.py` e `index.html` (el primer parche falló porque asumía otra versión de `server.py`; se rehízo contra el real). Quedó hecho: login con correo y con Google, nombre del usuario en el saludo y en el prompt, historial de chats por usuario en el sidebar (crear, abrir, borrar), memoria permanente por tema con `guardar_recuerdo` y `olvidar_recuerdo`, y se quitó el autocompletado de contraseñas de Chrome en el login. Probado en local y en Vercel.
 
 ---
@@ -67,6 +69,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 ## 4. Limitaciones conocidas
 
 - En Vercel, Piper no corre (la voz es la del navegador, más robótica; Piper solo funciona corriendo local en Termux).
+- La primera frase siempre espera el audio de `/voz` (1–2 s con Piper local). Con Piper local cada frase vuelve a lanzar Piper; si se notan pausas entre frases, subir el tamaño mínimo de frase en `dividirFrases` (hoy 12 caracteres la primera y 50 las demás).
 - Linterna, vibrar y batería dependen de Termux: solo funcionan corriendo local.
 - Cada mensaje hace varias llamadas a Supabase (validar sesión, leer historial y recuerdos, guardar), así que hay algo más de latencia que antes.
 - El chat de un usuario se crea al enviar su primer mensaje; "Nuevo chat" solo prepara la pantalla.
@@ -84,7 +87,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 3. Antes de abrir Jarvis a otras personas: reactivar "Confirm email" en Supabase y confirmar que la app de Google esté publicada (modo Producción).
 4. **Resumen automático** de la charla vieja, siempre presente en el contexto (hoy solo se recuerdan 20 mensajes).
 5. Modelo por defecto más grande (Gemini Flash normal en vez de flash-lite).
-6. Reponer las funciones quitadas en Vercel (voz de mejor calidad; acciones de dispositivo si hay forma).
+6. Reponer las funciones quitadas en Vercel: voz de mejor calidad (por ahora se deja Piper local; opciones evaluadas: Gemini TTS gratis con límites y tono por instrucciones, o Piper en un servidor aparte con Docker, donde lo gratis se duerme) y acciones de dispositivo si hay forma. Para una voz estilo JARVIS de Iron Man no hay versión gratis oficial; probar voces masculinas de Gemini TTS (Charon, Orus, Iapetus) en Google AI Studio con instrucción de tono de mayordomo.
 7. Funciones del sidebar marcadas "Próximamente": buscar en los chats y recordatorios (ahora podrían guardarse por usuario en Supabase).
 
 **Meta principal**: que Jarvis tenga buena memoria, entienda de qué se habla y no lo confunda con otra cosa cuando David cambia una palabra.
