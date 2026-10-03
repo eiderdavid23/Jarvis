@@ -359,6 +359,97 @@
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 </style>
+<style id="estiloAdjuntos">
+  /* --- Caja de 2 filas: texto arriba, controles abajo --- */
+  #inputArea { flex-direction: column; align-items: stretch; gap: 0; padding: 8px 8px 6px; border-radius: 24px; }
+  #inputArea.multi { border-radius: 24px; }
+  #texto { flex: none; width: 100%; padding: 8px 8px 8px 10px; height: 40px; min-height: 40px; }
+  #filaControles { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  #filaControles .espacio { flex: 1; }
+  #filaControles .btnRedondo { width: 40px; height: 40px; }
+  #btnMas { background: transparent; color: var(--cian); border: 1px solid var(--linea); }
+  #pildora {
+    height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--linea);
+    background: transparent; color: var(--suave); font-size: 13px; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden;
+  }
+  #pildora b { color: var(--cian); font-weight: 600; }
+  #pildora:active { transform: scale(.96); }
+
+  /* --- Adjuntos: miniaturas y chips --- */
+  #adjStrip { display: none; gap: 10px; overflow-x: auto; padding: 9px 9px 8px 4px; -webkit-overflow-scrolling: touch; }
+  #adjStrip.hay { display: flex; }
+  .adj { position: relative; flex: 0 0 auto; border-radius: 12px; border: 1px solid var(--linea); background: var(--panel); }
+  .adjImg { width: 60px; height: 60px; }
+  .adjImg img { width: 100%; height: 100%; object-fit: cover; border-radius: 11px; display: block; }
+  .adjArch { height: 60px; max-width: 170px; display: flex; align-items: center; gap: 8px; padding: 0 12px 0 8px; }
+  .adjIco {
+    flex: 0 0 auto; min-width: 34px; height: 34px; padding: 0 4px; border-radius: 9px;
+    background: var(--linea); color: var(--cian); font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .adjNom { font-size: 13px; color: var(--texto); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .adjX {
+    position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; padding: 0; border-radius: 50%;
+    border: 1px solid var(--linea); background: var(--panel2); color: var(--texto);
+    font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .adjMsg { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .adjMsg .adjImg { width: 96px; height: 96px; }
+  .adjMsg .adjArch { height: 48px; max-width: 100%; }
+
+  /* --- Hojas desde abajo --- */
+  #hojaVelo {
+    position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.5);
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+  }
+  #hojaVelo.on { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+  .hoja {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; max-width: 760px; margin: 0 auto;
+    background: var(--panel); border: 1px solid var(--linea); border-bottom: none; border-radius: 24px 24px 0 0;
+    padding: 10px 16px calc(18px + env(safe-area-inset-bottom)); box-shadow: 0 -10px 40px rgba(0,0,0,.35);
+    transform: translateY(105%); visibility: hidden; transition: transform .32s var(--ease), visibility 0s linear .32s;
+  }
+  .hoja.on { transform: none; visibility: visible; transition: transform .32s var(--ease); }
+  .hojaAgarre { width: 40px; height: 4px; border-radius: 2px; background: var(--suave); opacity: .45; margin: 0 auto 12px; }
+  .hojaTit { text-align: center; font-size: 16px; font-weight: 600; color: var(--texto); margin: 0 0 14px; }
+  .hojaGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .opHoja {
+    display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 6px;
+    border-radius: 16px; border: 1px solid var(--linea); background: var(--panel2); color: var(--texto); font-size: 14px;
+  }
+  .opHoja svg { color: var(--cian); }
+  .opHoja:active { transform: scale(.97); }
+  .filaNivel {
+    width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 6px;
+    border-radius: 14px; border: 1px solid transparent; background: transparent; color: var(--texto);
+    text-align: left; font-size: 15px;
+  }
+  .filaNivel .nivTxt { flex: 1; }
+  .filaNivel small { display: block; margin-top: 2px; color: var(--suave); font-size: 12.5px; }
+  .filaNivel .nivOk {
+    width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid var(--linea);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .filaNivel .nivOk::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--panel); display: none; }
+  .filaNivel.on { border-color: var(--cian); background: var(--panel2); }
+  .filaNivel.on .nivOk { background: var(--cian); border-color: var(--cian); }
+  .filaNivel.on .nivOk::after { display: block; }
+
+  /* --- Aviso breve --- */
+  #toastAdj {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 130px); z-index: 45;
+    max-width: min(88vw, 420px); padding: 10px 16px; border-radius: 14px; text-align: center; font-size: 14px;
+    background: var(--panel); color: var(--texto); border: 1px solid var(--linea); box-shadow: 0 8px 30px rgba(0,0,0,.35);
+    opacity: 0; pointer-events: none; transform: translate(-50%, 10px); transition: opacity .25s, transform .25s;
+  }
+  #toastAdj.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* --- Tema claro --- */
+  [data-tema="claro"] .hoja { box-shadow: 0 -10px 40px rgba(20,60,80,.2); }
+  [data-tema="claro"] #hojaVelo { background: rgba(0,0,0,.32); }
+  [data-tema="claro"] #toastAdj { box-shadow: 0 8px 30px rgba(20,60,80,.2); }
+</style>
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
@@ -405,7 +496,14 @@
 </div>
 
 <div id="inputArea">
+  <div id="adjStrip"></div>
   <textarea id="texto" name="mensaje" rows="1" placeholder="Habla con Jarvis..." autocomplete="off" autocapitalize="sentences" enterkeyhint="send"></textarea>
+  <div id="filaControles">
+    <button id="btnMas" class="btnRedondo" type="button" aria-label="Agregar adjunto">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button id="pildora" type="button" aria-label="Nivel de pensamiento"><span>Jarvis 1.0</span><b id="pildoraNivel">Medio</b><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+    <span class="espacio"></span>
   <button id="btnVoz" class="btnRedondo" aria-label="Dictar">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
   </button>
@@ -413,6 +511,28 @@
     <svg class="icoOnda" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="6" x2="8" y2="18"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="16" y1="7" x2="16" y2="17"/><line x1="20" y1="10" x2="20" y2="14"/></svg>
     <svg class="icoEnviar" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
   </button>
+  </div>
+  <input type="file" id="inCamara" accept="image/*" capture="environment" hidden>
+  <input type="file" id="inFotos" accept="image/*" multiple hidden>
+  <input type="file" id="inArchivos" multiple hidden>
+</div>
+
+<div id="hojaVelo"></div>
+<div class="hoja" id="hojaMas">
+  <div class="hojaAgarre"></div>
+  <p class="hojaTit">Agregar a Jarvis</p>
+  <div class="hojaGrid">
+    <button class="opHoja" id="opCamara" type="button"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Cámara</span></button>
+    <button class="opHoja" id="opFotos" type="button"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Fotos</span></button>
+    <button class="opHoja" id="opArchivos" type="button"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><span>Archivos</span></button>
+  </div>
+</div>
+<div class="hoja" id="hojaNivel">
+  <div class="hojaAgarre"></div>
+  <p class="hojaTit">Nivel de pensamiento</p>
+  <button class="filaNivel" type="button" data-nivel="bajo"><span class="nivTxt">Bajo<small>Respuestas rápidas</small></span><span class="nivOk"></span></button>
+  <button class="filaNivel" type="button" data-nivel="medio"><span class="nivTxt">Medio<small>Equilibrado (recomendado)</small></span><span class="nivOk"></span></button>
+  <button class="filaNivel" type="button" data-nivel="alto"><span class="nivTxt">Alto<small>Más profundo, pero más lento</small></span><span class="nivOk"></span></button>
 </div>
 
 <div id="velo"></div>
@@ -661,7 +781,7 @@ const vozJarvis = document.getElementById('vozJarvis');
 function bajarChat() {
   requestAnimationFrame(() => chat.scrollTo({ top: chat.scrollHeight, behavior: 'smooth' }));
 }
-function agregarMensaje(txt, clase) {
+function agregarMensaje(txt, clase, adjs) {
   const fila = document.createElement('div');
   fila.className = 'fila ' + clase;
   if (clase === 'jarvis') {
@@ -671,7 +791,16 @@ function agregarMensaje(txt, clase) {
   }
   const b = document.createElement('div');
   b.className = 'burbuja';
-  b.textContent = txt;
+  if (adjs && adjs.length) {
+    const cont = document.createElement('div');
+    cont.className = 'adjMsg';
+    adjs.forEach((a) => cont.appendChild(elAdjunto(a, false)));
+    if (!txt) cont.style.marginBottom = '0';
+    b.appendChild(cont);
+    if (txt) b.appendChild(document.createTextNode(txt));
+  } else {
+    b.textContent = txt;
+  }
   fila.appendChild(b);
   chatInner.appendChild(fila);
   bajarChat();
@@ -689,12 +818,12 @@ const inputArea = document.getElementById('inputArea');
 function ajustarCaja() {
   texto.style.height = 'auto';
   const h = Math.min(texto.scrollHeight, 176);
-  texto.style.height = Math.max(h, 44) + 'px';
+  texto.style.height = Math.max(h, 40) + 'px';
   inputArea.classList.toggle('multi', h > 50);
 }
 function actualizarBotonAccion() {
   ajustarCaja();
-  const hay = texto.value.trim().length > 0;
+  const hay = texto.value.trim().length > 0 || adjuntos.length > 0;
   btnAccion.classList.toggle('conTexto', hay);
   btnAccion.style.display = (!hay && !SR) ? 'none' : 'flex';
 }
@@ -824,6 +953,220 @@ function detenerHabla() {
   if (finHablaActual) finHablaActual();
 }
 
+/* ========== Adjuntos y nivel de pensamiento ========== */
+const MAX_ADJ = 5;
+const MAX_TOTAL_B64 = 3300000;
+const MAX_LADO = 1600;
+const EXT_TEXTO = ['txt','md','csv','tsv','json','jsonl','xml','yaml','yml','toml','ini','cfg','conf','log','html','htm',
+  'css','scss','js','mjs','jsx','ts','tsx','py','java','kt','c','h','cpp','hpp','cs','go','rs','php','rb','swift','sh',
+  'bat','sql','r','lua','dart','vue','svelte','tex','srt'];
+const NOMBRES_NIVEL = { bajo: 'Bajo', medio: 'Medio', alto: 'Alto' };
+let adjuntos = [];
+let leyendo = 0;
+let adjSeq = 0;
+let avisoT = null;
+
+const adjStrip = document.getElementById('adjStrip');
+const hojaVelo = document.getElementById('hojaVelo');
+const inCamara = document.getElementById('inCamara');
+const inFotos = document.getElementById('inFotos');
+const inArchivos = document.getElementById('inArchivos');
+inArchivos.accept = 'application/pdf,text/*,application/json,' + EXT_TEXTO.map((e) => '.' + e).join(',') + ',.pdf';
+
+function avisoAdj(msg) {
+  let t = document.getElementById('toastAdj');
+  if (!t) { t = document.createElement('div'); t.id = 'toastAdj'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.style.bottom = (window.innerHeight - inputArea.getBoundingClientRect().top + 10) + 'px';
+  t.classList.add('on');
+  clearTimeout(avisoT);
+  avisoT = setTimeout(() => t.classList.remove('on'), 3200);
+}
+
+/* --- hojas desde abajo --- */
+function cerrarHojas() {
+  hojaVelo.classList.remove('on');
+  document.querySelectorAll('.hoja').forEach((h) => h.classList.remove('on'));
+}
+function abrirHoja(id) {
+  cerrarHojas();
+  const tt = document.getElementById('toastAdj');
+  if (tt) tt.classList.remove('on');
+  texto.blur();
+  hojaVelo.classList.add('on');
+  document.getElementById(id).classList.add('on');
+}
+hojaVelo.addEventListener('click', cerrarHojas);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarHojas(); });
+document.getElementById('btnMas').addEventListener('click', () => abrirHoja('hojaMas'));
+document.getElementById('pildora').addEventListener('click', () => abrirHoja('hojaNivel'));
+document.getElementById('opCamara').addEventListener('click', () => { cerrarHojas(); inCamara.click(); });
+document.getElementById('opFotos').addEventListener('click', () => { cerrarHojas(); inFotos.click(); });
+document.getElementById('opArchivos').addEventListener('click', () => { cerrarHojas(); inArchivos.click(); });
+[inCamara, inFotos, inArchivos].forEach((inp) => {
+  inp.addEventListener('change', () => {
+    const lista = Array.from(inp.files || []);
+    inp.value = '';
+    if (lista.length) agregarArchivos(lista);
+  });
+});
+
+/* --- nivel de pensamiento (se guarda en localStorage) --- */
+function nivelPensamiento() {
+  try {
+    const v = localStorage.getItem('jarvisPensamiento');
+    return NOMBRES_NIVEL[v] ? v : 'medio';
+  } catch (e) { return 'medio'; }
+}
+function actualizarPildora() {
+  const n = nivelPensamiento();
+  document.getElementById('pildoraNivel').textContent = NOMBRES_NIVEL[n];
+  document.querySelectorAll('.filaNivel').forEach((f) => f.classList.toggle('on', f.dataset.nivel === n));
+}
+document.querySelectorAll('.filaNivel').forEach((f) => {
+  f.addEventListener('click', () => {
+    try { localStorage.setItem('jarvisPensamiento', f.dataset.nivel); } catch (e) {}
+    actualizarPildora();
+    cerrarHojas();
+  });
+});
+actualizarPildora();
+
+/* --- archivos --- */
+function extDe(n) { const m = /\.([^.]+)$/.exec(n || ''); return m ? m[1].toLowerCase() : ''; }
+function clasificarArchivo(f) {
+  const t = (f.type || '').toLowerCase();
+  const e = extDe(f.name);
+  if (t.indexOf('image/') === 0) return 'imagen';
+  if (t === 'application/pdf' || e === 'pdf') return 'pdf';
+  if (EXT_TEXTO.indexOf(e) >= 0 || t.indexOf('text/') === 0 || t === 'application/json') return 'texto';
+  return '';
+}
+function totalB64() { return adjuntos.reduce((n, a) => n + a.datos.length, 0); }
+function blobABase64(blob) {
+  return new Promise((ok, mal) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1] || '');
+    r.onerror = () => mal(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+function cargarImagen(file) {
+  return new Promise((ok, mal) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); ok(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); mal(new Error('imagen')); };
+    img.src = url;
+  });
+}
+/* Reduce a JPEG (max 1600 px). Si aun no cabe en lo que queda de presupuesto, baja calidad y tamano. */
+async function reducirImagen(file, presupuestoB64) {
+  const img = await cargarImagen(file);
+  const intentos = [[MAX_LADO, 0.82], [MAX_LADO, 0.65], [1280, 0.6], [1024, 0.55]];
+  let blob = null;
+  for (const [lado, calidad] of intentos) {
+    const esc = Math.min(1, lado / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * esc));
+    const h = Math.max(1, Math.round(img.naturalHeight * esc));
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const cx = cv.getContext('2d');
+    cx.fillStyle = '#fff';
+    cx.fillRect(0, 0, w, h);
+    cx.drawImage(img, 0, 0, w, h);
+    blob = await new Promise((r) => cv.toBlob(r, 'image/jpeg', calidad));
+    if (!blob) throw new Error('canvas');
+    if (Math.ceil(blob.size / 3) * 4 <= presupuestoB64) break;
+  }
+  return blob;
+}
+async function agregarArchivos(lista) {
+  for (const f of lista) {
+    if (adjuntos.length >= MAX_ADJ) { avisoAdj('Máximo ' + MAX_ADJ + ' adjuntos por mensaje, señor.'); break; }
+    const clase = clasificarArchivo(f);
+    if (!clase) { avisoAdj('No puedo leer "' + f.name + '". Admito imágenes, PDF y archivos de texto o código.'); continue; }
+    const libre = MAX_TOTAL_B64 - totalB64();
+    if (clase !== 'imagen' && Math.ceil(f.size / 3) * 4 > libre) {
+      avisoAdj('"' + f.name + '" es demasiado grande (el total máximo es de unos 3 MB).');
+      continue;
+    }
+    leyendo++;
+    avisoAdj('Leyendo ' + (f.name || 'archivo') + '...');
+    try {
+      let blob = f;
+      let tipo = f.type || '';
+      let nombre = f.name || 'archivo';
+      if (clase === 'imagen') {
+        blob = await reducirImagen(f, libre);
+        tipo = 'image/jpeg';
+        nombre = nombre.replace(/\.[^.]+$/, '') + '.jpg';
+      } else if (clase === 'pdf') {
+        tipo = 'application/pdf';
+      } else if (!tipo) {
+        tipo = 'text/plain';
+      }
+      const datos = await blobABase64(blob);
+      if (adjuntos.length >= MAX_ADJ) { avisoAdj('Máximo ' + MAX_ADJ + ' adjuntos por mensaje, señor.'); break; }
+      if (datos.length + totalB64() > MAX_TOTAL_B64) {
+        avisoAdj('"' + nombre + '" no cabe: el total de adjuntos no puede pasar de unos 3 MB.');
+        continue;
+      }
+      adjuntos.push({ id: ++adjSeq, nombre, tipo, datos, clase, url: clase === 'imagen' ? URL.createObjectURL(blob) : '' });
+      renderAdjuntos();
+      avisoAdj('Listo: ' + nombre);
+    } catch (e) {
+      avisoAdj('No pude leer "' + (f.name || 'el archivo') + '".');
+    } finally {
+      leyendo--;
+    }
+  }
+  actualizarBotonAccion();
+}
+
+/* --- miniaturas y chips --- */
+function elAdjunto(a, conX) {
+  const d = document.createElement('div');
+  d.className = 'adj ' + (a.clase === 'imagen' ? 'adjImg' : 'adjArch');
+  if (a.clase === 'imagen') {
+    const i = document.createElement('img');
+    i.src = a.url;
+    i.alt = a.nombre;
+    d.appendChild(i);
+  } else {
+    const ic = document.createElement('span');
+    ic.className = 'adjIco';
+    ic.textContent = (extDe(a.nombre) || 'ARCH').slice(0, 4).toUpperCase();
+    const nm = document.createElement('span');
+    nm.className = 'adjNom';
+    nm.textContent = a.nombre;
+    d.appendChild(ic);
+    d.appendChild(nm);
+  }
+  if (conX) {
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'adjX';
+    x.setAttribute('aria-label', 'Quitar ' + a.nombre);
+    x.textContent = '×';
+    x.addEventListener('click', () => quitarAdjunto(a.id));
+    d.appendChild(x);
+  }
+  return d;
+}
+function renderAdjuntos() {
+  adjStrip.innerHTML = '';
+  adjuntos.forEach((a) => adjStrip.appendChild(elAdjunto(a, true)));
+  adjStrip.classList.toggle('hay', adjuntos.length > 0);
+  actualizarBotonAccion();
+}
+function quitarAdjunto(id) {
+  const a = adjuntos.find((x) => x.id === id);
+  if (a && a.url) URL.revokeObjectURL(a.url);
+  adjuntos = adjuntos.filter((x) => x.id !== id);
+  renderAdjuntos();
+}
+
 /* ========== Enviar mensaje ========== */
 let procesando = false;
 
@@ -837,13 +1180,16 @@ function procesarAcciones(txt) {
 
 async function enviarMensaje(desdeVoz) {
   const mensaje = texto.value.trim();
-  if (!mensaje || procesando) return;
+  const adj = desdeVoz ? [] : adjuntos.slice();
+  if ((!mensaje && !adj.length) || procesando) return;
+  if (leyendo > 0) { avisoAdj('Un momento, señor: sigo leyendo los archivos.'); return; }
   procesando = true;
   if (modo === 'inicio') cambiarModo('chat');
   if (hablando) detenerHabla();
 
-  agregarMensaje(mensaje, 'user');
+  agregarMensaje(mensaje, 'user', adj);
   texto.value = '';
+  if (adj.length) { adjuntos = []; renderAdjuntos(); }
   actualizarBotonAccion();
   if (desdeVoz) { vozUsuario.textContent = mensaje; vozJarvis.textContent = ''; }
   const escribiendo = agregarEscribiendo();
@@ -862,9 +1208,12 @@ async function enviarMensaje(desdeVoz) {
         'Content-Type': 'application/json',
         'X-Proveedor': proveedor,
         'X-Gemini-Key': llaveGemini,
-        'X-Groq-Key': llaveGroq
+        'X-Groq-Key': llaveGroq,
+        'X-Pensamiento': nivelPensamiento()
       },
-      body: JSON.stringify({ mensaje, zona_horaria: zonaHoraria })
+      body: JSON.stringify(adj.length
+        ? { mensaje, zona_horaria: zonaHoraria, adjuntos: adj.map((a) => ({ nombre: a.nombre, tipo: a.tipo, datos: a.datos })) }
+        : { mensaje, zona_horaria: zonaHoraria })
     });
     const data = await res.json();
     escribiendo.remove();
@@ -987,7 +1336,7 @@ btnVoz.addEventListener('click', () => {
 });
 
 btnAccion.addEventListener('click', () => {
-  if (texto.value.trim()) enviarMensaje(false);
+  if (texto.value.trim() || adjuntos.length) enviarMensaje(false);
   else entrarVoz();
 });
 const esTactil = window.matchMedia('(pointer: coarse)').matches;
