@@ -362,21 +362,106 @@
   sb.insertBefore(titulo, seccionPronto);
   sb.insertBefore(lista, seccionPronto);
 
-  const salir = document.createElement('button');
-  salir.className = 'sbItem';
-  salir.id = 'sbSalir';
-  sb.insertBefore(salir, sb.querySelector('.sbPie'));
+  /* ---------- tarjeta de usuario + cerrar sesion (con confirmacion) ---------- */
+  const st2 = document.createElement('style');
+  st2.textContent = `
+    #sidebar .sbPie { gap: 10px; justify-content: flex-start; padding: 14px 6px 2px; font-size: 12px; }
+    .syAv { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #05070d; background: radial-gradient(circle at 30% 30%, #c8faff, var(--cian) 72%); }
+    .syDatos { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+    .syDatos b { font-size: 14px; font-weight: 600; color: var(--texto); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .syDatos small { font-size: 11px; color: var(--suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .syBtn { width: 38px; height: 38px; flex: 0 0 38px; padding: 0; border-radius: 12px; border: 1px solid var(--linea); background: transparent; color: var(--suave); display: flex; align-items: center; justify-content: center; transition: transform .15s, color .2s, border-color .2s; }
+    .syBtn:active { transform: scale(.92); color: var(--rojo); border-color: rgba(255,90,90,.5); }
+    #syOverlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(0,0,0,.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility 0s linear .3s; }
+    #syOverlay.abierto { opacity: 1; visibility: visible; transition: opacity .3s ease; }
+    .syCard { position: relative; width: min(100%, 340px); text-align: center; padding: 26px 22px 20px; border-radius: 22px; background: var(--panel); border: 1px solid var(--linea); box-shadow: 0 24px 70px rgba(0,0,0,.55); transform: translateY(14px) scale(.95); transition: transform .4s var(--ease); }
+    #syOverlay.abierto .syCard { transform: none; }
+    .syCard::before { content: ""; position: absolute; top: 0; left: 16%; right: 16%; height: 1px; background: linear-gradient(90deg, transparent, var(--cian), transparent); }
+    .syOrb { position: relative; width: 64px; height: 64px; margin: 0 auto 14px; }
+    .syOrb i, .syOrb b { position: absolute; border-radius: 50%; }
+    .syOrb i { inset: 0; border: 1.5px solid transparent; }
+    .syOrb .r1 { border-top-color: var(--cian); border-bottom-color: rgba(0,229,255,.25); animation: auSpin 6s linear infinite; }
+    .syOrb .r2 { inset: 8px; border-left-color: var(--cian); border-right-color: rgba(0,229,255,.25); animation: auSpin 4s linear infinite reverse; }
+    .syOrb b { inset: 21px; background: radial-gradient(circle, #c8faff 0, var(--cian) 42%, rgba(0,229,255,0) 72%); animation: auPulse 2.6s ease-in-out infinite; }
+    .syCard h3 { margin: 0 0 8px; font-size: 18px; font-weight: 600; color: var(--texto); }
+    .syCard p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--suave); }
+    .syBtns { display: flex; gap: 10px; margin-top: 20px; }
+    .syBtns button { flex: 1; height: 46px; border-radius: 14px; font-family: inherit; font-size: 15px; cursor: pointer; transition: transform .15s; }
+    .syBtns button:active { transform: scale(.97); }
+    .syNo { border: 0; background: var(--cian); color: #05070d; font-weight: 600; }
+    .syOk { background: transparent; border: 1px solid rgba(255,90,90,.55); color: var(--rojo); }
+    .syCard.despide .syBtns { display: none; }
+    .syCard.despide .syOrb { animation: syAdios 1.5s ease forwards; }
+    @keyframes syAdios { 60% { opacity: 1; } to { opacity: .2; transform: scale(.7); } }
+    [data-tema="claro"] .syCard { box-shadow: 0 24px 70px rgba(20,60,80,.28); }
+    [data-tema="claro"] .syAv { color: #fff; background: radial-gradient(circle at 30% 30%, #4fb8d1, var(--cian) 72%); }
+    [data-tema="claro"] .syNo { color: #fff; }
+    [data-tema="claro"] .syOrb b { background: radial-gradient(circle, #fff 0, var(--cian) 42%, rgba(0,122,153,0) 72%); }
+    [data-tema="claro"] #syOverlay { background: rgba(0,0,0,.4); }
+    @media (prefers-reduced-motion: reduce) { .syCard, .syCard * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  `;
+  document.head.appendChild(st2);
+
+  let pie = sb.querySelector('.sbPie');
+  if (!pie) { pie = document.createElement('div'); pie.className = 'sbPie'; sb.appendChild(pie); }
+  pie.innerHTML = '<div class="syAv" id="syAv"></div>'
+    + '<div class="syDatos"><b id="syNom"></b><small id="syMail"></small></div>'
+    + '<button class="syBtn" id="syBtn" aria-label="Cerrar sesión" title="Cerrar sesión">'
+    + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'
+    + '</button>';
+
   function textoSalir() {
-    salir.textContent = 'Cerrar sesión' + (localStorage.getItem(K.mail) ? ' (' + localStorage.getItem(K.mail) + ')' : '');
+    const mail = localStorage.getItem(K.mail) || '';
+    let nom = localStorage.getItem(K.nom) || (mail ? mail.split('@')[0] : 'Usuario');
+    nom = nom.charAt(0).toUpperCase() + nom.slice(1);
+    document.getElementById('syNom').textContent = nom;
+    document.getElementById('syMail').textContent = mail;
+    document.getElementById('syAv').textContent = nom.charAt(0);
   }
   textoSalir();
-  salir.addEventListener('click', () => {
-    limpiarSesion();
-    cerrarSidebar();
-    reiniciarVista();
-    textoSalir();
-    mostrarLogin();
-  });
+
+  const sy = document.createElement('div');
+  sy.id = 'syOverlay';
+  sy.innerHTML = '<div class="syCard" role="dialog" aria-modal="true" aria-labelledby="syTit">'
+    + '<div class="syOrb"><i class="r1"></i><i class="r2"></i><b></b></div>'
+    + '<h3 id="syTit"></h3><p id="syTxt"></p>'
+    + '<div class="syBtns"><button class="syNo" id="syNo">Quedarme</button><button class="syOk" id="syOk">Cerrar sesión</button></div>'
+    + '</div>';
+  document.body.appendChild(sy);
+  const syCard = sy.querySelector('.syCard');
+  let despidiendo = false;
+
+  function cerrarConfirmacion() { if (!despidiendo) sy.classList.remove('abierto'); }
+  function abrirConfirmacion() {
+    const n = localStorage.getItem(K.nom);
+    document.getElementById('syTit').textContent = '¿Cerrar sesión, ' + (n || 'señor') + '?';
+    document.getElementById('syTxt').textContent = 'Sus chats y recuerdos quedan guardados. Aquí estaré cuando regrese.';
+    syCard.classList.remove('despide');
+    sy.classList.add('abierto');
+  }
+  function despedirYSalir() {
+    if (despidiendo) return;
+    despidiendo = true;
+    const n = localStorage.getItem(K.nom);
+    document.getElementById('syTit').textContent = 'Hasta pronto, ' + (n || 'señor') + '.';
+    document.getElementById('syTxt').textContent = 'Sesión cerrada. Que tenga un excelente día.';
+    syCard.classList.add('despide');
+    setTimeout(() => {
+      try { if (vozActiva) salirVoz(); detenerHabla(); } catch (e) {}
+      limpiarSesion();
+      cerrarSidebar();
+      reiniciarVista();
+      textoSalir();
+      mostrarLogin();
+      sy.classList.remove('abierto');
+      despidiendo = false;
+    }, 1500);
+  }
+  document.getElementById('syBtn').addEventListener('click', abrirConfirmacion);
+  document.getElementById('syNo').addEventListener('click', cerrarConfirmacion);
+  document.getElementById('syOk').addEventListener('click', despedirYSalir);
+  sy.addEventListener('click', (e) => { if (e.target === sy) cerrarConfirmacion(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarConfirmacion(); });
 
   ['btnNuevoTop', 'sbNuevo'].forEach((id) => {
     document.getElementById(id).addEventListener('click', () => { chatId = null; marcarActivo(); });

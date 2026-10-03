@@ -6,6 +6,29 @@
 <title>J.A.R.V.I.S.</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#05070d">
+<script>
+(function () {
+  var mq = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
+  function pref() {
+    try { var p = localStorage.getItem('jarvisTema'); return (p === 'claro' || p === 'oscuro') ? p : 'sistema'; }
+    catch (e) { return 'sistema'; }
+  }
+  window.preferenciaTema = pref;
+  window.aplicarTema = function () {
+    var p = pref();
+    var t = p === 'sistema' ? (mq && mq.matches ? 'claro' : 'oscuro') : p;
+    document.documentElement.setAttribute('data-tema', t);
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', t === 'claro' ? '#f4f8fa' : '#05070d');
+  };
+  window.fijarTema = function (p) {
+    try { if (p === 'sistema') localStorage.removeItem('jarvisTema'); else localStorage.setItem('jarvisTema', p); } catch (e) {}
+    window.aplicarTema();
+  };
+  if (mq) { if (mq.addEventListener) mq.addEventListener('change', window.aplicarTema); else if (mq.addListener) mq.addListener(window.aplicarTema); }
+  window.aplicarTema();
+})();
+</script>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <style>
   :root {
@@ -123,16 +146,19 @@
   #inputArea {
     flex-shrink: 0; width: calc(100% - 24px); max-width: 760px; margin: 0 auto;
     margin-bottom: max(12px, env(safe-area-inset-bottom));
-    display: flex; align-items: center; gap: 6px; padding: 6px;
+    display: flex; align-items: flex-end; gap: 6px; padding: 6px;
     background: var(--panel2); border: 1px solid var(--linea); border-radius: 30px;
     box-shadow: 0 6px 30px rgba(0,0,0,.4);
-    transition: transform .6s var(--ease), opacity .4s ease, border-color .2s;
+    transition: transform .6s var(--ease), opacity .4s ease, border-color .2s, border-radius .2s;
   }
+  #inputArea.multi { border-radius: 24px; }
   #inputArea:focus-within { border-color: rgba(0,229,255,.45); }
   body.m-voz #inputArea { transform: translateY(140%); opacity: 0; pointer-events: none; }
   #texto {
-    flex: 1; min-width: 0; background: transparent; border: none; outline: none;
-    color: var(--texto); font-size: 16px; font-family: inherit; padding: 10px 8px 10px 14px;
+    flex: 1; min-width: 0; background: transparent; border: none; outline: none; resize: none;
+    color: var(--texto); font-size: 16px; font-family: inherit; line-height: 22px;
+    padding: 11px 8px 11px 14px; height: 44px; min-height: 44px; max-height: 176px;
+    overflow-y: auto; display: block; margin: 0;
   }
   #texto::placeholder { color: #5d8590; }
   .btnRedondo {
@@ -271,6 +297,64 @@
   .filaSwitch { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #eafcff; font-size: 14px; margin-bottom: 10px; }
   .filaSwitch input { width: 20px; height: 20px; accent-color: #00e5ff; }
 
+  /* --- Selector de tema --- */
+  :root { color-scheme: dark; }
+  .opcionesTema { display: flex; gap: 6px; background: var(--fondo); border: 1px solid var(--linea); border-radius: 12px; padding: 4px; margin-bottom: 10px; }
+  .opTema { flex: 1; padding: 10px 6px; border: none; border-radius: 9px; background: transparent; color: var(--suave); font-size: 13px; transition: background .2s, color .2s; }
+  .opTema.on { background: var(--cian); color: #05070d; font-weight: bold; }
+
+  /* --- Tema claro --- */
+  :root[data-tema="claro"] {
+    color-scheme: light;
+    --fondo: #f4f8fa; --panel: #ffffff; --panel2: #ffffff;
+    --linea: rgba(0,122,153,.24); --cian: #007a99; --texto: #0e2530;
+    --suave: #4a6b77; --verde: #1a9e55; --rojo: #d83a3a;
+  }
+  :root[data-tema="claro"], :root[data-tema="claro"] body {
+    background: radial-gradient(120% 70% at 50% 0%, #dcedf4 0%, var(--fondo) 62%);
+  }
+  [data-tema="claro"] .btnIcono:active, [data-tema="claro"] .sbItem:active { background: rgba(0,122,153,.12); }
+  [data-tema="claro"] #btnSilencio.silenciado, [data-tema="claro"] #btnVoz.activo { background: #fde6e6; border-color: rgba(216,58,58,.4); }
+  [data-tema="claro"] .chip { background: rgba(0,122,153,.08); }
+  [data-tema="claro"] .chip:active { background: rgba(0,122,153,.18); }
+  [data-tema="claro"] .fila.user .burbuja { background: #e2eef3; border-color: rgba(0,0,0,.06); }
+  [data-tema="claro"] .fila.jarvis .burbuja, [data-tema="claro"] #vozJarvis { color: var(--texto); }
+  [data-tema="claro"] .avatar { background: radial-gradient(circle, #fff 0 22%, rgba(0,140,180,.9) 38%, rgba(0,140,180,0) 72%); }
+  [data-tema="claro"] #inputArea { box-shadow: 0 6px 24px rgba(20,60,80,.14); }
+  [data-tema="claro"] #inputArea:focus-within { border-color: rgba(0,122,153,.55); }
+  [data-tema="claro"] #texto::placeholder, [data-tema="claro"] #pieVoz small, [data-tema="claro"] .sbSeccion { color: #6b8a95; }
+  [data-tema="claro"] #btnAccion { color: #fff; }
+  [data-tema="claro"] #velo { background: rgba(0,0,0,.32); }
+  [data-tema="claro"] #overlayAjustes { background: rgba(0,0,0,.4); }
+  [data-tema="claro"] #sidebar { background: linear-gradient(180deg, #ffffff, #eef5f8); }
+  [data-tema="claro"] #panelAjustes { background: linear-gradient(180deg, #ffffff 0%, #f1f7fa 100%); border-color: var(--linea); box-shadow: 0 20px 60px rgba(20,60,80,.25); }
+  [data-tema="claro"] #panelHeader, [data-tema="claro"] #tabsAjustes { border-bottom-color: var(--linea); }
+  [data-tema="claro"] #btnCerrarPanel { background: #eef5f8; border-color: var(--linea); }
+  [data-tema="claro"] .tabAjuste { color: #3f7f91; }
+  [data-tema="claro"] .tabAjuste.activo, [data-tema="claro"] .btnPanel, [data-tema="claro"] .badge.on, [data-tema="claro"] .opTema.on { color: #fff; }
+  [data-tema="claro"] .vistaAjuste p { color: #3d5f6b; }
+  [data-tema="claro"] .card { background: #f3f8fa; border-color: var(--linea); }
+  [data-tema="claro"] .cardHead strong, [data-tema="claro"] .filaSwitch { color: var(--texto); }
+  [data-tema="claro"] .badge { color: #3f7f91; border-color: var(--linea); }
+  [data-tema="claro"] .campoTexto, [data-tema="claro"] .campoMeta, [data-tema="claro"] .usoBarraFondo { background: #fff; border-color: var(--linea); color: var(--texto); }
+  [data-tema="claro"] .campoTexto::placeholder { color: #7a98a3; }
+  [data-tema="claro"] .filaSwitch input { accent-color: #007a99; }
+  [data-tema="claro"] .btnPanel.secundario { color: #c93030; border-color: rgba(201,48,48,.4); background: transparent; }
+  [data-tema="claro"] [style*="color:#00e5ff"] { color: var(--cian) !important; }
+  [data-tema="claro"] [style*="border-color:#00e5ff55"] { border-color: rgba(0,122,153,.45) !important; }
+  [data-tema="claro"] [style*="color:#35e07a"] { color: var(--verde) !important; }
+  [data-tema="claro"] [style*="border-color:#35e07a55"] { border-color: rgba(26,158,85,.45) !important; }
+  /* login y lista de chats (auth.js) */
+  [data-tema="claro"] .chatItem.activo { background: rgba(0,122,153,.12); }
+  [data-tema="claro"] .auBg::before { background-image: linear-gradient(rgba(0,122,153,.09) 1px, transparent 1px), linear-gradient(90deg, rgba(0,122,153,.09) 1px, transparent 1px); }
+  [data-tema="claro"] .auBlob { opacity: .22; }
+  [data-tema="claro"] .auCard { background: rgba(255,255,255,.82); box-shadow: 0 24px 70px rgba(20,60,80,.22); }
+  [data-tema="claro"] .auGoogle { border: 1px solid #d5e3e9; }
+  [data-tema="claro"] .auTabs button.on, [data-tema="claro"] .auGo { color: #fff; }
+  [data-tema="claro"] .auOrb b { background: radial-gradient(circle, #fff 0, var(--cian) 42%, rgba(0,122,153,0) 72%); }
+  [data-tema="claro"] .auGo .auSp { border-color: rgba(255,255,255,.4); border-top-color: #fff; }
+  [data-tema="claro"] .auGo { box-shadow: 0 8px 24px rgba(0,122,153,.25); }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
@@ -321,7 +405,7 @@
 </div>
 
 <div id="inputArea">
-  <input type="text" id="texto" name="mensaje" placeholder="Habla con Jarvis..." autocomplete="off" autocapitalize="sentences" enterkeyhint="send">
+  <textarea id="texto" name="mensaje" rows="1" placeholder="Habla con Jarvis..." autocomplete="off" autocapitalize="sentences" enterkeyhint="send"></textarea>
   <button id="btnVoz" class="btnRedondo" aria-label="Dictar">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
   </button>
@@ -355,7 +439,7 @@
   <div class="sbItem pronto">Historial de chats <span class="chipPronto">Pronto</span></div>
   <div class="sbItem pronto">Buscar <span class="chipPronto">Pronto</span></div>
   <div class="sbItem pronto">Recordatorios <span class="chipPronto">Pronto</span></div>
-  <div class="sbPie"><span>Proveedor de IA</span><span id="sbProveedor">Gemini</span></div>
+  <div class="sbPie" id="sbPie"></div>
 </aside>
 <div id="overlayAjustes">
   <div id="panelAjustes">
@@ -366,6 +450,7 @@
     <div id="tabsAjustes">
       <button class="tabAjuste activo" data-tab="llave">Llave IA</button>
       <button class="tabAjuste" data-tab="voz">Voz</button>
+      <button class="tabAjuste" data-tab="tema">Tema</button>
       <button class="tabAjuste" data-tab="uso">Uso</button>
       <button class="tabAjuste" data-tab="acerca">Acerca de</button>
     </div>
@@ -421,6 +506,18 @@
         <div class="card">
           <label class="filaSwitch"><span>Hablar las respuestas del chat</span><input type="checkbox" id="chkHablarChat"></label>
           <p style="margin:0; font-size:11px; opacity:0.7;">En modo voz siempre habla. Usa la voz Piper del servidor; si no está disponible (por ejemplo en Vercel) usa la voz del navegador.</p>
+        </div>
+      </div>
+
+      <div class="vistaAjuste" id="tabTema">
+        <h3>Tema</h3>
+        <div class="card">
+          <div class="opcionesTema">
+            <button class="opTema" data-tema="sistema">Sistema</button>
+            <button class="opTema" data-tema="claro">Claro</button>
+            <button class="opTema" data-tema="oscuro">Oscuro</button>
+          </div>
+          <p style="margin:0; font-size:11px; opacity:0.7;">Sistema sigue el modo claro u oscuro de tu celular y cambia solo cuando tú lo cambias.</p>
         </div>
       </div>
 
@@ -487,6 +584,9 @@ function animar() {
   if (estadoActual === 'escuchando') { velocidad = 0.03; amplitud = 1.25; color = '0,255,180'; }
   if (estadoActual === 'pensando')   { velocidad = 0.035; amplitud = 1.1 + Math.sin(t * 0.25) * 0.12; color = '140,170,255'; }
   if (estadoActual === 'hablando')   { velocidad = 0.05; amplitud = 1.5 + Math.sin(t * 0.3) * 0.15; color = '0,229,255'; }
+  if (document.documentElement.getAttribute('data-tema') === 'claro') {
+    color = ({ '0,229,255': '0,140,180', '0,255,180': '0,155,105', '140,170,255': '85,100,225' })[color] || color;
+  }
   t += velocidad * 10;
   const nucleoR = base * 0.35 * amplitud;
   const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, nucleoR * 1.8);
@@ -585,7 +685,15 @@ function agregarEscribiendo() {
   bajarChat();
   return fila;
 }
+const inputArea = document.getElementById('inputArea');
+function ajustarCaja() {
+  texto.style.height = 'auto';
+  const h = Math.min(texto.scrollHeight, 176);
+  texto.style.height = Math.max(h, 44) + 'px';
+  inputArea.classList.toggle('multi', h > 50);
+}
 function actualizarBotonAccion() {
+  ajustarCaja();
   const hay = texto.value.trim().length > 0;
   btnAccion.classList.toggle('conTexto', hay);
   btnAccion.style.display = (!hay && !SR) ? 'none' : 'flex';
@@ -882,8 +990,10 @@ btnAccion.addEventListener('click', () => {
   if (texto.value.trim()) enviarMensaje(false);
   else entrarVoz();
 });
+const esTactil = window.matchMedia('(pointer: coarse)').matches;
+if (esTactil) texto.setAttribute('enterkeyhint', 'enter');
 texto.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); enviarMensaje(false); }
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !esTactil) { e.preventDefault(); enviarMensaje(false); }
 });
 document.getElementById('btnColgar').addEventListener('click', salirVoz);
 orbWrap.addEventListener('click', () => {
@@ -1091,6 +1201,15 @@ function fijarHablarChat(activa) {
 btnSilencio.addEventListener('click', () => fijarHablarChat(!hablarChat()));
 chkHablarChat.addEventListener('change', () => fijarHablarChat(chkHablarChat.checked));
 pintarSilencio();
+
+function pintarTema() {
+  const p = preferenciaTema();
+  document.querySelectorAll('.opTema').forEach((b) => b.classList.toggle('on', b.dataset.tema === p));
+}
+document.querySelectorAll('.opTema').forEach((b) => {
+  b.addEventListener('click', () => { fijarTema(b.dataset.tema); pintarTema(); });
+});
+pintarTema();
 </script>
 <script src="/auth.js"></script>
 <script>

@@ -63,6 +63,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **2 oct 2026**: nuevo frontend estilo Claude (`public/index.html` reemplazado; la copia anterior quedó fuera del repo): sidebar, burbujas, animaciones, orbe con 3 modos y modo voz continuo. Se entregó en 6 partes (1014 líneas) y se desplegó en Vercel.
 - **3 oct 2026**: botón para silenciar la voz del chat (barra superior, sincronizado con Ajustes; calla al instante y no afecta al modo voz) y voz por frases (empieza a hablar con la primera frase sin esperar todo el audio). Se entregaron como `parche_silencio.py` y `parche_frases.py`. Probado en Chrome headless con audio simulado; no se probó con Piper real en el celular. Se decidió dejar por ahora la voz Piper local.
 - **3 oct 2026**: cuentas por usuario con Supabase. Se creó `supa.py` y `public/auth.js`, y se parchó `server.py` e `index.html` (el primer parche falló porque asumía otra versión de `server.py`; se rehízo contra el real). Quedó hecho: login con correo y con Google, nombre del usuario en el saludo y en el prompt, historial de chats por usuario en el sidebar (crear, abrir, borrar), memoria permanente por tema con `guardar_recuerdo` y `olvidar_recuerdo`, y se quitó el autocompletado de contraseñas de Chrome en el login. Probado en local y en Vercel.
+- **3 oct 2026**: caja de texto auto-expandible (textarea que crece hacia abajo hasta ~6 líneas), tema Sistema / Claro / Oscuro (por defecto sigue el del sistema; pestaña Tema en Ajustes, se guarda en `localStorage` como `jarvisTema`) y pie del sidebar con tarjeta de usuario (inicial, nombre, correo) en lugar de "Proveedor de IA"; Cerrar sesión ahora pide confirmación con un mensaje al estilo Jarvis y se despide antes de salir. Se entregaron como `parche_caja.py`, `parche_tema.py` y `parche_salir.py`.
 
 ---
 
@@ -77,6 +78,9 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - Con "Confirm email" desactivado, cualquiera puede crear una cuenta con un correo falso.
 - Chrome ya no ofrece guardar la contraseña del login (se desactivó a propósito para quitar el cuadro de contraseñas guardadas).
 - En Android, el navegador puede sonar un bip cada vez que reinicia la escucha del modo voz (es del navegador).
+- En celular, Enter en la caja de texto hace salto de línea y se envía con el botón; en PC Enter envía y Shift+Enter hace salto de línea.
+- El color de la PWA instalada (`manifest.json`) sigue siendo oscuro aunque el tema sea claro; la barra del navegador sí cambia con el tema.
+- Borrar un chat todavía usa el `confirm()` del navegador (falta el diálogo estilo Jarvis).
 
 ---
 
