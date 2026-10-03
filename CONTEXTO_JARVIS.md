@@ -28,8 +28,8 @@ David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y 
 
 Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man: dice "señor", es conciso salvo que se pida detalle y nunca dice que es un modelo de lenguaje. Ahora es multiusuario: cada persona tiene su cuenta, sus chats y su memoria.
 
-- **Backend**: Python + Flask. `server.py` (~472 líneas) y `supa.py` (~234 líneas: login, chats y memoria en Supabase por REST con el token del usuario; no usa supabase-py). `/chat` exige sesión (decorador `requiere_login`, header `Authorization: Bearer`).
-- **Frontend**: `public/index.html` (~1104 líneas, estilo Claude) y `public/auth.js` (~305 líneas): pantalla de login, lista de chats en el sidebar (sustituyó a "Historial de chats"), "Cerrar sesión" y saludo con el nombre del usuario. En "Próximamente" quedan Buscar y Recordatorios.
+- **Backend**: Python + Flask. `server.py` (~810 líneas) y `supa.py` (~234 líneas: login, chats y memoria en Supabase por REST con el token del usuario; no usa supabase-py). `/chat` exige sesión (decorador `requiere_login`, header `Authorization: Bearer`).
+- **Frontend**: `public/index.html` (~1602 líneas, estilo Claude) y `public/auth.js` (~533 líneas): pantalla de login, lista de chats en el sidebar (sustituyó a "Historial de chats"), "Cerrar sesión" y saludo con el nombre del usuario. En "Próximamente" quedan Buscar y Recordatorios.
 - **Login (Supabase Auth)**: "Continuar con Google" y correo + contraseña (con campo Nombre al crear cuenta). Rutas: `/auth/registro`, `/auth/login`, `/auth/refresh`, `/auth/google`, `/auth/yo`. Google devuelve la sesión en el `#` de la URL y `auth.js` la lee. Los tokens van en el `localStorage` del navegador y se renuevan solos.
 - **Memoria (Supabase, con RLS por usuario)**: tablas `chats`, `mensajes` y `memorias` (clave/valor). Se mandan al modelo el resumen del chat (columnas `resumen` y `resumen_hasta` de `chats`) más los mensajes posteriores a ese resumen (entre 20 y 30). Los datos permanentes se guardan **por tema** (se actualizan, no se duplican). Ya no se usan `memoria_local.json` ni `memoria_persistente.json`.
 - **Herramientas** (function calling, definidas en `server.py`): `abrir_url`, `encender_linterna`, `apagar_linterna`, `vibrar`, `consultar_bateria`, `guardar_recuerdo` (tema + dato) y `olvidar_recuerdo`. Las de hardware usan Termux:API (`comandos_dispositivo.py`).
@@ -38,6 +38,9 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **IA**: Gemini por defecto (`GEMINI_MODEL`, hoy `gemini-3.5-flash-lite`) y Groq como alternativa (`openai/gpt-oss-120b`). Las llaves pueden venir del navegador (headers `X-Gemini-Key`, `X-Groq-Key`, `X-Proveedor`) o del `.env`.
 - **Voz**: Piper TTS local (`/voz`). El frontend divide la respuesta en frases (`dividirFrases`): pide el audio de la primera y, mientras suena, pide la siguiente (no espera el audio completo). Si `/voz` falla, sigue con la voz del navegador, también frase por frase, y no vuelve a intentar Piper en esa sesión.
 - **Silenciar la voz**: botón de altavoz en la barra superior (junto al "+") y interruptor en Ajustes → Voz. Activa o silencia la voz de las respuestas del chat; se guarda en `localStorage` (`jarvisHablarChat`), por defecto activada. Al silenciar calla al instante, incluso si el audio aún se estaba generando. El modo voz siempre habla.
+- **Adjuntos** (botón "+" junto a la caja de texto): hoja "Agregar a Jarvis" con Cámara, Fotos (varias) y Archivos (PDF, texto, código, csv, json…). Máximo 5 adjuntos y ~3.3 MB en total (base64), porque Vercel limita el cuerpo a ~4.5 MB; las fotos se reducen en el navegador (JPEG, máx. 1600 px). `/chat` acepta `adjuntos` `[{nombre, tipo, datos(base64)}]`: imágenes y PDF van a Gemini como `inlineData`; los de texto se anexan al mensaje; con Groq las imágenes no se ven (Jarvis avisa) y el PDF se lee con `pypdf`. Se validan antes de crear el chat. En la base solo se guarda el texto más una línea `📎 Adjuntos: nombre1, nombre2`.
+- **Nivel de pensamiento**: píldora "Jarvis 1.0 Medio" junto al "+"; abre una hoja Bajo / Medio / Alto (Medio por defecto), se guarda en `localStorage` (`jarvisPensamiento`) y viaja en el header `X-Pensamiento`. En Gemini se traduce a `thinkingConfig` (`thinkingLevel` en Gemini 3.x, `thinkingBudget` en 2.5) y en Groq a `reasoning_effort`; sube `maxOutputTokens` (2048 / 4096 / 8192 en Gemini; 1500 / 3000 / 4500 en Groq) porque el pensamiento cuenta dentro del límite. Si el proveedor rechaza el ajuste (error 400), reintenta sin él.
+- **Uso real de la API** (Ajustes → Uso): cada llamada real a Gemini o Groq (también las del resumen y las vueltas de herramientas) se anota en el servidor y se guarda en Supabase (tabla `uso_api` y función `registrar_uso`, ver `supabase_uso.sql`), con tokens de entrada y salida. El número es el mismo en el local y en Vercel. Se actualiza solo cada 5 s con la pestaña abierta y al terminar cada mensaje (`GET /uso`). El día de Gemini cambia a medianoche del Pacífico y el de Groq a medianoche UTC. Las metas (500 / 1000) siguen en `localStorage`, por dispositivo.
 - **requirements.txt**: flask, flask-cors, python-dotenv, requests, pypdf, beautifulsoup4, fpdf2, gunicorn, cryptography (`piper-tts` se quita para Vercel).
 
 **Repo**: https://github.com/eiderdavidgarcia23/Jarvis
@@ -49,7 +52,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 **Configuración externa** (no está en el repo):
 - Supabase → Authentication → Sign In / Providers: Google activado y "Confirm email" desactivado (para pruebas). URL Configuration: Site URL y Redirect URLs con la dirección de Vercel y `http://localhost:3000`.
 - Google Cloud: proyecto "Jarvis", cliente OAuth tipo Aplicación web, con la callback de Supabase como URI de redirección.
-- Las tablas y políticas RLS se crearon con un SQL ejecutado a mano en Supabase.
+- Las tablas y políticas RLS se crearon con un SQL ejecutado a mano en Supabase. También se ejecutan a mano `supabase_resumen.sql` y `supabase_uso.sql`.
 
 **Deploy (solo Vercel)**: `git add -A && git commit -m "mensaje" && git push`; Vercel redespliega solo. Render ya no se usa.
 
@@ -65,11 +68,18 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **3 oct 2026**: cuentas por usuario con Supabase. Se creó `supa.py` y `public/auth.js`, y se parchó `server.py` e `index.html` (el primer parche falló porque asumía otra versión de `server.py`; se rehízo contra el real). Quedó hecho: login con correo y con Google, nombre del usuario en el saludo y en el prompt, historial de chats por usuario en el sidebar (crear, abrir, borrar), memoria permanente por tema con `guardar_recuerdo` y `olvidar_recuerdo`, y se quitó el autocompletado de contraseñas de Chrome en el login. Probado en local y en Vercel.
 - **3 oct 2026**: caja de texto auto-expandible (textarea que crece hacia abajo hasta ~6 líneas), tema Sistema / Claro / Oscuro (por defecto sigue el del sistema; pestaña Tema en Ajustes, se guarda en `localStorage` como `jarvisTema`) y pie del sidebar con tarjeta de usuario (inicial, nombre, correo) en lugar de "Proveedor de IA"; Cerrar sesión ahora pide confirmación con un mensaje al estilo Jarvis y se despide antes de salir. Se entregaron como `parche_caja.py`, `parche_tema.py` y `parche_salir.py`.
 - **3 oct 2026**: resumen automático por chat. Al juntar 30 mensajes sin resumir, Jarvis le pide a la IA (el mismo proveedor y llave de ese mensaje) un resumen que fusiona el anterior con los mensajes más viejos, deja los últimos 20 completos y guarda el resumen en `chats.resumen`. El resumen va siempre en el prompt de ese chat. Si las columnas no existen o la IA falla, el chat sigue normal sin resumir. Se entregó como `parche_resumen.py` y `supabase_resumen.sql`.
+- **3 oct 2026**: adjuntos y nivel de pensamiento. Botón "+" con hoja (Cámara, Fotos, Archivos), miniaturas y chips con × encima del texto y dentro de la burbuja, píldora "Jarvis 1.0 Medio" con hoja Bajo / Medio / Alto, y backend con `adjuntos` y header `X-Pensamiento`. Se entregó como `parche_adjuntos_back.py`, `parche_adjuntos_front_a.py` y `parche_adjuntos_front_b.py`. Probado con Gemini, Groq y Supabase simulados y en Chrome headless (tema claro y oscuro); funcionando en el celular.
+- **3 oct 2026**: uso real de la API. Reemplaza el contador local, que contaba mensajes por navegador y no coincidía entre el local y Vercel. Ahora el servidor cuenta cada llamada real y la guarda en Supabase. Se entregó como `parche_uso_real.py` y `supabase_uso.sql`. Probado con Supabase simulado y en Chrome headless; funcionando.
 
 ---
 
 ## 4. Limitaciones conocidas
 
+- Adjuntos: Vercel limita el cuerpo a ~4.5 MB, por eso el tope es 5 adjuntos y ~3.3 MB en base64. Las fotos se reducen solas; un PDF o archivo grande no. Una foto HEIC de la galería puede no abrirse en Chrome.
+- Con Groq no se ven imágenes (Jarvis avisa) y un PDF escaneado sin texto no se puede leer.
+- El timeout hacia la IA es de 55 s. El límite de la función en Vercel depende del plan y no hay `vercel.json`: si con nivel Alto sale error 504, usar Medio.
+- El uso real cuenta solo lo que Jarvis envía: Google cuenta la cuota por proyecto, así que otras apps con la misma llave no aparecen (el total oficial está en aistudio.google.com/rate-limit). La hora de reinicio de Groq (UTC) no está verificada.
+- Si falta la tabla `uso_api`, el chat sigue normal y Uso muestra "Falta crear la tabla en Supabase". Las metas del contador siguen guardadas por dispositivo.
 - En Vercel, Piper no corre (la voz es la del navegador, más robótica; Piper solo funciona corriendo local en Termux).
 - La primera frase siempre espera el audio de `/voz` (1–2 s con Piper local). Con Piper local cada frase vuelve a lanzar Piper; si se notan pausas entre frases, subir el tamaño mínimo de frase en `dividirFrases` (hoy 12 caracteres la primera y 50 las demás).
 - Linterna, vibrar y batería dependen de Termux: solo funcionan corriendo local.
@@ -95,6 +105,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 4. Modelo por defecto más grande (Gemini Flash normal en vez de flash-lite).
 5. Reponer las funciones quitadas en Vercel: voz de mejor calidad (por ahora se deja Piper local; opciones evaluadas: Gemini TTS gratis con límites y tono por instrucciones, o Piper en un servidor aparte con Docker, donde lo gratis se duerme) y acciones de dispositivo si hay forma. Para una voz estilo JARVIS de Iron Man no hay versión gratis oficial; probar voces masculinas de Gemini TTS (Charon, Orus, Iapetus) en Google AI Studio con instrucción de tono de mayordomo.
 6. Funciones del sidebar marcadas "Próximamente": buscar en los chats y recordatorios (ahora podrían guardarse por usuario en Supabase).
+7. Metas del contador de uso guardadas por cuenta (hoy en `localStorage`, por dispositivo) y verificar a qué hora reinicia el día de Groq.
 
 **Meta principal**: que Jarvis tenga buena memoria, entienda de qué se habla y no lo confunda con otra cosa cuando David cambia una palabra.
 

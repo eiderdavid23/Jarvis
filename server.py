@@ -364,12 +364,59 @@ def config_gemini(nivel):
     return cfg
 
 
+def dia_cuota(proveedor):
+    """Dia (AAAA-MM-DD) segun el reinicio de la cuota: Gemini = medianoche del Pacifico; Groq = UTC."""
+    zona = 'America/Los_Angeles' if proveedor == 'gemini' else 'UTC'
+    return datetime.now(ZoneInfo(zona)).date().isoformat()
+
+
+def reinicio_cuota(proveedor):
+    from datetime import timedelta, timezone
+    zona = ZoneInfo('America/Los_Angeles' if proveedor == 'gemini' else 'UTC')
+    manana = (datetime.now(zona) + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return manana.astimezone(timezone.utc).isoformat()
+
+
+def contar_uso(proveedor, resp):
+    """Anota una llamada real al proveedor (solo si respondio bien). Se guarda al final de /chat."""
+    if resp.status_code >= 400:
+        return
+    try:
+        acc = g.setdefault('uso_pendiente', {}).setdefault(proveedor, [0, 0, 0])
+        acc[0] += 1
+        d = resp.json()
+        if proveedor == 'gemini':
+            m = d.get('usageMetadata') or {}
+            acc[1] += int(m.get('promptTokenCount') or 0)
+            acc[2] += int(m.get('candidatesTokenCount') or 0) + int(m.get('thoughtsTokenCount') or 0)
+        else:
+            m = d.get('usage') or {}
+            acc[1] += int(m.get('prompt_tokens') or 0)
+            acc[2] += int(m.get('completion_tokens') or 0)
+    except Exception as e:
+        print('[USO] No pude leer los tokens de la respuesta:', e)
+
+
+def guardar_uso_pendiente():
+    pendiente = g.pop('uso_pendiente', None)
+    if not pendiente:
+        return
+    for prov, (n, tin, tout) in pendiente.items():
+        try:
+            supa._rest('POST', 'rpc/registrar_uso', cuerpo={
+                'p_fecha': dia_cuota(prov), 'p_proveedor': prov,
+                'p_solicitudes': n, 'p_tin': tin, 'p_tout': tout})
+        except Exception as e:
+            print('[USO] No pude guardar el uso en Supabase (¿ejecutaste supabase_uso.sql?):', e)
+
+
 def llamar_gemini(cuerpo, gen_config, api_key):
     resp = requests.post(GEMINI_URL, params={'key': api_key}, json=cuerpo, timeout=TIMEOUT_IA)
     if resp.status_code == 400 and 'thinkingConfig' in gen_config:
         print('[GEMINI] 400 con thinkingConfig; reintento sin pensamiento extendido. Cuerpo:', resp.text[:500])
         gen_config.pop('thinkingConfig', None)
         resp = requests.post(GEMINI_URL, params={'key': api_key}, json=cuerpo, timeout=TIMEOUT_IA)
+    contar_uso('gemini', resp)
     return resp
 
 
@@ -381,6 +428,7 @@ def llamar_groq(cuerpo, cfg_groq, api_key):
         cfg_groq.pop('reasoning_effort', None)
         cuerpo.pop('reasoning_effort', None)
         resp = requests.post(GROQ_URL, headers=cab, json=cuerpo, timeout=TIMEOUT_IA)
+    contar_uso('groq', resp)
     return resp
 
 
@@ -522,6 +570,7 @@ def resumir_conversacion(resumen_previo, mensajes, proveedor, api_key):
             timeout=30
         )
         resp.raise_for_status()
+        contar_uso('groq', resp)
         texto = resp.json()['choices'][0]['message'].get('content') or ''
     else:
         resp = requests.post(
@@ -535,6 +584,7 @@ def resumir_conversacion(resumen_previo, mensajes, proveedor, api_key):
             timeout=30
         )
         resp.raise_for_status()
+        contar_uso('gemini', resp)
         partes = resp.json()['candidates'][0]['content'].get('parts', [])
         texto = ''.join(p.get('text', '') for p in partes)
     return texto.strip()[:MAX_RESUMEN]
@@ -591,6 +641,29 @@ def voz():
     if audio_bytes is None:
         return jsonify({'error': 'no se pudo generar audio'}), 500
     return Response(audio_bytes, mimetype='audio/wav')
+
+
+@app.route('/uso', methods=['GET'])
+@supa.requiere_login
+def uso_api():
+    fechas = {p: dia_cuota(p) for p in ('gemini', 'groq')}
+    try:
+        filas = supa._rest('GET', 'uso_api', {
+            'select': 'fecha,proveedor,solicitudes,tokens_entrada,tokens_salida',
+            'fecha': 'in.(' + ','.join(sorted(set(fechas.values()))) + ')'}) or []
+    except supa.SupaError as e:
+        print('[USO] No pude leer uso_api:', e)
+        return jsonify({'disponible': False})
+    res = {'disponible': True}
+    for p, f in fechas.items():
+        fila = next((x for x in filas if x.get('proveedor') == p and x.get('fecha') == f), {})
+        res[p] = {'fecha': f, 'solicitudes': fila.get('solicitudes', 0),
+                  'tokens_entrada': fila.get('tokens_entrada', 0),
+                  'tokens_salida': fila.get('tokens_salida', 0),
+                  'reinicia': reinicio_cuota(p)}
+    r = jsonify(res)
+    r.headers['Cache-Control'] = 'no-store'
+    return r
 
 
 @app.route('/chat', methods=['POST'])
@@ -723,6 +796,9 @@ def chat():
         print('[ERROR] Excepcion inesperada en /chat:', e)
         traceback.print_exc()
         return jsonify({'respuesta': 'Algo ha fallado de mi lado, señor.'}), 500
+
+    finally:
+        guardar_uso_pendiente()
 
 
 import logging

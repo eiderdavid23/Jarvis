@@ -117,6 +117,7 @@
 
   /* /chat pasa por aqui: agrega la sesion y el chat_id actual */
   window.fetch = function (url, opts) {
+    if (url === '/uso') return api(url, opts);
     if (url === '/chat' && opts && opts.method === 'POST') {
       try {
         const b = JSON.parse(opts.body || '{}');
