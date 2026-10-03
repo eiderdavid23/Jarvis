@@ -269,6 +269,7 @@
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 </style>
+<style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
 
@@ -308,7 +309,7 @@
 </div>
 
 <div id="inputArea">
-  <input type="text" id="texto" placeholder="Habla con Jarvis..." autocomplete="off">
+  <input type="text" id="texto" name="mensaje" placeholder="Habla con Jarvis..." autocomplete="off" autocapitalize="sentences" enterkeyhint="send">
   <button id="btnVoz" class="btnRedondo" aria-label="Dictar">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
   </button>
@@ -367,7 +368,7 @@
             <strong>Google Gemini</strong>
             <span class="badge" id="badgeLlaveGemini">Sin conectar</span>
           </div>
-          <input type="password" id="campoLlaveGemini" class="campoTexto" placeholder="Pega tu llave de Gemini (AQ...)">
+          <input type="text" id="campoLlaveGemini" class="campoTexto campoClave" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega tu llave de Gemini (AQ...)">
           <p style="font-size:11px; opacity:0.7; margin:0 0 10px;">¿No tienes una?</p>
           <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55; text-decoration:none; display:inline-block; margin-bottom:12px;">Obtener llave en AI Studio &rarr;</a>
           <div class="filaBtns">
@@ -386,7 +387,7 @@
             <strong>Groq</strong>
             <span class="badge" id="badgeLlaveGroq">Sin conectar</span>
           </div>
-          <input type="password" id="campoLlaveGroq" class="campoTexto" placeholder="Pega tu llave de Groq (gsk_...)">
+          <input type="text" id="campoLlaveGroq" class="campoTexto campoClave" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega tu llave de Groq (gsk_...)">
           <p style="font-size:11px; opacity:0.7; margin:0 0 10px;">¿No tienes una?</p>
           <a href="https://console.groq.com/keys" target="_blank" rel="noopener" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55; text-decoration:none; display:inline-block; margin-bottom:12px;">Obtener llave en Groq Console &rarr;</a>
           <div class="filaBtns">
@@ -952,7 +953,7 @@ btnBorrarLlaveGemini.addEventListener('click', () => {
   actualizarBadgesLlaves();
 });
 btnVerLlaveGemini.addEventListener('click', () => {
-  campoLlaveGemini.type = campoLlaveGemini.type === 'password' ? 'text' : 'password';
+  campoLlaveGemini.classList.toggle('campoClave');
 });
 
 btnGuardarLlaveGroq.addEventListener('click', () => {
@@ -966,7 +967,7 @@ btnBorrarLlaveGroq.addEventListener('click', () => {
   actualizarBadgesLlaves();
 });
 btnVerLlaveGroq.addEventListener('click', () => {
-  campoLlaveGroq.type = campoLlaveGroq.type === 'password' ? 'text' : 'password';
+  campoLlaveGroq.classList.toggle('campoClave');
 });
 
 btnUsarGemini.addEventListener('click', () => {
