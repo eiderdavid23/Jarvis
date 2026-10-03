@@ -41,6 +41,8 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **Adjuntos** (botón "+" junto a la caja de texto): hoja "Agregar a Jarvis" con Cámara, Fotos (varias) y Archivos (PDF, texto, código, csv, json…). Máximo 5 adjuntos y ~3.3 MB en total (base64), porque Vercel limita el cuerpo a ~4.5 MB; las fotos se reducen en el navegador (JPEG, máx. 1600 px). `/chat` acepta `adjuntos` `[{nombre, tipo, datos(base64)}]`: imágenes y PDF van a Gemini como `inlineData`; los de texto se anexan al mensaje; con Groq las imágenes no se ven (Jarvis avisa) y el PDF se lee con `pypdf`. Se validan antes de crear el chat. En la base solo se guarda el texto más una línea `📎 Adjuntos: nombre1, nombre2`.
 - **Nivel de pensamiento**: píldora "Jarvis 1.0 Medio" junto al "+"; abre una hoja Bajo / Medio / Alto (Medio por defecto), se guarda en `localStorage` (`jarvisPensamiento`) y viaja en el header `X-Pensamiento`. En Gemini se traduce a `thinkingConfig` (`thinkingLevel` en Gemini 3.x, `thinkingBudget` en 2.5) y en Groq a `reasoning_effort`; sube `maxOutputTokens` (2048 / 4096 / 8192 en Gemini; 1500 / 3000 / 4500 en Groq) porque el pensamiento cuenta dentro del límite. Si el proveedor rechaza el ajuste (error 400), reintenta sin él.
 - **Uso real de la API** (Ajustes → Uso): cada llamada real a Gemini o Groq (también las del resumen y las vueltas de herramientas) se anota en el servidor y se guarda en Supabase (tabla `uso_api` y función `registrar_uso`, ver `supabase_uso.sql`), con tokens de entrada y salida. El número es el mismo en el local y en Vercel. Se actualiza solo cada 5 s con la pestaña abierta y al terminar cada mensaje (`GET /uso`). El día de Gemini cambia a medianoche del Pacífico y el de Groq a medianoche UTC. Las metas (500 / 1000) siguen en `localStorage`, por dispositivo.
+- **Busqueda de personas** (`buscar_persona`, Tavily): busca en Google y en Instagram, Facebook, TikTok, X y LinkedIn (solo paginas publicas indexadas). `/chat` devuelve `busqueda`; el front muestra una tarjeta de resultados y abre sola la primera red social (si el navegador no bloquea la pestana). Necesita `TAVILY_API_KEY` (llave por Bearer) en `.env` y en Vercel.
+- **Orbita flotante (solo PC)**: boton junto al "+" que abre una ventana flotante (Document Picture-in-Picture, Chrome/Edge de escritorio) con orbe, ultimos mensajes, resultados, texto y microfono. En celular el boton no aparece.
 - **requirements.txt**: flask, flask-cors, python-dotenv, requests, pypdf, beautifulsoup4, fpdf2, gunicorn, cryptography (`piper-tts` se quita para Vercel).
 
 **Repo**: https://github.com/eiderdavidgarcia23/Jarvis
@@ -70,6 +72,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **3 oct 2026**: resumen automático por chat. Al juntar 30 mensajes sin resumir, Jarvis le pide a la IA (el mismo proveedor y llave de ese mensaje) un resumen que fusiona el anterior con los mensajes más viejos, deja los últimos 20 completos y guarda el resumen en `chats.resumen`. El resumen va siempre en el prompt de ese chat. Si las columnas no existen o la IA falla, el chat sigue normal sin resumir. Se entregó como `parche_resumen.py` y `supabase_resumen.sql`.
 - **3 oct 2026**: adjuntos y nivel de pensamiento. Botón "+" con hoja (Cámara, Fotos, Archivos), miniaturas y chips con × encima del texto y dentro de la burbuja, píldora "Jarvis 1.0 Medio" con hoja Bajo / Medio / Alto, y backend con `adjuntos` y header `X-Pensamiento`. Se entregó como `parche_adjuntos_back.py`, `parche_adjuntos_front_a.py` y `parche_adjuntos_front_b.py`. Probado con Gemini, Groq y Supabase simulados y en Chrome headless (tema claro y oscuro); funcionando en el celular.
 - **3 oct 2026**: uso real de la API. Reemplaza el contador local, que contaba mensajes por navegador y no coincidía entre el local y Vercel. Ahora el servidor cuenta cada llamada real y la guarda en Supabase. Se entregó como `parche_uso_real.py` y `supabase_uso.sql`. Probado con Supabase simulado y en Chrome headless; funcionando.
+- **3 oct 2026**: busqueda de personas con Tavily (`buscar_persona`) y tarjeta de resultados; arreglado `abrir_url` (el front ignoraba `urls_abrir`); orbita flotante para PC; sidebar con scroll y saludo sin encimarse en celular horizontal. Entregado como `parche_busqueda_back.py`, `parche_busqueda_front.py`, `parche_flotar.py` y `parche_sidebar.py`. La orbita flotante se probo con una ventana simulada, NO en un Chrome de PC real.
 
 ---
 
@@ -94,6 +97,11 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - Borrar un chat todavía usa el `confirm()` del navegador (falta el diálogo estilo Jarvis).
 - El resumen es por chat: no mezcla chats distintos (los datos permanentes siguen en `memorias`). Cada resumen cuesta una llamada extra a la IA cada ~10 mensajes y suma 1–3 s a esa respuesta.
 - En chats viejos con más de 60 mensajes sin resumir, el primer resumen solo cubre los últimos 60.
+- Tavily: la llave de prueba se compartio en un chat; cambiarla por una nueva. Sin `TAVILY_API_KEY` la busqueda dice que falta la llave. Solo encuentra lo publico que indexa Google: no entra a Instagram/Facebook con sesion ni lee perfiles privados.
+- Abrir la pestana del resultado solo puede ser bloqueado por el navegador (no hay gesto del usuario); en ese caso se toca el resultado en la tarjeta. La tarjeta no se guarda en el historial.
+- Orbita flotante: solo Chrome/Edge de escritorio; no se probo en PC real (ventana, microfono dentro de ella, popups). En Android se usa la ventana flotante del sistema.
+- Linterna, vibrar y bateria funcionan en local (Termux); desde Vercel no.
+- En Termux hace falta `pip install tzdata` (si no, el contador de uso falla con America/Los_Angeles).
 
 ---
 
@@ -106,6 +114,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 5. Reponer las funciones quitadas en Vercel: voz de mejor calidad (por ahora se deja Piper local; opciones evaluadas: Gemini TTS gratis con límites y tono por instrucciones, o Piper en un servidor aparte con Docker, donde lo gratis se duerme) y acciones de dispositivo si hay forma. Para una voz estilo JARVIS de Iron Man no hay versión gratis oficial; probar voces masculinas de Gemini TTS (Charon, Orus, Iapetus) en Google AI Studio con instrucción de tono de mayordomo.
 6. Funciones del sidebar marcadas "Próximamente": buscar en los chats y recordatorios (ahora podrían guardarse por usuario en Supabase).
 7. Metas del contador de uso guardadas por cuenta (hoy en `localStorage`, por dispositivo) y verificar a qué hora reinicia el día de Groq.
+8. Probar la orbita flotante en una PC real. Opcional: agente en Termux que lea ordenes de Supabase para que linterna/vibrar/bateria y abrir apps tambien funcionen desde Vercel.
 
 **Meta principal**: que Jarvis tenga buena memoria, entienda de qué se habla y no lo confunda con otra cosa cuando David cambia una palabra.
 
