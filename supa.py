@@ -158,6 +158,33 @@ def mensajes_de(chat_id, limite=20):
             for f in reversed(filas)]
 
 
+def datos_chat(chat_id):
+    """Resumen guardado del chat. Si las columnas aun no existen, devuelve {} y todo sigue igual."""
+    try:
+        filas = _rest('GET', 'chats', {'id': 'eq.' + str(chat_id),
+                                       'select': 'resumen,resumen_hasta', 'limit': '1'})
+    except SupaError as e:
+        print('[RESUMEN] No pude leer el resumen (falta correr el SQL?):', e)
+        return {}
+    return filas[0] if filas else {}
+
+
+def mensajes_desde(chat_id, desde=None, limite=60):
+    """Mensajes posteriores al ultimo resumen (o los ultimos, si aun no hay resumen)."""
+    p = {'chat_id': 'eq.' + str(chat_id), 'select': 'rol,texto,creado',
+         'order': 'creado.desc', 'limit': str(limite)}
+    if desde:
+        p['creado'] = 'gt.' + str(desde)
+    filas = _rest('GET', 'mensajes', p)
+    return [{'role': 'user' if f['rol'] == 'user' else 'assistant', 'texto': f['texto'],
+             'creado': f['creado']} for f in reversed(filas)]
+
+
+def guardar_resumen(chat_id, resumen, hasta):
+    _rest('PATCH', 'chats', {'id': 'eq.' + str(chat_id)},
+          {'resumen': resumen, 'resumen_hasta': hasta})
+
+
 def guardar_intercambio(chat_id, mensaje, respuesta):
     t = _ahora()
     _rest('POST', 'mensajes', cuerpo=[

@@ -315,6 +315,65 @@ def generar_groq(system_prompt, turnos, api_key):
     return 'Me enrede pensando demasiado en eso, señor. ¿Puede reformularlo?', acciones
 
 
+# --- Resumen automatico de la charla vieja ---
+MENSAJES_VIVOS = 20   # los ultimos mensajes siempre se mandan completos al modelo
+UMBRAL_RESUMEN = 30   # al juntar tantos mensajes sin resumir, se resumen los mas viejos
+MAX_RESUMEN = 1800    # caracteres maximos del resumen guardado
+
+PROMPT_RESUMEN = (
+    'Eres el modulo de memoria de J.A.R.V.I.S. Recibes un RESUMEN PREVIO (puede estar vacio) '
+    'y MENSAJES NUEVOS de una conversacion entre un usuario y Jarvis. Devuelve un unico resumen '
+    'actualizado, en español y en tercera persona, de maximo 180 palabras. Conserva: los temas '
+    'tratados, los datos concretos (nombres, cifras, fechas, lugares, archivos, codigo importante), '
+    'lo que el usuario pidio o decidio, lo que Jarvis le respondio o recomendo (para poder retomar '
+    'frases como "eso que me dijiste") y lo que quedo pendiente. Descarta saludos y relleno. '
+    'Si el resumen previo y los mensajes nuevos tratan temas distintos, conserva ambos. '
+    'Responde solo con el resumen, sin titulos ni comentarios.'
+)
+
+
+def resumir_conversacion(resumen_previo, mensajes, proveedor, api_key):
+    lineas = []
+    for m in mensajes:
+        quien = 'Usuario' if m['role'] == 'user' else 'Jarvis'
+        lineas.append(f"{quien}: {m['texto'][:700]}")
+    entrada = ''
+    if resumen_previo:
+        entrada += 'RESUMEN PREVIO:\n' + resumen_previo + '\n\n'
+    entrada += 'MENSAJES NUEVOS:\n' + '\n'.join(lineas)
+
+    if proveedor == 'groq':
+        resp = requests.post(
+            GROQ_URL,
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={
+                'model': GROQ_MODEL,
+                'messages': [{'role': 'system', 'content': PROMPT_RESUMEN},
+                             {'role': 'user', 'content': entrada}],
+                'temperature': 0.3,
+                'max_tokens': 900
+            },
+            timeout=30
+        )
+        resp.raise_for_status()
+        texto = resp.json()['choices'][0]['message'].get('content') or ''
+    else:
+        resp = requests.post(
+            GEMINI_URL,
+            params={'key': api_key},
+            json={
+                'system_instruction': {'parts': [{'text': PROMPT_RESUMEN}]},
+                'contents': [{'role': 'user', 'parts': [{'text': entrada}]}],
+                'generationConfig': {'temperature': 0.3, 'maxOutputTokens': 700}
+            },
+            timeout=30
+        )
+        resp.raise_for_status()
+        partes = resp.json()['candidates'][0]['content'].get('parts', [])
+        texto = ''.join(p.get('text', '') for p in partes)
+    return texto.strip()[:MAX_RESUMEN]
+
+
 # --- Modelo local (llama-server): sin herramientas por ahora, modo simple ---
 def generar_local(system_prompt, turnos):
     mensajes = [{'role': 'system', 'content': system_prompt}]
@@ -395,7 +454,9 @@ def chat():
             if not api_key:
                 return jsonify({'respuesta': 'No tengo una llave de Gemini configurada, señor. Agreguela en Ajustes o en el archivo .env.'}), 400
 
-        historial = supa.mensajes_de(chat_id)
+        datos = supa.datos_chat(chat_id)
+        resumen_previo = (datos.get('resumen') or '').strip()
+        historial = supa.mensajes_desde(chat_id, datos.get('resumen_hasta'))
 
         try:
             ahora = datetime.now(ZoneInfo(zona_horaria))
@@ -413,9 +474,14 @@ def chat():
         texto_nombre = ''
         if nombre:
             texto_nombre = f' El usuario se llama {nombre}; puedes usar su nombre de vez en cuando, ademas de "señor".'
-        system_prompt = SYSTEM_PROMPT_BASE + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.' + texto_recuerdos
+        texto_resumen = ''
+        if resumen_previo:
+            texto_resumen = (' Resumen de lo hablado antes en ESTE chat (los mensajes viejos ya no se muestran; '
+                             'usalo como contexto y no lo menciones salvo que ayude): ' + resumen_previo)
+        system_prompt = (SYSTEM_PROMPT_BASE + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
+                         + texto_recuerdos + texto_resumen)
 
-        turnos = list(historial[-20:])  # ultimos turnos, para no saturar el contexto del modelo chico
+        turnos = list(historial[-UMBRAL_RESUMEN:])  # mensajes posteriores al resumen (maximo 30)
         turnos.append({'role': 'user', 'texto': mensaje_usuario})
 
         if proveedor == 'groq':
@@ -426,10 +492,21 @@ def chat():
         if not respuesta.strip():
             respuesta = 'Parece que mis circuitos se distrajeron un instante, señor. ¿Podría repetirlo?'
 
-        era_nuevo = len(historial) == 0
+        era_nuevo = len(historial) == 0 and not resumen_previo
         supa.guardar_intercambio(chat_id, mensaje_usuario, respuesta)
         if era_nuevo:
             supa.renombrar_chat(chat_id, mensaje_usuario)
+
+        total_sin_resumir = len(historial) + 2
+        if datos and total_sin_resumir >= UMBRAL_RESUMEN:
+            try:
+                viejos = historial[:total_sin_resumir - MENSAJES_VIVOS]
+                nuevo_resumen = resumir_conversacion(resumen_previo, viejos, proveedor, api_key)
+                if nuevo_resumen and viejos:
+                    supa.guardar_resumen(chat_id, nuevo_resumen, viejos[-1]['creado'])
+                    print(f'[RESUMEN] Chat {chat_id}: {len(viejos)} mensajes resumidos.')
+            except Exception as e:
+                print('[RESUMEN] No pude actualizar el resumen (el chat sigue normal):', e)
 
         return jsonify({'respuesta': respuesta, 'chat_id': chat_id,
                         'urls_abrir': acciones.get('urls_abrir', [])})
