@@ -19,8 +19,6 @@ import supa
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
-import integraciones
-app.register_blueprint(integraciones.bp)
 
 # --- Modelo local (llama-server corriendo en el mismo Termux) ---
 MODELO_LOCAL_URL = os.environ.get('MODELO_LOCAL_URL', 'http://localhost:8081/v1/chat/completions')
