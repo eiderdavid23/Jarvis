@@ -6,25 +6,38 @@
     'https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.3/+esm'
   ];
   var K = { id: 'jarvisPiperWeb', on: 'jarvisPiperWebOn' };
-  var lib = null, cargando = null, bloqueado = false;
+  var lib = null, cargando = null, bloqueado = false, idx = 0, ultimoError = '';
+
+  function descr(e) {
+    var t = e && (e.stack || e.message) ? (e.stack || e.message) : String(e);
+    return '[motor ' + (idx + 1) + ' de ' + URLS.length + '] ' + String(t).split('\n').slice(0, 3).join(' | ').slice(0, 300);
+  }
 
   function cargarLib() {
     if (lib) return Promise.resolve(lib);
     if (cargando) return cargando;
     cargando = (async function () {
       var ultimo = null;
-      for (var i = 0; i < URLS.length; i++) {
+      while (idx < URLS.length) {
         try {
-          var m = await import(URLS[i]);
-          lib = (!m.predict && m.default) ? m.default : m;
-          if (typeof lib.predict !== 'function') throw new Error('El motor no tiene predict');
+          var m = await import(URLS[idx]);
+          var l = (!m.predict && m.default) ? m.default : m;
+          if (typeof l.predict !== 'function') throw new Error('El motor no tiene predict');
+          lib = l;
           return lib;
-        } catch (e) { ultimo = e; }
+        } catch (e) { ultimo = e; ultimoError = descr(e); idx++; }
       }
+      idx = 0;
       throw ultimo || new Error('No pude cargar el motor de voz');
     })();
     cargando.catch(function () { cargando = null; });
     return cargando;
+  }
+
+  function otroMotor() {
+    if (idx + 1 >= URLS.length) { idx = 0; lib = null; cargando = null; return false; }
+    idx++; lib = null; cargando = null;
+    return true;
   }
 
   async function resolverVoz(l) {
@@ -39,19 +52,22 @@
   }
 
   async function descargar(alProgreso) {
-    var l = await cargarLib();
-    var id = await resolverVoz(l);
-    var porUrl = {};
-    if (navigator.storage && navigator.storage.persist) { try { navigator.storage.persist(); } catch (e) {} }
-    await l.download(id, function (p) {
-      if (p && p.url) porUrl[p.url] = { l: p.loaded || 0, t: p.total || 0 };
-      var c = 0, t = 0;
-      Object.keys(porUrl).forEach(function (k) { c += porUrl[k].l; t += porUrl[k].t; });
-      if (alProgreso) alProgreso(c, t);
-    });
-    localStorage.setItem(K.id, id);
-    localStorage.setItem(K.on, '1');
-    return id;
+    try {
+      var l = await cargarLib();
+      var id = await resolverVoz(l);
+      var porUrl = {};
+      if (navigator.storage && navigator.storage.persist) { try { navigator.storage.persist(); } catch (e) {} }
+      await l.download(id, function (p) {
+        if (p && p.url) porUrl[p.url] = { l: p.loaded || 0, t: p.total || 0 };
+        var c = 0, t = 0;
+        Object.keys(porUrl).forEach(function (k) { c += porUrl[k].l; t += porUrl[k].t; });
+        if (alProgreso) alProgreso(c, t);
+      });
+      localStorage.setItem(K.id, id);
+      localStorage.setItem(K.on, '1');
+      bloqueado = false;
+      return id;
+    } catch (e) { ultimoError = descr(e); throw e; }
   }
 
   async function borrar() {
@@ -68,40 +84,46 @@
   /* Habla las frases con la voz descargada. Devuelve cuantas alcanzo a decir; el resto lo cubre la voz del navegador. */
   async function hablar(partes, cancelado, ponerLiberar, audio) {
     var hechas = 0;
-    try {
-      var l = await cargarLib();
-      var id = localStorage.getItem(K.id);
-      var pedir = function (i) {
-        var p = l.predict({ text: partes[i], voiceId: id });
-        p.catch(function () {});
-        return p;
-      };
-      var reproducir = function (blob) {
-        return new Promise(function (ok, mal) {
-          var url = URL.createObjectURL(blob);
-          var limpiar = function () { audio.onended = null; audio.onerror = null; URL.revokeObjectURL(url); };
-          ponerLiberar(function () { limpiar(); ok(); });
-          audio.onended = function () { limpiar(); ok(); };
-          audio.onerror = function () { limpiar(); mal(new Error('audio')); };
-          if (window.jarvisVoz) window.jarvisVoz.aplicar(audio);
-          audio.src = url;
-          audio.play().catch(function (e) { limpiar(); mal(e); });
-        });
-      };
-      var siguiente = partes.length ? pedir(0) : null;
-      for (var i = 0; i < partes.length; i++) {
-        var blob = await siguiente;
+    for (;;) {
+      try {
+        var l = await cargarLib();
+        var id = localStorage.getItem(K.id);
+        var pedir = function (i) {
+          var p = l.predict({ text: partes[i], voiceId: id });
+          p.catch(function () {});
+          return p;
+        };
+        var reproducir = function (blob) {
+          return new Promise(function (ok, mal) {
+            var url = URL.createObjectURL(blob);
+            var limpiar = function () { audio.onended = null; audio.onerror = null; URL.revokeObjectURL(url); };
+            ponerLiberar(function () { limpiar(); ok(); });
+            audio.onended = function () { limpiar(); ok(); };
+            audio.onerror = function () { limpiar(); mal(new Error('El audio no se pudo reproducir')); };
+            if (window.jarvisVoz) window.jarvisVoz.aplicar(audio);
+            audio.src = url;
+            audio.play().catch(function (e) { limpiar(); mal(e); });
+          });
+        };
+        var siguiente = hechas < partes.length ? pedir(hechas) : null;
+        while (hechas < partes.length) {
+          var blob = await siguiente;
+          if (cancelado()) return partes.length;
+          siguiente = (hechas + 1 < partes.length) ? pedir(hechas + 1) : null;
+          await reproducir(blob);
+          if (cancelado()) return partes.length;
+          hechas++;
+        }
+        return hechas;
+      } catch (e) {
+        ultimoError = descr(e);
+        console.warn('Voz Piper del navegador fallo:', e);
         if (cancelado()) return partes.length;
-        siguiente = (i + 1 < partes.length) ? pedir(i + 1) : null;
-        await reproducir(blob);
-        if (cancelado()) return partes.length;
-        hechas++;
+        if (hechas === 0 && otroMotor()) continue;
+        if (hechas === 0) bloqueado = true;
+        return hechas;
       }
-    } catch (e) {
-      console.warn('Voz Piper del navegador fallo:', e);
-      if (hechas === 0) bloqueado = true;
     }
-    return hechas;
   }
 
   window.jarvisPiperWeb = { listo: listo, hablar: hablar, descargar: descargar, borrar: borrar };
@@ -119,14 +141,24 @@
 
   var card = h('div', 'card');
   var cab = h('div', 'cardHead');
-  cab.appendChild(h('strong', '', 'Voz de Jarvis en este dispositivo'));
+  cab.appendChild(h('strong', '', 'Voz de Jarvis'));
   card.appendChild(cab);
-  var info = h('p', '', 'Descarga la voz Piper (la misma del servidor local) para que Jarvis hable con ella aunque el servidor no tenga voz, como en Vercel. Pesa unos 60 MB y se guarda en este navegador. Mejor con WiFi.');
+  var info = h('p', '', 'Peso aproximado: 60 MB. Recomendado: descargarla con WiFi.');
   info.style.cssText = 'font-size:11px;opacity:.7;margin:0 0 10px';
   card.appendChild(info);
   var estado = h('p', '', '');
-  estado.style.cssText = 'font-size:12px;margin:0 0 10px;word-break:break-word';
+  estado.style.cssText = 'font-size:12px;margin:0 0 6px;word-break:break-word';
   card.appendChild(estado);
+  var verDetalle = h('button', '', 'Ver detalle');
+  verDetalle.style.cssText = 'background:none;border:0;padding:0;margin:0 0 10px;font-size:11px;opacity:.6;text-decoration:underline;color:inherit;display:none';
+  card.appendChild(verDetalle);
+  var detalle = h('div', '', '');
+  detalle.style.cssText = 'font-size:10px;opacity:.6;margin:0 0 10px;word-break:break-all;display:none';
+  card.appendChild(detalle);
+  verDetalle.addEventListener('click', function () {
+    detalle.textContent = ultimoError || 'Sin detalle.';
+    detalle.style.display = detalle.style.display === 'none' ? '' : 'none';
+  });
 
   var barraFondo = h('div');
   barraFondo.style.cssText = 'height:6px;border-radius:3px;background:#8884;overflow:hidden;margin:0 0 10px;display:none';
@@ -153,8 +185,11 @@
   var ocupado = false;
   function pintar(msg, error) {
     var tiene = !!localStorage.getItem(K.id);
-    estado.textContent = msg || (tiene ? 'Lista: la voz está guardada en este dispositivo.' : 'No descargada.');
+    estado.textContent = msg != null ? msg : (tiene ? 'Descargada.' : '');
     estado.style.color = error ? '#ff6b6b' : '';
+    estado.style.display = estado.textContent ? '' : 'none';
+    verDetalle.style.display = error ? '' : 'none';
+    detalle.style.display = 'none';
     filaSw.style.display = tiene ? '' : 'none';
     chk.checked = localStorage.getItem(K.on) !== '0';
     btnDescargar.style.display = tiene ? 'none' : '';
@@ -180,17 +215,17 @@
       pintar('Lista. Toca "Probar" para escucharla.');
     } catch (e) {
       ocupado = false;
-      pintar('No pude descargar la voz: ' + (e && e.message ? e.message : e) + '. Revisa tu conexión e intenta de nuevo.', true);
+      pintar('No se pudo descargar la voz. Revisa tu conexión e intenta de nuevo.', true);
     }
     barraFondo.style.display = 'none';
   });
   chk.addEventListener('change', function () { localStorage.setItem(K.on, chk.checked ? '1' : '0'); });
-  btnBorrar.addEventListener('click', async function () { await borrar(); pintar('Voz borrada de este dispositivo.'); });
+  btnBorrar.addEventListener('click', async function () { await borrar(); pintar('Voz eliminada.'); });
   btnProbar.addEventListener('click', async function () {
     if (typeof detenerHabla === 'function') detenerHabla();
     var audio = (typeof audioPlayer !== 'undefined') ? audioPlayer : new Audio();
     pintar('Generando voz...');
     var n = await hablar(['Buenos días, señor. Todos los sistemas están listos para servirle.'], function () { return false; }, function () {}, audio);
-    pintar(n ? null : 'No pude generar la voz. Prueba de nuevo o bórrala y vuelve a descargarla.', !n);
+    pintar(n ? null : 'No se pudo reproducir la voz. Intenta de nuevo.', !n);
   });
 })();
