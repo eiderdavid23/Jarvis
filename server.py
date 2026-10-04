@@ -46,7 +46,7 @@ def limpiar_texto_para_voz(texto):
     return texto.strip()
 
 
-def generar_audio(texto):
+def generar_audio(texto, tono=1.0, vel=1.0):
     import subprocess
     texto = limpiar_texto_para_voz(texto)
     tmp_path = None
@@ -56,10 +56,13 @@ def generar_audio(texto):
         tmp.close()
         env = dict(os.environ)
         env['LD_LIBRARY_PATH'] = PIPER_LIB
-        subprocess.run(
-            [PIPER_BIN, '-m', PIPER_VOICE, '--output_file', tmp_path],
-            input=texto, text=True, env=env, timeout=60, check=True, capture_output=True
-        )
+        largo = max(0.5, min(1.5, tono / vel))
+        base = [PIPER_BIN, '-m', PIPER_VOICE, '--output_file', tmp_path]
+        try:
+            subprocess.run(base + ['--length_scale', '%.3f' % largo],
+                           input=texto, text=True, env=env, timeout=60, check=True, capture_output=True)
+        except subprocess.CalledProcessError:
+            subprocess.run(base, input=texto, text=True, env=env, timeout=60, check=True, capture_output=True)
         with open(tmp_path, 'rb') as f:
             return f.read()
     except Exception as e:
@@ -729,7 +732,12 @@ def voz():
         return jsonify({'error': 'texto vacio'}), 400
     if len(texto) > 4000:
         return jsonify({'error': 'texto demasiado largo'}), 400
-    audio_bytes = generar_audio(texto)
+    try:
+        tono = max(0.75, min(1.1, float(data.get('tono', 1.0))))
+        vel = max(0.8, min(1.25, float(data.get('vel', 1.0))))
+    except (TypeError, ValueError):
+        tono, vel = 1.0, 1.0
+    audio_bytes = generar_audio(texto, tono, vel)
     if audio_bytes is None:
         return jsonify({'error': 'no se pudo generar audio'}), 500
     return Response(audio_bytes, mimetype='audio/wav')
