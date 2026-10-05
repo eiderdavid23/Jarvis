@@ -19,7 +19,7 @@
     var t = p === 'sistema' ? (mq && mq.matches ? 'claro' : 'oscuro') : p;
     document.documentElement.setAttribute('data-tema', t);
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', t === 'claro' ? '#f4f8fa' : '#05070d');
+    if (m) m.setAttribute('content', t === 'claro' ? '#ffffff' : '#05070d');
   };
   window.fijarTema = function (p) {
     try { if (p === 'sistema') localStorage.removeItem('jarvisTema'); else localStorage.setItem('jarvisTema', p); } catch (e) {}
@@ -473,6 +473,8 @@
   [data-tema="claro"] #hojaVelo { background: rgba(0,0,0,.32); }
   [data-tema="claro"] #toastAdj { box-shadow: 0 8px 30px rgba(20,60,80,.2); }
 </style>
+<link rel="stylesheet" href="/respuestas.css">
+<link rel="stylesheet" href="/tema_claro.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
@@ -826,6 +828,9 @@ function agregarMensaje(txt, clase, adjs) {
     if (!txt) cont.style.marginBottom = '0';
     b.appendChild(cont);
     if (txt) b.appendChild(document.createTextNode(txt));
+  } else if (clase === 'jarvis' && window.mdHtml) {
+    b.classList.add('md');
+    b.innerHTML = window.mdHtml(txt);
   } else {
     b.textContent = txt;
   }
@@ -867,7 +872,7 @@ const hablarChat = () => localStorage.getItem('jarvisHablarChat') !== '0';
 audioPlayer.addEventListener('play', () => { hablando = true; setEstado('hablando', 'Hablando'); });
 
 function dividirFrases(txt) {
-  const limpio = String(txt || '').replace(/[*_#`]/g, '').replace(/^\s*[-•]\s+/gm, '').replace(/\s+/g, ' ').trim();
+  const limpio = (window.mdPlano ? window.mdPlano(txt) : String(txt || '')).replace(/\s+/g, ' ').trim();
   if (!limpio) return [];
   const frases = limpio.match(/\S.*?(?:[.!?…]+(?=\s|$)|$)/g) || [limpio];
   const partes = [];
@@ -1489,7 +1494,7 @@ async function enviarMensaje(desdeVoz) {
     agregarMensaje(textoFinal, 'jarvis');
     setEstado('reposo', 'En reposo');
   }
-  if (desdeVoz) vozJarvis.textContent = textoFinal;
+  if (desdeVoz) vozJarvis.textContent = window.mdPlano ? window.mdPlano(textoFinal) : textoFinal;
   procesando = false;
   if (hablarAhora) await hablar(textoFinal);
   if (vozActiva) escucharVoz();
@@ -1844,6 +1849,7 @@ document.querySelectorAll('.opTema').forEach((b) => {
 });
 pintarTema();
 </script>
+<script src="/markdown.js"></script>
 <script src="/auth.js"></script>
 <script src="/voz_ajustes.js"></script>
 <script src="/voz_piper_web.js"></script>
