@@ -737,6 +737,13 @@ def voz():
         vel = max(0.8, min(1.25, float(data.get('vel', 1.0))))
     except (TypeError, ValueError):
         tono, vel = 1.0, 1.0
+    if data.get('premium') and len(texto) <= 300:
+        import voz_eleven
+        audio_eleven = voz_eleven.generar(limpiar_texto_para_voz(texto), vel, request.headers.get('Authorization', ''))
+        if audio_eleven:
+            resp = Response(audio_eleven, mimetype='audio/mpeg')
+            resp.headers['X-Voz-Motor'] = 'eleven'
+            return resp
     audio_bytes = generar_audio(texto, tono, vel)
     if audio_bytes is None:
         return jsonify({'error': 'no se pudo generar audio'}), 500

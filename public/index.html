@@ -921,6 +921,8 @@ function hablar(txt) {
   return new Promise((resolve) => {
     const partes = dividirFrases(txt);
     if (!partes.length) { resolve(); return; }
+    const premium = !!(window.jarvisVoz && window.jarvisVoz.premium && window.jarvisVoz.premium(partes));
+    if (premium) vozServidorOK = true;
     let terminado = false;
     let liberar = null;
     const fin = () => {
@@ -936,11 +938,17 @@ function hablar(txt) {
     const pedidos = [];
     const pedir = (i) => {
       if (!pedidos[i]) {
+        const cab = { 'Content-Type': 'application/json' };
+        if (premium) cab.Authorization = 'Bearer ' + (localStorage.getItem('jarvisAcceso') || '');
         pedidos[i] = fetch('/voz', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texto: partes[i], tono: window.jarvisVoz ? window.jarvisVoz.tono() : 1, vel: window.jarvisVoz ? window.jarvisVoz.vel() : 1 })
-        }).then((res) => { if (!res.ok) throw new Error('voz'); return res.blob(); });
+          headers: cab,
+          body: JSON.stringify({ texto: partes[i], premium, tono: window.jarvisVoz ? window.jarvisVoz.tono() : 1, vel: window.jarvisVoz ? window.jarvisVoz.vel() : 1 })
+        }).then((res) => {
+          if (!res.ok) throw new Error('voz');
+          const eleven = res.headers.get('X-Voz-Motor') === 'eleven';
+          return res.blob().then((b) => { b.eleven = eleven; return b; });
+        });
         pedidos[i].catch(() => {});
       }
       return pedidos[i];
@@ -951,7 +959,7 @@ function hablar(txt) {
       liberar = () => { limpiar(); ok(); };
       audioPlayer.onended = () => { limpiar(); ok(); };
       audioPlayer.onerror = () => { limpiar(); mal(new Error('audio')); };
-      if (window.jarvisVoz) window.jarvisVoz.aplicar(audioPlayer);
+      if (window.jarvisVoz) { if (blob.eleven && window.jarvisVoz.normal) window.jarvisVoz.normal(audioPlayer); else window.jarvisVoz.aplicar(audioPlayer); }
       audioPlayer.src = url;
       audioPlayer.play().catch((e) => { limpiar(); mal(e); });
     });
@@ -1839,6 +1847,7 @@ pintarTema();
 <script src="/auth.js"></script>
 <script src="/voz_ajustes.js"></script>
 <script src="/voz_piper_web.js"></script>
+<script src="/voz_premium.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
