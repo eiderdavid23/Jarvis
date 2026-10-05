@@ -730,9 +730,9 @@ def texto_capacidades():
                     'telefono (Termux); en esta version en linea no estan disponibles, asi que si te '
                     'las piden explicalo sin intentarlo. ')
     if TAVILY_API_KEY:
-        personas = 'Buscas informacion publica de personas (perfiles en redes y la web). '
+        personas = 'Buscas en la web publica sobre personas o temas y en redes sociales (Instagram, Facebook, TikTok, X, LinkedIn); los resultados salen en un panel y se abre el primero. '
     else:
-        personas = 'La busqueda de personas no esta activa por ahora. '
+        personas = 'La busqueda en la web y en redes no esta activa por ahora. '
     return (
         ' SOBRE TI (usalo cuando pregunten que eres, que haces o que puedes hacer; responde breve y '
         'natural, sin recitar todo salvo que pidan detalle; no inventes funciones que no estan aqui y, '
@@ -745,9 +745,9 @@ def texto_capacidades():
         'Groq no), PDF y archivos de texto o codigo, hasta 5 y unos 3 MB en total. (4) Abrir paginas '
         'web en una pestana nueva. ' + personas + telefono +
         '(5) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
-        'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar en los '
-        'chats ni recordatorios (estan en camino), tampoco leer llamadas o mensajes del telefono, '
-        'enviar mensajes ni buscar en internet en general.'
+        'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
+        'tus chats guardados ni recordatorios (estan en camino), tampoco leer llamadas o mensajes del telefono, '
+        'ni enviar mensajes.'
     )
 
 
