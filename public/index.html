@@ -1644,12 +1644,24 @@ let usoIntentado = false;
 let usoCargando = false;
 try { localStorage.removeItem('jarvisUso'); } catch (e) {}  /* contador viejo, solo de ese dispositivo */
 function obtenerMeta(proveedor) {
+  if (usoServidor && usoServidor.metas) {
+    return usoServidor.metas[proveedor] || METAS_POR_DEFECTO[proveedor];
+  }
   const guardada = localStorage.getItem('jarvisMeta_' + proveedor);
   return guardada ? parseInt(guardada, 10) : METAS_POR_DEFECTO[proveedor];
 }
-function guardarMeta(proveedor, valor) {
+async function guardarMeta(proveedor, valor) {
   const num = parseInt(valor, 10);
   if (!num || num < 1) return;
+  if (usoServidor && usoServidor.metas) {
+    usoServidor.metas[proveedor] = num;
+    actualizarUsoUI();
+    try {
+      await fetch('/uso', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proveedor: proveedor, meta: num }) });
+    } catch (e) {}
+    return;
+  }
   localStorage.setItem('jarvisMeta_' + proveedor, num);
   actualizarUsoUI();
 }

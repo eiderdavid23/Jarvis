@@ -44,7 +44,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **Silenciar la voz**: botón de altavoz en la barra superior (junto al "+") y interruptor en Ajustes → Voz. Activa o silencia la voz de las respuestas del chat; se guarda en `localStorage` (`jarvisHablarChat`), por defecto activada. Al silenciar calla al instante, incluso si el audio aún se estaba generando. El modo voz siempre habla.
 - **Adjuntos** (botón "+" junto a la caja de texto): hoja "Agregar a Jarvis" con Cámara, Fotos (varias) y Archivos (PDF, texto, código, csv, json…). Máximo 5 adjuntos y ~3.3 MB en total (base64), porque Vercel limita el cuerpo a ~4.5 MB; las fotos se reducen en el navegador (JPEG, máx. 1600 px). `/chat` acepta `adjuntos` `[{nombre, tipo, datos(base64)}]`: imágenes y PDF van a Gemini como `inlineData`; los de texto se anexan al mensaje; con Groq las imágenes no se ven (Jarvis avisa) y el PDF se lee con `pypdf`. Se validan antes de crear el chat. En la base solo se guarda el texto más una línea `📎 Adjuntos: nombre1, nombre2`.
 - **Nivel de pensamiento**: píldora "Jarvis 1.0 Medio" junto al "+"; abre una hoja Bajo / Medio / Alto (Medio por defecto), se guarda en `localStorage` (`jarvisPensamiento`) y viaja en el header `X-Pensamiento`. En Gemini se traduce a `thinkingConfig` (`thinkingLevel` en Gemini 3.x, `thinkingBudget` en 2.5) y en Groq a `reasoning_effort`; sube `maxOutputTokens` (2048 / 4096 / 8192 en Gemini; 1500 / 3000 / 4500 en Groq) porque el pensamiento cuenta dentro del límite. Si el proveedor rechaza el ajuste (error 400), reintenta sin él.
-- **Uso real de la API** (Ajustes → Uso): cada llamada real a Gemini o Groq (también las del resumen y las vueltas de herramientas) se anota en el servidor y se guarda en Supabase (tabla `uso_api` y función `registrar_uso`, ver `supabase_uso.sql`), con tokens de entrada y salida. El número es el mismo en el local y en Vercel. Se actualiza solo cada 5 s con la pestaña abierta y al terminar cada mensaje (`GET /uso`). El día de Gemini cambia a medianoche del Pacífico y el de Groq a medianoche UTC. Las metas (500 / 1000) siguen en `localStorage`, por dispositivo.
+- **Uso real de la API** (Ajustes → Uso): cada llamada real a Gemini o Groq (también las del resumen y las vueltas de herramientas) se anota en el servidor y se guarda en Supabase (tabla `uso_api` y función `registrar_uso`, ver `supabase_uso.sql`), con tokens de entrada y salida. El número es el mismo en el local y en Vercel. Se actualiza solo cada 5 s con la pestaña abierta y al terminar cada mensaje (`GET /uso`). El día de Gemini cambia a medianoche del Pacífico y el de Groq a medianoche UTC. Las metas (500 / 1000 por defecto) se guardan por cuenta en la tabla `metas_uso` (`supabase_metas.sql`; `GET /uso` las devuelve y `POST /uso` las guarda); si esa tabla no existe, siguen en `localStorage`, por dispositivo.
 - **requirements.txt**: flask, flask-cors, python-dotenv, requests, pypdf, beautifulsoup4, fpdf2, gunicorn, cryptography (`piper-tts` se quita para Vercel).
 
 **Repo**: https://github.com/eiderdavidgarcia23/Jarvis
@@ -56,7 +56,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 **Configuración externa** (no está en el repo):
 - Supabase → Authentication → Sign In / Providers: Google activado y "Confirm email" desactivado (para pruebas). URL Configuration: Site URL y Redirect URLs con la dirección de Vercel y `http://localhost:3000`.
 - Google Cloud: proyecto "Jarvis", cliente OAuth tipo Aplicación web, con la callback de Supabase como URI de redirección.
-- Las tablas y políticas RLS se crearon con un SQL ejecutado a mano en Supabase. También se ejecutan a mano `supabase_resumen.sql` y `supabase_uso.sql`.
+- Las tablas y políticas RLS se crearon con un SQL ejecutado a mano en Supabase. También se ejecutan a mano `supabase_resumen.sql`, `supabase_uso.sql` y `supabase_metas.sql`.
 
 **Deploy (solo Vercel)**: `git add -A && git commit -m "mensaje" && git push`; Vercel redespliega solo. Render ya no se usa.
 
@@ -78,6 +78,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **4–5 oct 2026**: voz más grave y ajustable (tarjeta "Tono y estilo", ver sección 2). Se entregó como `public/voz_ajustes.js` y `parche_voz.py`. Probado en Chrome headless con Piper y audio simulados; el sonido real solo lo puede evaluar David de oído.
 - **4–5 oct 2026**: Piper en el navegador, para tener en Vercel la misma voz del local. Se entregó como `public/voz_piper_web.js` y `parche_voz_piper.py`. El primer intento dio error al generar el audio; se agregó un segundo motor de respaldo y el enlace "Ver detalle", y los textos de la tarjeta se simplificaron (solo "Voz de Jarvis", el peso y la recomendación de usar WiFi). Resultado: funciona, pero en el celular de David demora un poco; por eso se pasó a ElevenLabs.
 - **5 oct 2026**: voz premium con ElevenLabs. David creó con Voice Design una voz grave de mayordomo en español y se conectó al servidor y al frontend (ver sección 2). Se entregó como `voz_eleven.py`, `public/voz_premium.js` y `parche_voz_eleven.py`. Probado con ElevenLabs y Supabase simulados y en Chrome headless; en el celular de David funciona y no demora para hablar.
+- **5 oct 2026**: metas del contador de uso por cuenta (tabla `metas_uso`, `POST /uso` para guardar y `metas` dentro de `GET /uso`; si la tabla no existe usa `localStorage` como antes). Se entregó como `supabase_metas.sql` y `parche_metas.py`. David confirmó además que ya reactivó "Confirm email" y publicó la app de Google (antiguo pendiente 3).
 
 ---
 
@@ -87,7 +88,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - Con Groq no se ven imágenes (Jarvis avisa) y un PDF escaneado sin texto no se puede leer.
 - El timeout hacia la IA es de 55 s. El límite de la función en Vercel depende del plan y no hay `vercel.json`: si con nivel Alto sale error 504, usar Medio.
 - El uso real cuenta solo lo que Jarvis envía: Google cuenta la cuota por proyecto, así que otras apps con la misma llave no aparecen (el total oficial está en aistudio.google.com/rate-limit). La hora de reinicio de Groq (UTC) no está verificada.
-- Si falta la tabla `uso_api`, el chat sigue normal y Uso muestra "Falta crear la tabla en Supabase". Las metas del contador siguen guardadas por dispositivo.
+- Si falta la tabla `uso_api`, el chat sigue normal y Uso muestra "Falta crear la tabla en Supabase". Si falta la tabla `metas_uso`, las metas del contador quedan guardadas por dispositivo.
 - En Vercel, Piper del servidor no corre (solo funciona corriendo local en Termux): ahí la voz es la premium de ElevenLabs en respuestas cortas, Piper descargado en el navegador (más lento) o la voz del navegador (más robótica).
 - Voz premium: el plan gratis de ElevenLabs trae 10.000 créditos al mes (unos 10 minutos de voz, a 1 crédito por letra; cifra sin verificar con el uso real) y no tiene licencia comercial. Cada frase y cada "Probar voz" los gastan, y cualquier cuenta con sesión los gasta también, salvo que se use `ELEVENLABS_EMAILS`. Al agotarse, Jarvis vuelve solo a la voz anterior y no se cobra nada (la cuenta no tiene tarjeta). La pausa de 10 min y las sesiones recordadas viven en la memoria de cada instancia del servidor; en Vercel pueden reiniciarse.
 - Piper en el navegador: la primera vez necesita internet (carga el motor desde esm.sh o jsdelivr y descarga el modelo) y en el celular de David tarda en generar cada frase. No se le puede compensar la velocidad: con tono grave suena más lenta.
@@ -111,12 +112,11 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 
 1. Guardar el SQL de las tablas y políticas en el repo (por ejemplo `supabase_schema.sql`) para poder recrearlas.
 2. Probar con dos cuentas reales que cada una solo ve sus chats y su memoria (hasta ahora se probó con una prueba simulada y con una cuenta real).
-3. Antes de abrir Jarvis a otras personas: reactivar "Confirm email" en Supabase y confirmar que la app de Google esté publicada (modo Producción).
-4. Modelo por defecto más grande (Gemini Flash normal en vez de flash-lite).
-5. Voz: decidir qué hacer cuando se agoten los créditos de ElevenLabs (hoy Jarvis vuelve a la voz anterior), revisar de vez en cuando el gasto en el panel de ElevenLabs y evaluar Gemini TTS gratis como segunda voz del servidor para Vercel (voces masculinas Charon, Orus e Iapetus en Google AI Studio, con instrucción de tono de mayordomo; su velocidad no se ha medido). Acciones de dispositivo en Vercel, si hay forma.
-6. Funciones del sidebar marcadas "Próximamente": buscar en los chats y recordatorios (ahora podrían guardarse por usuario en Supabase).
-7. Metas del contador de uso guardadas por cuenta (hoy en `localStorage`, por dispositivo) y verificar a qué hora reinicia el día de Groq.
-8. Integraciones (widget de soporte para otras plataformas): descartado por ahora; ver el historial del 3–4 oct.
+3. Modelo por defecto más grande (Gemini Flash normal en vez de flash-lite).
+4. Voz: decidir qué hacer cuando se agoten los créditos de ElevenLabs (hoy Jarvis vuelve a la voz anterior), revisar de vez en cuando el gasto en el panel de ElevenLabs y evaluar Gemini TTS gratis como segunda voz del servidor para Vercel (voces masculinas Charon, Orus e Iapetus en Google AI Studio, con instrucción de tono de mayordomo; su velocidad no se ha medido). Acciones de dispositivo en Vercel, si hay forma.
+5. Funciones del sidebar marcadas "Próximamente": buscar en los chats y recordatorios (ahora podrían guardarse por usuario en Supabase).
+6. Verificar a qué hora reinicia el día de Groq (hoy se asume medianoche UTC, sin verificar).
+7. Integraciones (widget de soporte para otras plataformas): descartado por ahora; ver el historial del 3–4 oct.
 
 **Meta principal**: que Jarvis tenga buena memoria, entienda de qué se habla y no lo confunda con otra cosa cuando David cambia una palabra.
 

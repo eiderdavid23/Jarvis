@@ -768,9 +768,37 @@ def uso_api():
                   'tokens_entrada': fila.get('tokens_entrada', 0),
                   'tokens_salida': fila.get('tokens_salida', 0),
                   'reinicia': reinicio_cuota(p)}
+    try:
+        mm = supa._rest('GET', 'metas_uso', {'select': 'proveedor,meta'}) or []
+        res['metas'] = {x['proveedor']: x['meta'] for x in mm}
+    except supa.SupaError as e:
+        print('[USO] No pude leer metas_uso:', e)
+        res['metas'] = None
     r = jsonify(res)
     r.headers['Cache-Control'] = 'no-store'
     return r
+
+
+@app.route('/uso', methods=['POST'])
+@supa.requiere_login
+def guardar_meta_uso():
+    data = request.get_json(silent=True) or {}
+    proveedor = data.get('proveedor')
+    try:
+        meta = int(data.get('meta'))
+    except (TypeError, ValueError):
+        meta = 0
+    if proveedor not in ('gemini', 'groq') or meta < 1 or meta > 100000000:
+        return jsonify({'error': 'meta invalida'}), 400
+    try:
+        supa._rest('POST', 'metas_uso', {'on_conflict': 'usuario_id,proveedor'}, {
+            'usuario_id': g.usuario_id, 'proveedor': proveedor, 'meta': meta,
+            'actualizado': datetime.now(ZoneInfo('UTC')).isoformat()
+        }, {'Prefer': 'resolution=merge-duplicates'})
+    except supa.SupaError as e:
+        print('[USO] No pude guardar la meta:', e)
+        return jsonify({'error': 'no se pudo guardar la meta'}), 502
+    return jsonify({'ok': True})
 
 
 @app.route('/chat', methods=['POST'])
