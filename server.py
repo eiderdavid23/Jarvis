@@ -85,8 +85,11 @@ HERRAMIENTAS = [
         'name': 'abrir_url',
         'description': (
             'Abre una pagina web, app web o enlace en el navegador del usuario. '
-            'Usar cuando el usuario pida abrir YouTube, Google Maps, WhatsApp Web, '
-            'una busqueda, o cualquier sitio.'
+            'Usar cuando el usuario pida abrir un sitio o buscar algo DENTRO de un sitio '
+            '(Mercado Libre, Amazon, YouTube, Google Maps, WhatsApp Web...): en ese caso la '
+            'URL debe ser la de resultados de busqueda de ese sitio. Si el usuario pidio '
+            'BUSCAR algo en un sitio, antes de llamarla pide confirmacion y espera su '
+            'respuesta; si solo pidio abrir el sitio, abrelo sin preguntar.'
         ),
         'parameters': {
             'type': 'object',
@@ -99,16 +102,18 @@ HERRAMIENTAS = [
     {
         'name': 'buscar_persona',
         'description': (
-            'Busca en la web publica informacion sobre una persona o tema, y tambien en '
-            'redes sociales (Instagram, Facebook, TikTok, X, LinkedIn). Usar cuando el '
-            'usuario pida buscar, investigar o consultar sobre alguien. Solo devuelve '
+            'Busca informacion publica sobre una PERSONA en la web y en redes sociales '
+            '(Instagram, Facebook, TikTok, X, LinkedIn). Usar SOLO cuando el usuario pida '
+            'buscar, investigar o consultar sobre alguien. NUNCA para productos, compras, '
+            'tiendas ni busquedas dentro de un sitio (Mercado Libre, Amazon, YouTube...): '
+            'para eso usa abrir_url. Solo devuelve '
             'paginas publicas. Despues de usarla, di en que sitios encontraste algo '
             '(Google, Instagram, Facebook...) y resume lo mas relevante.'
         ),
         'parameters': {
             'type': 'object',
             'properties': {
-                'consulta': {'type': 'string', 'description': 'Nombre o tema a buscar, con el contexto que dio el usuario (ciudad, trabajo, etc.)'},
+                'consulta': {'type': 'string', 'description': 'Nombre de la persona a buscar, con el contexto que dio el usuario (ciudad, trabajo, etc.)'},
                 'redes': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Redes a incluir: instagram, facebook, tiktok, x, linkedin. Si el usuario no dice, omitir y se usan instagram, facebook y linkedin.'}
             },
             'required': ['consulta']
@@ -714,8 +719,20 @@ SYSTEM_PROMPT_BASE = (
     'cuando el usuario lo pida o cuando sea evidente que corresponde, y luego '
     'responde de forma natural con el resultado real que te devuelven. Nunca '
     'inventes un dato (como el porcentaje de bateria) sin haber llamado antes '
-    'a la herramienta correspondiente. Para buscar personas usa buscar_persona: '
-    'solo informacion publica, sin inventar datos que no aparezcan en los resultados.'
+    'a la herramienta correspondiente. Para buscar PERSONAS usa buscar_persona: '
+    'solo informacion publica, sin inventar datos que no aparezcan en los resultados. '
+    'Si el usuario pide buscar un producto o algo en un sitio concreto (Mercado Libre, '
+    'Amazon, YouTube, Google Maps...), NO uses buscar_persona: primero pregunta si '
+    'confirma que abras ese sitio con esa busqueda (por ejemplo: ¿Abro Mercado Libre '
+    'con la busqueda de control de Xbox 360, señor?) y solo cuando confirme usa abrir_url '
+    'con la URL de resultados de ese sitio, sin abrir ningun otro (si ya dijo que lo '
+    'abras, no vuelvas a preguntar). URLs: Mercado Libre '
+    'https://listado.mercadolibre.<dominio-del-pais>/<terminos-con-guiones> (dominios: '
+    'com.co, com.mx, com.ar, com.ve, cl, com.pe, com.uy, com.ec; si no sabes el pais del '
+    'usuario, preguntalo una vez y guardalo con guardar_recuerdo en el tema pais); '
+    'Amazon https://www.amazon.com/s?k=<terminos>; YouTube '
+    'https://www.youtube.com/results?search_query=<terminos>; Google Maps '
+    'https://www.google.com/maps/search/<terminos>.'
 )
 
 
@@ -730,9 +747,9 @@ def texto_capacidades():
                     'telefono (Termux); en esta version en linea no estan disponibles, asi que si te '
                     'las piden explicalo sin intentarlo. ')
     if TAVILY_API_KEY:
-        personas = 'Buscas en la web publica sobre personas o temas y en redes sociales (Instagram, Facebook, TikTok, X, LinkedIn); los resultados salen en un panel y se abre el primero. '
+        personas = 'Buscas informacion publica de personas en la web y en redes sociales (Instagram, Facebook, TikTok, X, LinkedIn); los resultados salen en un panel y se abre el primero. '
     else:
-        personas = 'La busqueda en la web y en redes no esta activa por ahora. '
+        personas = 'La busqueda de personas no esta activa por ahora. '
     return (
         ' SOBRE TI (usalo cuando pregunten que eres, que haces o que puedes hacer; responde breve y '
         'natural, sin recitar todo salvo que pidan detalle; no inventes funciones que no estan aqui y, '
@@ -742,8 +759,9 @@ def texto_capacidades():
         'por tema, que puedes guardar y olvidar cuando te lo pidan. (2) Voz: hablas tus respuestas y '
         'el modo voz permite conversar sin escribir; el usuario puede silenciarte y ajustar tono y '
         'velocidad en Ajustes. (3) Archivos: el usuario puede adjuntar fotos (con Gemini las ves; con '
-        'Groq no), PDF y archivos de texto o codigo, hasta 5 y unos 3 MB en total. (4) Abrir paginas '
-        'web en una pestana nueva. ' + personas + telefono +
+        'Groq no), PDF y archivos de texto o codigo, hasta 5 y unos 3 MB en total. (4) Abrir un sitio o la '
+        'busqueda dentro de un sitio (Mercado Libre, Amazon, YouTube...) en una pestana nueva, '
+        'las busquedas dentro de un sitio se hacen tras pedir confirmacion. ' + personas + telefono +
         '(5) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
         'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
         'tus chats guardados ni recordatorios (estan en camino), tampoco leer llamadas o mensajes del telefono, '
