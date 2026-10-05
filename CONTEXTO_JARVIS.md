@@ -33,7 +33,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **Frontend**: `public/index.html` (~1627 líneas, estilo Claude) y `public/auth.js` (~533 líneas): pantalla de login, lista de chats en el sidebar (sustituyó a "Historial de chats"), "Cerrar sesión" y saludo con el nombre del usuario. En "Próximamente" quedan Buscar y Recordatorios.
 - **Login (Supabase Auth)**: "Continuar con Google" y correo + contraseña (con campo Nombre al crear cuenta). Rutas: `/auth/registro`, `/auth/login`, `/auth/refresh`, `/auth/google`, `/auth/yo`. Google devuelve la sesión en el `#` de la URL y `auth.js` la lee. Los tokens van en el `localStorage` del navegador y se renuevan solos.
 - **Memoria (Supabase, con RLS por usuario)**: tablas `chats`, `mensajes` y `memorias` (clave/valor). Se mandan al modelo el resumen del chat (columnas `resumen` y `resumen_hasta` de `chats`) más los mensajes posteriores a ese resumen (entre 20 y 30). Los datos permanentes se guardan **por tema** (se actualizan, no se duplican). Ya no se usan `memoria_local.json` ni `memoria_persistente.json`.
-- **Herramientas** (function calling, definidas en `server.py`): `abrir_url`, `encender_linterna`, `apagar_linterna`, `vibrar`, `consultar_bateria`, `guardar_recuerdo` (tema + dato) y `olvidar_recuerdo`. Las de hardware usan Termux:API (`comandos_dispositivo.py`).
+- **Herramientas** (function calling, definidas en `server.py`): `abrir_url`, `buscar_persona` (Tavily, necesita `TAVILY_API_KEY`), `encender_linterna`, `apagar_linterna`, `vibrar`, `consultar_bateria`, `guardar_recuerdo` (tema + dato) y `olvidar_recuerdo`. Las de hardware usan Termux:API (`comandos_dispositivo.py`).
 - **Orbe animado** (canvas) con 3 modos: grande al centro en el inicio y en el modo voz (llamada con escucha continua), y pequeño arriba cuando hay chat. Estados: reposo / escuchando / pensando / hablando. Tocar el orbe interrumpe a Jarvis.
 - **PWA**: `public/manifest.json`, `public/sw.js`, `public/icon.svg`.
 - **IA**: Gemini por defecto (`GEMINI_MODEL`, hoy `gemini-3.5-flash-lite`) y Groq como alternativa (`openai/gpt-oss-120b`). Las llaves pueden venir del navegador (headers `X-Gemini-Key`, `X-Groq-Key`, `X-Proveedor`) o del `.env`.
@@ -51,7 +51,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 **Vercel**: https://jarvis-mu-ebon-12.vercel.app
 **Local**: `~/jarvis` en Termux, con `python server.py` (puerto 3000 o `PORT`).
 
-**Variables de entorno** (en `.env` local y en Vercel → Settings → Environment Variables; Flask solo lee el `.env` al arrancar, y en Vercel hay que hacer Redeploy tras cambiarlas): `GEMINI_API_KEY`, `GROQ_API_KEY`, `SUPABASE_URL` y `SUPABASE_KEY` (la llave **publishable**; nunca la `secret` ni el Client Secret de Google) y `ELEVENLABS_API_KEY` (llave de ElevenLabs; solo en `.env` y Vercel). Opcionales: `ELEVENLABS_EMAILS`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL`, `ELEVENLABS_STABILITY`.
+**Variables de entorno** (en `.env` local y en Vercel → Settings → Environment Variables; Flask solo lee el `.env` al arrancar, y en Vercel hay que hacer Redeploy tras cambiarlas): `GEMINI_API_KEY`, `GROQ_API_KEY`, `SUPABASE_URL` y `SUPABASE_KEY` (la llave **publishable**; nunca la `secret` ni el Client Secret de Google) y `ELEVENLABS_API_KEY` (llave de ElevenLabs; solo en `.env` y Vercel). Opcionales: `TAVILY_API_KEY` (búsqueda de personas), `ELEVENLABS_EMAILS`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL`, `ELEVENLABS_STABILITY`.
 
 **Configuración externa** (no está en el repo):
 - Supabase → Authentication → Sign In / Providers: Google activado y "Confirm email" desactivado (para pruebas). URL Configuration: Site URL y Redirect URLs con la dirección de Vercel y `http://localhost:3000`.
@@ -79,6 +79,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **4–5 oct 2026**: Piper en el navegador, para tener en Vercel la misma voz del local. Se entregó como `public/voz_piper_web.js` y `parche_voz_piper.py`. El primer intento dio error al generar el audio; se agregó un segundo motor de respaldo y el enlace "Ver detalle", y los textos de la tarjeta se simplificaron (solo "Voz de Jarvis", el peso y la recomendación de usar WiFi). Resultado: funciona, pero en el celular de David demora un poco; por eso se pasó a ElevenLabs.
 - **5 oct 2026**: voz premium con ElevenLabs. David creó con Voice Design una voz grave de mayordomo en español y se conectó al servidor y al frontend (ver sección 2). Se entregó como `voz_eleven.py`, `public/voz_premium.js` y `parche_voz_eleven.py`. Probado con ElevenLabs y Supabase simulados y en Chrome headless; en el celular de David funciona y no demora para hablar.
 - **5 oct 2026**: metas del contador de uso por cuenta (tabla `metas_uso`, `POST /uso` para guardar y `metas` dentro de `GET /uso`; si la tabla no existe usa `localStorage` como antes). Se entregó como `supabase_metas.sql` y `parche_metas.py`. David confirmó además que ya reactivó "Confirm email" y publicó la app de Google (antiguo pendiente 3).
+- **5 oct 2026**: Jarvis ahora conoce sus propias funciones. `texto_capacidades()` en `server.py` agrega al prompt un bloque "SOBRE TI" con lo que tiene y lo que aún no (y avisa que linterna, vibración y batería no están en la versión en línea; la búsqueda de personas solo se ofrece si hay `TAVILY_API_KEY`). Se entregó como `parche_capacidades.py`.
 
 ---
 
@@ -131,5 +132,6 @@ Al terminar **cada** actualización:
 4. Cambiar la fecha de "Última actualización".
 5. Entregar el archivo completo actualizado (con `cat > CONTEXTO_JARVIS.md << 'EOF'`), no solo los cambios.
 6. Subirlo al repo: `git add CONTEXTO_JARVIS.md && git commit -m "Actualizar contexto" && git push`.
+7. Si se agrega o quita una función de Jarvis, actualizar también `texto_capacidades()` en `server.py`, para que Jarvis sepa qué tiene.
 
 David comparte este archivo al abrir un chat nuevo, para que la IA tenga todo el contexto.

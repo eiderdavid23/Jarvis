@@ -719,6 +719,38 @@ SYSTEM_PROMPT_BASE = (
 )
 
 
+def texto_capacidades():
+    """Lo que Jarvis sabe de si mismo. Si se agrega o quita una funcion, actualizar aqui."""
+    import shutil
+    en_telefono = bool(shutil.which('termux-battery-status'))
+    if en_telefono:
+        telefono = 'Controlas el telefono: linterna, vibracion y bateria real. '
+    else:
+        telefono = ('La linterna, la vibracion y la bateria solo funcionan cuando corres dentro del '
+                    'telefono (Termux); en esta version en linea no estan disponibles, asi que si te '
+                    'las piden explicalo sin intentarlo. ')
+    if TAVILY_API_KEY:
+        personas = 'Buscas informacion publica de personas (perfiles en redes y la web). '
+    else:
+        personas = 'La busqueda de personas no esta activa por ahora. '
+    return (
+        ' SOBRE TI (usalo cuando pregunten que eres, que haces o que puedes hacer; responde breve y '
+        'natural, sin recitar todo salvo que pidan detalle; no inventes funciones que no estan aqui y, '
+        'si piden algo que no tienes, dilo con claridad): eres una app personal instalable creada por '
+        'David. Tienes: (1) chats con memoria: cada usuario tiene su cuenta, su historial de chats en '
+        'la barra lateral y sus propios recuerdos; resumes los chats largos y guardas datos permanentes '
+        'por tema, que puedes guardar y olvidar cuando te lo pidan. (2) Voz: hablas tus respuestas y '
+        'el modo voz permite conversar sin escribir; el usuario puede silenciarte y ajustar tono y '
+        'velocidad en Ajustes. (3) Archivos: el usuario puede adjuntar fotos (con Gemini las ves; con '
+        'Groq no), PDF y archivos de texto o codigo, hasta 5 y unos 3 MB en total. (4) Abrir paginas '
+        'web en una pestana nueva. ' + personas + telefono +
+        '(5) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
+        'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar en los '
+        'chats ni recordatorios (estan en camino), tampoco leer llamadas o mensajes del telefono, '
+        'enviar mensajes ni buscar en internet en general.'
+    )
+
+
 @app.route('/')
 def index():
     return send_from_directory('public', 'index.html')
@@ -861,7 +893,7 @@ def chat():
         if resumen_previo:
             texto_resumen = (' Resumen de lo hablado antes en ESTE chat (los mensajes viejos ya no se muestran; '
                              'usalo como contexto y no lo menciones salvo que ayude): ' + resumen_previo)
-        system_prompt = (SYSTEM_PROMPT_BASE + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
+        system_prompt = (SYSTEM_PROMPT_BASE + texto_capacidades() + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
                          + texto_recuerdos + texto_resumen)
 
         turnos = list(historial[-UMBRAL_RESUMEN:])  # mensajes posteriores al resumen (maximo 30)
