@@ -33,7 +33,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **Frontend**: `public/index.html` (~1627 líneas, estilo Claude) y `public/auth.js` (~533 líneas): pantalla de login, lista de chats en el sidebar (sustituyó a "Historial de chats"), "Cerrar sesión" y saludo con el nombre del usuario. En "Próximamente" quedan Buscar y Recordatorios.
 - **Login (Supabase Auth)**: "Continuar con Google" y correo + contraseña (con campo Nombre al crear cuenta). Rutas: `/auth/registro`, `/auth/login`, `/auth/refresh`, `/auth/google`, `/auth/yo`. Google devuelve la sesión en el `#` de la URL y `auth.js` la lee. Los tokens van en el `localStorage` del navegador y se renuevan solos.
 - **Memoria (Supabase, con RLS por usuario)**: tablas `chats`, `mensajes` y `memorias` (clave/valor). Se mandan al modelo el resumen del chat (columnas `resumen` y `resumen_hasta` de `chats`) más los mensajes posteriores a ese resumen (entre 20 y 30). Los datos permanentes se guardan **por tema** (se actualizan, no se duplican). Ya no se usan `memoria_local.json` ni `memoria_persistente.json`.
-- **Herramientas** (function calling, definidas en `server.py`): `abrir_url`, `buscar_persona` (Tavily, necesita `TAVILY_API_KEY`), `generar_imagen` (Gemini, solo con ese proveedor), `encender_linterna`, `apagar_linterna`, `vibrar`, `consultar_bateria`, `guardar_recuerdo` (tema + dato) y `olvidar_recuerdo`. Las de hardware usan Termux:API (`comandos_dispositivo.py`).
+- **Herramientas** (function calling, definidas en `server.py`): `abrir_url`, `buscar_persona` (Tavily, necesita `TAVILY_API_KEY`), `generar_imagen` (Cloudflare FLUX.1 schnell si hay `CF_ACCOUNT_ID` y `CF_API_TOKEN`; si no, Gemini), `encender_linterna`, `apagar_linterna`, `vibrar`, `consultar_bateria`, `guardar_recuerdo` (tema + dato) y `olvidar_recuerdo`. Las de hardware usan Termux:API (`comandos_dispositivo.py`).
 - **Orbe animado** (canvas) con 3 modos: grande al centro en el inicio y en el modo voz (llamada con escucha continua), y pequeño arriba cuando hay chat. Estados: reposo / escuchando / pensando / hablando. Tocar el orbe interrumpe a Jarvis.
 - **PWA**: `public/manifest.json`, `public/sw.js`, `public/icon.svg`.
 - **IA**: Gemini por defecto (`GEMINI_MODEL`, hoy `gemini-3.5-flash-lite`) y Groq como alternativa (`openai/gpt-oss-120b`). Las llaves pueden venir del navegador (headers `X-Gemini-Key`, `X-Groq-Key`, `X-Proveedor`) o del `.env`.
@@ -51,7 +51,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 **Vercel**: https://jarvis-mu-ebon-12.vercel.app
 **Local**: `~/jarvis` en Termux, con `python server.py` (puerto 3000 o `PORT`).
 
-**Variables de entorno** (en `.env` local y en Vercel → Settings → Environment Variables; Flask solo lee el `.env` al arrancar, y en Vercel hay que hacer Redeploy tras cambiarlas): `GEMINI_API_KEY`, `GROQ_API_KEY`, `SUPABASE_URL` y `SUPABASE_KEY` (la llave **publishable**; nunca la `secret` ni el Client Secret de Google) y `ELEVENLABS_API_KEY` (llave de ElevenLabs; solo en `.env` y Vercel). Opcionales: `TAVILY_API_KEY` (búsqueda de personas), `GEMINI_IMAGE_MODEL` (por defecto `gemini-2.5-flash-image`), `ELEVENLABS_EMAILS`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL`, `ELEVENLABS_STABILITY`.
+**Variables de entorno** (en `.env` local y en Vercel → Settings → Environment Variables; Flask solo lee el `.env` al arrancar, y en Vercel hay que hacer Redeploy tras cambiarlas): `GEMINI_API_KEY`, `GROQ_API_KEY`, `SUPABASE_URL` y `SUPABASE_KEY` (la llave **publishable**; nunca la `secret` ni el Client Secret de Google) y `ELEVENLABS_API_KEY` (llave de ElevenLabs; solo en `.env` y Vercel). Opcionales: `TAVILY_API_KEY` (búsqueda de personas), `CF_ACCOUNT_ID` y `CF_API_TOKEN` (imágenes con Cloudflare), `CF_IMAGE_MODEL`, `GEMINI_IMAGE_MODEL` (por defecto `gemini-2.5-flash-image`), `ELEVENLABS_EMAILS`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL`, `ELEVENLABS_STABILITY`.
 
 **Configuración externa** (no está en el repo):
 - Supabase → Authentication → Sign In / Providers: Google activado y "Confirm email" desactivado (para pruebas). URL Configuration: Site URL y Redirect URLs con la dirección de Vercel y `http://localhost:3000`.
@@ -82,6 +82,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **5 oct 2026**: Jarvis ahora conoce sus propias funciones. `texto_capacidades()` en `server.py` agrega al prompt un bloque "SOBRE TI" con lo que tiene y lo que aún no (y avisa que linterna, vibración y batería no están en la versión en línea; la búsqueda de personas solo se ofrece si hay `TAVILY_API_KEY`). Se entregó como `parche_capacidades.py`.
 - **5 oct 2026**: corregido que Jarvis usaba `buscar_persona` para buscar productos en un sitio (abría Instagram y mostraba resultados ajenos). Ahora `buscar_persona` es solo para personas; para un producto o una búsqueda en un sitio, Jarvis pregunta si confirma y, al confirmar, abre con `abrir_url` la búsqueda de ese sitio (Mercado Libre usa el dominio del país; si no lo sabe lo pregunta y lo guarda como recuerdo `pais`). La confirmación depende de las instrucciones al modelo, no de un bloqueo en el código. Se entregó como `parche_busqueda.py`.
 - **7 oct 2026**: generación de imágenes. Herramienta `generar_imagen` (modelo `gemini-2.5-flash-image`, cambiable con `GEMINI_IMAGE_MODEL`): `/chat` devuelve `imagenes` y el navegador las muestra en una tarjeta con botón Descargar. Una por mensaje, solo con Gemini, sin guardarse en el historial. Se entregó como `parche_imagen.py`.
+- **7 oct 2026**: la llave gratis de Gemini no tenía cuota para imágenes, así que `generar_imagen` ahora usa Cloudflare Workers AI (FLUX.1 schnell) cuando existen `CF_ACCOUNT_ID` y `CF_API_TOKEN` en Vercel; si no, vuelve a Gemini. Con Cloudflare también funciona con Groq. Se entregó como `parche_cloudflare.py`.
 
 ---
 
@@ -89,7 +90,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 
 - Adjuntos: Vercel limita el cuerpo a ~4.5 MB, por eso el tope es 5 adjuntos y ~3.3 MB en base64. Las fotos se reducen solas; un PDF o archivo grande no. Una foto HEIC de la galería puede no abrirse en Chrome.
 - Con Groq no se ven imágenes (Jarvis avisa) y un PDF escaneado sin texto no se puede leer.
-- Imágenes generadas (`generar_imagen`): solo con Gemini, una por mensaje, no se guardan en el historial (al reabrir el chat queda solo el texto) y no suman al contador de uso. La cuota gratis del modelo de imágenes no está verificada y Vercel puede cortar la generación por tiempo.
+- Imágenes generadas (`generar_imagen`): una por mensaje (con Cloudflare sirve con cualquier proveedor; sin Cloudflare, solo con Gemini), no se guardan en el historial (al reabrir el chat queda solo el texto) y no suman al contador de uso. La llave gratis de Gemini no tuvo cuota para imágenes (7 oct); la cuota diaria gratis de Cloudflare no está verificada y Vercel puede cortar la generación por tiempo.
 - El timeout hacia la IA es de 55 s. El límite de la función en Vercel depende del plan y no hay `vercel.json`: si con nivel Alto sale error 504, usar Medio.
 - El uso real cuenta solo lo que Jarvis envía: Google cuenta la cuota por proyecto, así que otras apps con la misma llave no aparecen (el total oficial está en aistudio.google.com/rate-limit). La hora de reinicio de Groq (UTC) no está verificada.
 - Si falta la tabla `uso_api`, el chat sigue normal y Uso muestra "Falta crear la tabla en Supabase". Si falta la tabla `metas_uso`, las metas del contador quedan guardadas por dispositivo.
@@ -121,7 +122,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 5. Funciones del sidebar marcadas "Próximamente": buscar en los chats y recordatorios (ahora podrían guardarse por usuario en Supabase).
 6. Verificar a qué hora reinicia el día de Groq (hoy se asume medianoche UTC, sin verificar).
 7. Integraciones (widget de soporte para otras plataformas): descartado por ahora; ver el historial del 3–4 oct.
-8. Probar la generación de imágenes con la llave de Gemini (cuota gratis) y en Vercel (tiempo máximo de la función).
+8. Probar la generación de imágenes con Cloudflare (cuota diaria gratis) y el tiempo máximo de la función en Vercel.
 
 **Meta principal**: que Jarvis tenga buena memoria, entienda de qué se habla y no lo confunda con otra cosa cuando David cambia una palabra.
 

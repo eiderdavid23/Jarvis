@@ -254,8 +254,45 @@ IMAGEN_MODELO = os.environ.get('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image')
 IMAGEN_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{IMAGEN_MODELO}:generateContent'
 
 
+CF_ACCOUNT_ID = os.environ.get('CF_ACCOUNT_ID', '').strip()
+CF_API_TOKEN = os.environ.get('CF_API_TOKEN', '').strip()
+CF_IMAGEN_MODELO = os.environ.get('CF_IMAGE_MODEL', '@cf/black-forest-labs/flux-1-schnell')
+
+
+def generar_imagen_cloudflare(descripcion):
+    """Devuelve (imagen, error) usando Cloudflare Workers AI."""
+    url = f'https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/{CF_IMAGEN_MODELO}'
+    try:
+        r = requests.post(url, headers={'Authorization': 'Bearer ' + CF_API_TOKEN},
+                          json={'prompt': descripcion[:2000], 'steps': 4}, timeout=50)
+    except requests.exceptions.Timeout:
+        return None, 'La imagen tardo demasiado en generarse.'
+    except requests.exceptions.RequestException:
+        return None, 'No pude conectar con el generador de imagenes.'
+    try:
+        data = r.json()
+    except ValueError:
+        data = {}
+    if r.status_code != 200 or not data.get('success', True):
+        print('[IMAGEN] Cloudflare error', r.status_code, r.text[:500])
+        if r.status_code == 429:
+            return None, 'Se acabo la cuota diaria de imagenes de Cloudflare.'
+        if r.status_code in (401, 403):
+            return None, 'El token de Cloudflare no es valido o no tiene permiso de Workers AI.'
+        errores = data.get('errors') or [{}]
+        return None, f"Cloudflare respondio con error {r.status_code}: {str(errores[0].get('message', ''))[:200]}"
+    imagen = (data.get('result') or {}).get('image')
+    if not imagen:
+        return None, 'El generador no devolvio una imagen (puede que la descripcion fuera bloqueada).'
+    if len(imagen) > 3500000:
+        return None, 'La imagen salio demasiado pesada para enviarla.'
+    return {'mime': 'image/jpeg', 'datos': imagen}, None
+
+
 def generar_imagen(descripcion, api_key):
     """Devuelve (imagen, error). imagen = {'mime': ..., 'datos': base64}."""
+    if CF_ACCOUNT_ID and CF_API_TOKEN:
+        return generar_imagen_cloudflare(descripcion)
     cuerpo = {
         'contents': [{'parts': [{'text': descripcion}]}],
         'generationConfig': {'responseModalities': ['TEXT', 'IMAGE']}
@@ -319,7 +356,7 @@ def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         if not descripcion:
             return {'ok': False, 'error': 'falta la descripcion de la imagen'}
         llave = acciones_frontend.get('_llave')
-        if not llave:
+        if not llave and not (CF_ACCOUNT_ID and CF_API_TOKEN):
             return {'ok': False, 'error': 'Con Groq no se pueden generar imagenes; hay que cambiar a Gemini en Ajustes.'}
         if acciones_frontend.get('imagenes'):
             return {'ok': False, 'error': 'ya se genero una imagen en este mensaje; que el usuario pida la siguiente aparte.'}
@@ -833,7 +870,7 @@ def texto_capacidades():
         'Groq no), PDF y archivos de texto o codigo, hasta 5 y unos 3 MB en total. (4) Abrir un sitio o la '
         'busqueda dentro de un sitio (Mercado Libre, Amazon, YouTube...) en una pestana nueva, '
         'las busquedas dentro de un sitio se hacen tras pedir confirmacion. Generas imagenes nuevas '
-        'con IA a partir de una descripcion (solo con Gemini; con Groq no) y las muestras en el chat; '
+        'con IA a partir de una descripcion (con Gemini; con Groq solo si hay Cloudflare configurado) y las muestras en el chat; '
         'no se guardan en el historial. ' + personas + telefono +
         '(5) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
         'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
