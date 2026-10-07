@@ -86,6 +86,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **7 oct 2026**: Jarvis dijo "generando la imagen" sin llamar a `generar_imagen` (no salió nada). Se reforzó la instrucción en la descripción de la herramienta y en `texto_capacidades()`. Se entregó como `parche_imagen_regla.py`.
 - **7 oct 2026**: modelo avanzado con respaldo. `GEMINI_MODEL` pasa a `gemini-3.5-flash` y, si Google responde 404, 429 o 5xx, `llamar_gemini` reintenta con `GEMINI_MODEL_RESPALDO` (`gemini-3.5-flash-lite`). Se entregó como `parche_modelo.py`.
 - **7 oct 2026**: Jarvis lee archivos .zip adjuntos (ver Adjuntos en la sección 2). Se entregó como `parche_zip.py`. Probado con zips normales, con rutas con `..`, con enlaces simbólicos, cifrado, corrupto, con 2.500 archivos y con una bomba de compresión, con Gemini y Supabase simulados y en Chrome headless; falta probarlo con un zip real en el celular.
+- **7 oct 2026**: los adjuntos ya no se olvidan. Tabla `archivos_chat` (RLS por usuario, se borra con el chat; SQL en `supabase_archivos.sql`), herramienta `leer_archivo(ruta, parte)` y lista de archivos guardados en el prompt de cada mensaje. Funciona con zip, PDF y texto. Se entregó como `parche_archivos.py`.
 
 ---
 
@@ -114,7 +115,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - El color de la PWA instalada (`manifest.json`) sigue siendo oscuro aunque el tema sea claro; la barra del navegador sí cambia con el tema.
 - El resumen es por chat: no mezcla chats distintos (los datos permanentes siguen en `memorias`). Cada resumen cuesta una llamada extra a la IA cada ~10 mensajes y suma 1–3 s a esa respuesta.
 - En chats viejos con más de 60 mensajes sin resumir, el primer resumen solo cubre los últimos 60.
-- ZIP: el contenido del zip solo existe en el mensaje en que se adjunta (en el historial queda únicamente la línea `📎 Adjuntos`), así que en los mensajes siguientes Jarvis ya no lo tiene salvo lo que él mismo haya dicho. Un zip pesa como máximo unos 2,4 MB (tope de ~3,3 MB en base64 por Vercel); si hay más texto del que cabe, Jarvis lo avisa en la estructura (recortado / no leído). Solo `.zip`: no abre `.rar`, `.7z` ni `.tar.gz`.
+- ZIP: el texto de lo adjuntado (zip, PDF y archivos de texto) se guarda en la tabla `archivos_chat` y Jarvis lo reabre con `leer_archivo` en los mensajes siguientes (hasta ~1,5 MB de texto por mensaje; las imágenes no se guardan; cada lectura cuenta como una llamada más a la IA, tope 8 vueltas por mensaje; el prompt lleva la lista de hasta 80 archivos). Un zip pesa como máximo unos 2,4 MB (tope de ~3,3 MB en base64 por Vercel); si hay más texto del que cabe, Jarvis lo avisa en la estructura (recortado / no leído). Solo `.zip`: no abre `.rar`, `.7z` ni `.tar.gz`.
 
 ---
 

@@ -120,11 +120,11 @@ def requiere_login(f):
 
 # ---------- Base de datos (REST, con el token del usuario => RLS) ----------
 
-def _rest(metodo, tabla, params=None, cuerpo=None, extra=None):
+def _rest(metodo, tabla, params=None, cuerpo=None, extra=None, timeout=15):
     try:
         r = requests.request(metodo, _url() + '/rest/v1/' + tabla,
                              headers=_headers(g.token, extra),
-                             params=params, json=cuerpo, timeout=15)
+                             params=params, json=cuerpo, timeout=timeout)
     except requests.exceptions.RequestException as e:
         raise SupaError('sin conexion con Supabase: ' + str(e))
     if r.status_code >= 400:
@@ -208,6 +208,52 @@ def guardar_recuerdo(clave, valor):
 
 def olvidar_recuerdo(clave):
     _rest('DELETE', 'memorias', {'clave': 'eq.' + clave.strip().lower()})
+
+
+# ---------- Archivos del chat ----------
+
+def guardar_archivos(chat_id, filas):
+    """Guarda (o actualiza) el texto de los adjuntos de un chat, en tandas."""
+    tanda, peso = [], 0
+
+    def subir():
+        if tanda:
+            _rest('POST', 'archivos_chat', {'on_conflict': 'chat_id,ruta'}, list(tanda),
+                  {'Prefer': 'resolution=merge-duplicates,return=minimal'}, timeout=40)
+            tanda.clear()
+
+    for f in filas:
+        tanda.append({'user_id': g.usuario_id, 'chat_id': str(chat_id), 'ruta': f['ruta'],
+                      'tipo': f['tipo'], 'tam': int(f['tam']), 'largo': len(f['texto']),
+                      'estado': f['estado'], 'texto': f['texto']})
+        peso += len(f['texto']) + 300
+        if peso > 400000:
+            subir()
+            peso = 0
+    subir()
+
+
+def listar_archivos(chat_id):
+    return _rest('GET', 'archivos_chat', {'chat_id': 'eq.' + str(chat_id),
+                                          'select': 'ruta,tipo,tam,largo,estado',
+                                          'order': 'ruta.asc', 'limit': '500'})
+
+
+def leer_archivo(chat_id, ruta):
+    """Devuelve (fila, candidatas). Ruta exacta primero; si no, coincidencia parcial."""
+    cols = 'ruta,tipo,largo,estado,texto'
+    ruta = ruta.strip()
+    base = {'chat_id': 'eq.' + str(chat_id), 'select': cols, 'limit': '1'}
+    f = _rest('GET', 'archivos_chat', dict(base, ruta='eq.' + ruta))
+    if f:
+        return f[0], []
+    patron = '*' + ruta.replace('*', '').replace(',', ' ') + '*'
+    c = _rest('GET', 'archivos_chat', {'chat_id': 'eq.' + str(chat_id), 'select': 'ruta',
+                                       'ruta': 'ilike.' + patron, 'order': 'ruta.asc', 'limit': '10'})
+    if len(c) == 1:
+        f = _rest('GET', 'archivos_chat', dict(base, ruta='eq.' + c[0]['ruta']))
+        return (f[0] if f else None), []
+    return None, [x['ruta'] for x in c]
 
 
 # ---------- Rutas de chats ----------
