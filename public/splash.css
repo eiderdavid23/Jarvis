@@ -1,0 +1,48 @@
+/* Pantalla de inicio animada de Jarvis */
+#splash {
+  --sp: 0,229,255; --sp-txt: #e6f7fb; --sp-suave: #8fb4bf;
+  position: fixed; inset: 0; z-index: 99999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(120% 70% at 50% 0%, #0a1422 0%, #05070d 62%);
+  transition: opacity .6s ease, visibility .6s;
+}
+[data-tema="claro"] #splash { --sp: 0,140,180; --sp-txt: #1a1a1a; --sp-suave: #6b6b6b; background: #ffffff; }
+#splash.fuera { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.sp-orbe { position: relative; width: 170px; height: 170px; animation: spEntra .9s cubic-bezier(.2,.8,.2,1) both; }
+.sp-glow {
+  position: absolute; left: 50%; top: 50%; width: 300px; height: 300px; margin: -150px 0 0 -150px;
+  border-radius: 50%; background: radial-gradient(circle, rgba(var(--sp), .38) 0%, rgba(var(--sp), 0) 68%);
+  animation: spGlow 2.2s ease-in-out infinite;
+}
+.sp-anillos { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.sp-anillos circle { fill: none; stroke: rgb(var(--sp)); transform-origin: 100px 100px; }
+.sp-anillos .a1 { stroke-width: 1.4; stroke-dasharray: 3 9; opacity: .7; animation: spGira 16s linear infinite; }
+.sp-anillos .a2 { stroke-width: 2.2; stroke-dasharray: 70 30 18 30; opacity: .85; animation: spGira 7s linear infinite reverse; }
+.sp-anillos .a3 { stroke-width: 1.2; opacity: .5; animation: spPulsa 2.2s ease-in-out infinite; }
+.sp-nucleo {
+  position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 28px 8px rgba(var(--sp), .75), 0 0 70px 20px rgba(var(--sp), .35);
+  animation: spLatido 1.6s ease-in-out infinite;
+}
+[data-tema="claro"] .sp-nucleo { background: rgb(var(--sp)); box-shadow: 0 0 24px 6px rgba(var(--sp), .45); }
+
+.sp-titulo { margin-top: 46px; font-size: 24px; font-weight: 300; letter-spacing: .42em; color: var(--sp-txt); padding-left: .42em; white-space: nowrap; }
+.sp-titulo span { display: inline-block; opacity: 0; animation: spLetra .7s ease-out forwards; text-shadow: 0 0 14px rgba(var(--sp), .6); }
+[data-tema="claro"] .sp-titulo span { text-shadow: none; }
+.sp-sub { margin-top: 14px; height: 18px; font-size: 13px; letter-spacing: .12em; color: var(--sp-suave); opacity: 0; animation: spAparece .6s ease-out .7s forwards; }
+.sp-barra { margin-top: 22px; width: 150px; height: 2px; border-radius: 2px; background: rgba(var(--sp), .16); overflow: hidden; opacity: 0; animation: spAparece .6s ease-out .9s forwards; }
+.sp-barra i { display: block; height: 100%; width: 0; background: rgb(var(--sp)); box-shadow: 0 0 10px rgb(var(--sp)); animation: spCarga 1.3s cubic-bezier(.4,0,.2,1) .8s forwards; }
+
+@keyframes spEntra { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: scale(1); } }
+@keyframes spGira { to { transform: rotate(360deg); } }
+@keyframes spPulsa { 0%, 100% { transform: scale(.94); opacity: .3; } 50% { transform: scale(1.06); opacity: .7; } }
+@keyframes spLatido { 0%, 100% { transform: scale(.9); } 50% { transform: scale(1.1); } }
+@keyframes spGlow { 0%, 100% { transform: scale(.85); opacity: .7; } 50% { transform: scale(1.1); opacity: 1; } }
+@keyframes spLetra { from { opacity: 0; transform: translateY(10px); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes spAparece { to { opacity: 1; } }
+@keyframes spCarga { to { width: 100%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-anillos .a1, .sp-anillos .a2, .sp-anillos .a3, .sp-glow, .sp-nucleo { animation: none; }
+}

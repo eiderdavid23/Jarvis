@@ -87,6 +87,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **7 oct 2026**: modelo avanzado con respaldo. `GEMINI_MODEL` pasa a `gemini-3.5-flash` y, si Google responde 404, 429 o 5xx, `llamar_gemini` reintenta con `GEMINI_MODEL_RESPALDO` (`gemini-3.5-flash-lite`). Se entregó como `parche_modelo.py`.
 - **7 oct 2026**: Jarvis lee archivos .zip adjuntos (ver Adjuntos en la sección 2). Se entregó como `parche_zip.py`. Probado con zips normales, con rutas con `..`, con enlaces simbólicos, cifrado, corrupto, con 2.500 archivos y con una bomba de compresión, con Gemini y Supabase simulados y en Chrome headless; falta probarlo con un zip real en el celular.
 - **7 oct 2026**: los adjuntos ya no se olvidan. Tabla `archivos_chat` (RLS por usuario, se borra con el chat; SQL en `supabase_archivos.sql`), herramienta `leer_archivo(ruta, parte)` y lista de archivos guardados en el prompt de cada mensaje. Funciona con zip, PDF y texto. Se entregó como `parche_archivos.py`.
+- **7 oct 2026**: diseño. Pantalla de inicio animada al abrir la app (`public/splash.css` y `public/splash.js`: orbe con anillos giratorios, título letra por letra y barra de progreso, ~2 s, una vez por apertura; respeta tema claro y oscuro) y ondas de voz alrededor del orbe (`public/ondas.js`: barras circulares y anillos que se expanden; con el usuario se activan por cada resultado del reconocimiento de voz y con Jarvis por palabra o con ritmo simulado). Las ondas son simuladas, no leen el audio real. Se entregó como `parche_diseno.py`.
 
 ---
 
@@ -129,6 +130,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 6. Integraciones (widget de soporte para otras plataformas): descartado por ahora; ver el historial del 3–4 oct.
 7. Probar la generación de imágenes con Cloudflare (cuota diaria gratis) y el tiempo máximo de la función en Vercel.
 8. Verificar en Vercel (Logs) que el modelo avanzado responde con la llave de David y que el respaldo entra cuando se agota; probar también `gemini-3.6-flash` poniéndolo en `GEMINI_MODEL`.
+9. Iconos PNG (192, 512 y adaptable) para el icono de la app y la carga nativa de Android; hoy solo hay `icon.svg`.
 
 **Meta principal**: que Jarvis tenga buena memoria, entienda de qué se habla y no lo confunda con otra cosa cuando David cambia una palabra.
 

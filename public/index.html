@@ -478,9 +478,11 @@
 </style>
 <link rel="stylesheet" href="/respuestas.css">
 <link rel="stylesheet" href="/tema_claro.css">
+<link rel="stylesheet" href="/splash.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
+<script src="/splash.js"></script>
 
 <header id="barra">
   <button id="btnMenu" class="btnIcono" aria-label="Menú">
@@ -705,6 +707,7 @@
     </div>
   </div>
 </div>
+<script src="/ondas.js"></script>
 <script>
 /* ========== Orbe ========== */
 const body = document.body;
@@ -757,6 +760,7 @@ function animar() {
     ctx.beginPath(); ctx.arc(x, y, Math.max(1.5, w * 0.005), 0, Math.PI * 2);
     ctx.fillStyle = `rgba(${color},${0.5 + 0.5 * p.r})`; ctx.fill();
   });
+  dibujarOndas(ctx, w, cx, cy, color);
 }
 animar();
 
@@ -917,6 +921,7 @@ function hablarNavegador(partes, cancelado, ponerLiberar) {
         if (vn) u.voice = vn;
       }
       u.onstart = () => { hablando = true; setEstado('hablando', 'Hablando'); };
+      u.onboundary = () => pulsoVoz(0.8);
       u.onend = siguiente;
       u.onerror = siguiente;
       speechSynthesis.speak(u);
@@ -1574,6 +1579,7 @@ if (SR) {
     setEstado('escuchando', 'Escuchando');
   };
   recognition.onresult = (ev) => {
+    pulsoVoz(0.85);
     let interino = '', final = '';
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
       const r = ev.results[i];
