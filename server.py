@@ -25,8 +25,15 @@ MODELO_LOCAL_URL = os.environ.get('MODELO_LOCAL_URL', 'http://localhost:8081/v1/
 
 # --- Gemini (API en la nube) ---
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.5-flash-lite')
-GEMINI_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent'
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.5-flash')
+GEMINI_MODEL_RESPALDO = os.environ.get('GEMINI_MODEL_RESPALDO', 'gemini-3.5-flash-lite')
+
+
+def url_gemini(modelo):
+    return f'https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent'
+
+
+GEMINI_URL = url_gemini(GEMINI_MODEL)
 
 # --- Groq (respaldo si Gemini se queda sin cuota) ---
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
@@ -617,12 +624,21 @@ def guardar_uso_pendiente():
             print('[USO] No pude guardar el uso en Supabase (¿ejecutaste supabase_uso.sql?):', e)
 
 
-def llamar_gemini(cuerpo, gen_config, api_key):
-    resp = requests.post(GEMINI_URL, params={'key': api_key}, json=cuerpo, timeout=TIMEOUT_IA)
+def _post_gemini(modelo, cuerpo, gen_config, api_key):
+    resp = requests.post(url_gemini(modelo), params={'key': api_key}, json=cuerpo, timeout=TIMEOUT_IA)
     if resp.status_code == 400 and 'thinkingConfig' in gen_config:
         print('[GEMINI] 400 con thinkingConfig; reintento sin pensamiento extendido. Cuerpo:', resp.text[:500])
         gen_config.pop('thinkingConfig', None)
-        resp = requests.post(GEMINI_URL, params={'key': api_key}, json=cuerpo, timeout=TIMEOUT_IA)
+        resp = requests.post(url_gemini(modelo), params={'key': api_key}, json=cuerpo, timeout=TIMEOUT_IA)
+    return resp
+
+
+def llamar_gemini(cuerpo, gen_config, api_key):
+    resp = _post_gemini(GEMINI_MODEL, cuerpo, gen_config, api_key)
+    if (resp.status_code in (404, 429, 500, 502, 503, 504)
+            and GEMINI_MODEL_RESPALDO and GEMINI_MODEL_RESPALDO != GEMINI_MODEL):
+        print(f'[GEMINI] {GEMINI_MODEL} respondio {resp.status_code}; uso el respaldo {GEMINI_MODEL_RESPALDO}.')
+        resp = _post_gemini(GEMINI_MODEL_RESPALDO, cuerpo, gen_config, api_key)
     contar_uso('gemini', resp)
     return resp
 
@@ -782,7 +798,7 @@ def resumir_conversacion(resumen_previo, mensajes, proveedor, api_key):
         texto = resp.json()['choices'][0]['message'].get('content') or ''
     else:
         resp = requests.post(
-            GEMINI_URL,
+            url_gemini(GEMINI_MODEL_RESPALDO or GEMINI_MODEL),
             params={'key': api_key},
             json={
                 'system_instruction': {'parts': [{'text': PROMPT_RESUMEN}]},

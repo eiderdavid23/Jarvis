@@ -36,7 +36,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **Herramientas** (function calling, definidas en `server.py`): `abrir_url`, `buscar_persona` (Tavily, necesita `TAVILY_API_KEY`), `generar_imagen` (Cloudflare FLUX.1 schnell si hay `CF_ACCOUNT_ID` y `CF_API_TOKEN`; si no, Gemini), `encender_linterna`, `apagar_linterna`, `vibrar`, `consultar_bateria`, `guardar_recuerdo` (tema + dato) y `olvidar_recuerdo`. Las de hardware usan Termux:API (`comandos_dispositivo.py`).
 - **Orbe animado** (canvas) con 3 modos: grande al centro en el inicio y en el modo voz (llamada con escucha continua), y pequeño arriba cuando hay chat. Estados: reposo / escuchando / pensando / hablando. Tocar el orbe interrumpe a Jarvis.
 - **PWA**: `public/manifest.json`, `public/sw.js`, `public/icon.svg`.
-- **IA**: Gemini por defecto (`GEMINI_MODEL`, hoy `gemini-3.5-flash-lite`) y Groq como alternativa (`openai/gpt-oss-120b`). Las llaves pueden venir del navegador (headers `X-Gemini-Key`, `X-Groq-Key`, `X-Proveedor`) o del `.env`.
+- **IA**: Gemini por defecto (`GEMINI_MODEL`, hoy `gemini-3.5-flash`, con respaldo automático a `GEMINI_MODEL_RESPALDO`, hoy `gemini-3.5-flash-lite`, cuando Google responde 404, 429 o error 5xx; los resúmenes usan el de respaldo) y Groq como alternativa (`openai/gpt-oss-120b`). Las llaves pueden venir del navegador (headers `X-Gemini-Key`, `X-Groq-Key`, `X-Proveedor`) o del `.env`.
 - **Voz** (`POST /voz` con `{texto, tono, vel, premium}`): el frontend divide la respuesta en frases (`dividirFrases`): pide el audio de la primera y, mientras suena, pide la siguiente (no espera el audio completo). Orden de voces: (1) voz premium de ElevenLabs, si la respuesta es corta y está activada; (2) Piper del servidor (solo corre local en Termux); (3) Piper descargado en el navegador, si David lo descargó y lo tiene activado; (4) voz del navegador (`speechSynthesis`), también frase por frase. Si `/voz` falla, sigue con (3) o (4) y no vuelve a intentar el servidor en esa sesión, salvo que la respuesta sea corta y la voz premium esté activada (esa sí lo reintenta).
 - **Ajustes de voz** (Ajustes → Voz, `public/voz_ajustes.js`): tarjeta "Tono y estilo" con presets Mayordomo (tono 0.88, velocidad 0.95), Más grave (0.82, 0.92) y Normal, deslizadores de Tono (0.78–1) y Velocidad (0.85–1.15), selector de voz del navegador en español y botón Probar voz. Se guarda en `localStorage` (`jarvisTono`, `jarvisVel`, `jarvisVozNav`). Con Piper del servidor, `/voz` llama a Piper con `--length_scale = tono/vel` (si Piper no lo acepta, reintenta sin él) y el navegador reproduce con `playbackRate = tono` y `preservesPitch = false`, lo que baja el tono sin cambiar la velocidad. Con la voz del navegador se usa `pitch = 1 - (1 - tono) * 2.5` y `rate = vel`.
 - **Piper en el navegador** (`public/voz_piper_web.js`, tarjeta "Voz de Jarvis" en Ajustes → Voz): descarga opcional (unos 60 MB, tamaño sin verificar) de la voz `es_ES-davefx-medium`, la misma de Piper local, con la librería `@mintplex-labs/piper-tts-web@1.0.3` cargada como módulo desde esm.sh (jsdelivr de respaldo); el modelo queda guardado en el navegador. Botones Descargar, Probar y Borrar, interruptor "Usar esta voz" (`jarvisPiperWeb` y `jarvisPiperWebOn` en `localStorage`) y enlace "Ver detalle" con el error técnico. Si el primer motor falla al generar, prueba el segundo. En el celular de David funciona, pero demora un poco.
@@ -84,6 +84,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **7 oct 2026**: generación de imágenes. Herramienta `generar_imagen` (modelo `gemini-2.5-flash-image`, cambiable con `GEMINI_IMAGE_MODEL`): `/chat` devuelve `imagenes` y el navegador las muestra en una tarjeta con botón Descargar. Una por mensaje, solo con Gemini, sin guardarse en el historial. Se entregó como `parche_imagen.py`.
 - **7 oct 2026**: la llave gratis de Gemini no tenía cuota para imágenes, así que `generar_imagen` ahora usa Cloudflare Workers AI (FLUX.1 schnell) cuando existen `CF_ACCOUNT_ID` y `CF_API_TOKEN` en Vercel; si no, vuelve a Gemini. Con Cloudflare también funciona con Groq. Se entregó como `parche_cloudflare.py`.
 - **7 oct 2026**: Jarvis dijo "generando la imagen" sin llamar a `generar_imagen` (no salió nada). Se reforzó la instrucción en la descripción de la herramienta y en `texto_capacidades()`. Se entregó como `parche_imagen_regla.py`.
+- **7 oct 2026**: modelo avanzado con respaldo. `GEMINI_MODEL` pasa a `gemini-3.5-flash` y, si Google responde 404, 429 o 5xx, `llamar_gemini` reintenta con `GEMINI_MODEL_RESPALDO` (`gemini-3.5-flash-lite`). Se entregó como `parche_modelo.py`.
 
 ---
 
@@ -91,6 +92,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 
 - Adjuntos: Vercel limita el cuerpo a ~4.5 MB, por eso el tope es 5 adjuntos y ~3.3 MB en base64. Las fotos se reducen solas; un PDF o archivo grande no. Una foto HEIC de la galería puede no abrirse en Chrome.
 - Con Groq no se ven imágenes (Jarvis avisa) y un PDF escaneado sin texto no se puede leer.
+- Modelo avanzado + respaldo: la cuota de Google es por modelo y por proyecto; el contador de uso suma las llamadas de los dos modelos juntos. Si el avanzado se agota, Jarvis sigue con flash-lite (menos capaz con herramientas). Si en Vercel existe la variable `GEMINI_MODEL`, manda sobre el valor por defecto.
 - Imágenes generadas (`generar_imagen`): una por mensaje (con Cloudflare sirve con cualquier proveedor; sin Cloudflare, solo con Gemini), no se guardan en el historial (al reabrir el chat queda solo el texto) y no suman al contador de uso. La llave gratis de Gemini no tuvo cuota para imágenes (7 oct); la cuota diaria gratis de Cloudflare no está verificada y Vercel puede cortar la generación por tiempo.
 - El timeout hacia la IA es de 55 s. El límite de la función en Vercel depende del plan y no hay `vercel.json`: si con nivel Alto sale error 504, usar Medio.
 - El uso real cuenta solo lo que Jarvis envía: Google cuenta la cuota por proyecto, así que otras apps con la misma llave no aparecen (el total oficial está en aistudio.google.com/rate-limit). La hora de reinicio de Groq (UTC) no está verificada.
@@ -118,12 +120,12 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 
 1. Guardar el SQL de las tablas y políticas en el repo (por ejemplo `supabase_schema.sql`) para poder recrearlas.
 2. Probar con dos cuentas reales que cada una solo ve sus chats y su memoria (hasta ahora se probó con una prueba simulada y con una cuenta real).
-3. Modelo por defecto más grande (Gemini Flash normal en vez de flash-lite).
-4. Voz: decidir qué hacer cuando se agoten los créditos de ElevenLabs (hoy Jarvis vuelve a la voz anterior), revisar de vez en cuando el gasto en el panel de ElevenLabs y evaluar Gemini TTS gratis como segunda voz del servidor para Vercel (voces masculinas Charon, Orus e Iapetus en Google AI Studio, con instrucción de tono de mayordomo; su velocidad no se ha medido). Acciones de dispositivo en Vercel, si hay forma.
-5. Funciones del sidebar marcadas "Próximamente": buscar en los chats y recordatorios (ahora podrían guardarse por usuario en Supabase).
-6. Verificar a qué hora reinicia el día de Groq (hoy se asume medianoche UTC, sin verificar).
-7. Integraciones (widget de soporte para otras plataformas): descartado por ahora; ver el historial del 3–4 oct.
-8. Probar la generación de imágenes con Cloudflare (cuota diaria gratis) y el tiempo máximo de la función en Vercel.
+3. Voz: decidir qué hacer cuando se agoten los créditos de ElevenLabs (hoy Jarvis vuelve a la voz anterior), revisar de vez en cuando el gasto en el panel de ElevenLabs y evaluar Gemini TTS gratis como segunda voz del servidor para Vercel (voces masculinas Charon, Orus e Iapetus en Google AI Studio, con instrucción de tono de mayordomo; su velocidad no se ha medido). Acciones de dispositivo en Vercel, si hay forma.
+4. Funciones del sidebar marcadas "Próximamente": buscar en los chats y recordatorios (ahora podrían guardarse por usuario en Supabase).
+5. Verificar a qué hora reinicia el día de Groq (hoy se asume medianoche UTC, sin verificar).
+6. Integraciones (widget de soporte para otras plataformas): descartado por ahora; ver el historial del 3–4 oct.
+7. Probar la generación de imágenes con Cloudflare (cuota diaria gratis) y el tiempo máximo de la función en Vercel.
+8. Verificar en Vercel (Logs) que el modelo avanzado responde con la llave de David y que el respaldo entra cuando se agota; probar también `gemini-3.6-flash` poniéndolo en `GEMINI_MODEL`.
 
 **Meta principal**: que Jarvis tenga buena memoria, entienda de qué se habla y no lo confunda con otra cosa cuando David cambia una palabra.
 
