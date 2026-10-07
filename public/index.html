@@ -1026,7 +1026,7 @@ const hojaVelo = document.getElementById('hojaVelo');
 const inCamara = document.getElementById('inCamara');
 const inFotos = document.getElementById('inFotos');
 const inArchivos = document.getElementById('inArchivos');
-inArchivos.accept = 'application/pdf,text/*,application/json,' + EXT_TEXTO.map((e) => '.' + e).join(',') + ',.pdf';
+inArchivos.accept = 'application/pdf,text/*,application/json,' + EXT_TEXTO.map((e) => '.' + e).join(',') + ',.pdf,.zip,application/zip,application/x-zip-compressed';
 
 function avisoAdj(msg) {
   let t = document.getElementById('toastAdj');
@@ -1094,6 +1094,7 @@ function clasificarArchivo(f) {
   const e = extDe(f.name);
   if (t.indexOf('image/') === 0) return 'imagen';
   if (t === 'application/pdf' || e === 'pdf') return 'pdf';
+  if (e === 'zip' || t === 'application/zip' || t === 'application/x-zip-compressed') return 'zip';
   if (EXT_TEXTO.indexOf(e) >= 0 || t.indexOf('text/') === 0 || t === 'application/json') return 'texto';
   return '';
 }
@@ -1140,7 +1141,7 @@ async function agregarArchivos(lista) {
   for (const f of lista) {
     if (adjuntos.length >= MAX_ADJ) { avisoAdj('Máximo ' + MAX_ADJ + ' adjuntos por mensaje, señor.'); break; }
     const clase = clasificarArchivo(f);
-    if (!clase) { avisoAdj('No puedo leer "' + f.name + '". Admito imágenes, PDF y archivos de texto o código.'); continue; }
+    if (!clase) { avisoAdj('No puedo leer "' + f.name + '". Admito imágenes, PDF, ZIP y archivos de texto o código.'); continue; }
     const libre = MAX_TOTAL_B64 - totalB64();
     if (clase !== 'imagen' && Math.ceil(f.size / 3) * 4 > libre) {
       avisoAdj('"' + f.name + '" es demasiado grande (el total máximo es de unos 3 MB).');
@@ -1158,6 +1159,8 @@ async function agregarArchivos(lista) {
         nombre = nombre.replace(/\.[^.]+$/, '') + '.jpg';
       } else if (clase === 'pdf') {
         tipo = 'application/pdf';
+      } else if (clase === 'zip') {
+        tipo = 'application/zip';
       } else if (!tipo) {
         tipo = 'text/plain';
       }
