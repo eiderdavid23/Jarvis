@@ -171,6 +171,22 @@ HERRAMIENTAS = [
             'required': ['tema']
         }
     },
+    {
+        'name': 'generar_imagen',
+        'description': (
+            'Genera una imagen NUEVA con IA a partir de una descripcion y la muestra en el chat. '
+            'Usar cuando el usuario pida crear, dibujar, generar o disenar una imagen, foto, '
+            'logo, ilustracion o arte. No usar para buscar imagenes que ya existen. Si el pedido '
+            'es vago, inventa detalles razonables en vez de preguntar.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'descripcion': {'type': 'string', 'description': 'Descripcion detallada de la imagen: sujeto, estilo, colores, ambiente y formato'}
+            },
+            'required': ['descripcion']
+        }
+    },
 ]
 
 
@@ -234,6 +250,45 @@ def buscar_persona(consulta, redes=None):
     return resultados, None
 
 
+IMAGEN_MODELO = os.environ.get('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image')
+IMAGEN_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{IMAGEN_MODELO}:generateContent'
+
+
+def generar_imagen(descripcion, api_key):
+    """Devuelve (imagen, error). imagen = {'mime': ..., 'datos': base64}."""
+    cuerpo = {
+        'contents': [{'parts': [{'text': descripcion}]}],
+        'generationConfig': {'responseModalities': ['TEXT', 'IMAGE']}
+    }
+    try:
+        r = requests.post(IMAGEN_URL, params={'key': api_key}, json=cuerpo, timeout=50)
+    except requests.exceptions.Timeout:
+        return None, 'La imagen tardo demasiado en generarse.'
+    except requests.exceptions.RequestException:
+        return None, 'No pude conectar con el generador de imagenes.'
+    if r.status_code != 200:
+        print('[IMAGEN] Error', r.status_code, r.text[:500])
+        if r.status_code == 429:
+            return None, 'Se acabo la cuota de imagenes por ahora.'
+        try:
+            detalle = r.json().get('error', {}).get('message', '')
+        except ValueError:
+            detalle = ''
+        return None, f'El generador de imagenes respondio con error {r.status_code}: {detalle[:200]}'
+    sin_imagen = 'El generador no devolvio una imagen (puede que la descripcion fuera bloqueada).'
+    try:
+        partes = r.json()['candidates'][0]['content'].get('parts', [])
+    except (ValueError, KeyError, IndexError):
+        return None, sin_imagen
+    for p in partes:
+        im = p.get('inlineData') or p.get('inline_data')
+        if im and im.get('data'):
+            if len(im['data']) > 3500000:
+                return None, 'La imagen salio demasiado pesada para enviarla.'
+            return {'mime': im.get('mimeType') or im.get('mime_type') or 'image/png', 'datos': im['data']}, None
+    return None, sin_imagen
+
+
 def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
     """Ejecuta una herramienta real y devuelve un dict con el resultado para el modelo.
     acciones_frontend se va llenando con cosas que el NAVEGADOR debe hacer
@@ -258,6 +313,21 @@ def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         acciones_frontend['busqueda'] = {'consulta': consulta, 'resultados': resultados}
         return {'ok': True, 'resultados': resultados,
                 'mensaje': 'Los resultados ya se muestran al usuario en un panel; el primero se abre solo.'}
+
+    if nombre == 'generar_imagen':
+        descripcion = (argumentos.get('descripcion') or '').strip()
+        if not descripcion:
+            return {'ok': False, 'error': 'falta la descripcion de la imagen'}
+        llave = acciones_frontend.get('_llave')
+        if not llave:
+            return {'ok': False, 'error': 'Con Groq no se pueden generar imagenes; hay que cambiar a Gemini en Ajustes.'}
+        if acciones_frontend.get('imagenes'):
+            return {'ok': False, 'error': 'ya se genero una imagen en este mensaje; que el usuario pida la siguiente aparte.'}
+        imagen, error = generar_imagen(descripcion, llave)
+        if error:
+            return {'ok': False, 'error': error}
+        acciones_frontend['imagenes'].append(imagen)
+        return {'ok': True, 'mensaje': 'La imagen ya se muestra al usuario en el chat. Comenta brevemente, sin describirla en detalle.'}
 
     if nombre == 'encender_linterna':
         ok = encender_linterna()
@@ -538,7 +608,8 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
         partes_h = list(h.get('partes_gemini') or []) + [{'text': h['texto']}]
         contenidos.append({'role': rol, 'parts': partes_h})
 
-    acciones = {'urls_abrir': [], 'busqueda': None}
+    acciones = {'urls_abrir': [], 'busqueda': None, 'imagenes': []}
+    acciones['_llave'] = api_key
     gen_config = config_gemini(nivel)
 
     for _ in range(MAX_VUELTAS_HERRAMIENTAS):
@@ -584,7 +655,7 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
         rol = 'user' if h['role'] == 'user' else 'assistant'
         mensajes.append({'role': rol, 'content': h['texto']})
 
-    acciones = {'urls_abrir': [], 'busqueda': None}
+    acciones = {'urls_abrir': [], 'busqueda': None, 'imagenes': []}
     tools = construir_tools_groq()
     cfg_groq = {'max_tokens': TOKENS_GROQ[nivel], 'reasoning_effort': NIVEL_EN[nivel]}
 
@@ -761,7 +832,9 @@ def texto_capacidades():
         'velocidad en Ajustes. (3) Archivos: el usuario puede adjuntar fotos (con Gemini las ves; con '
         'Groq no), PDF y archivos de texto o codigo, hasta 5 y unos 3 MB en total. (4) Abrir un sitio o la '
         'busqueda dentro de un sitio (Mercado Libre, Amazon, YouTube...) en una pestana nueva, '
-        'las busquedas dentro de un sitio se hacen tras pedir confirmacion. ' + personas + telefono +
+        'las busquedas dentro de un sitio se hacen tras pedir confirmacion. Generas imagenes nuevas '
+        'con IA a partir de una descripcion (solo con Gemini; con Groq no) y las muestras en el chat; '
+        'no se guardan en el historial. ' + personas + telefono +
         '(5) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
         'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
         'tus chats guardados ni recordatorios (estan en camino), tampoco leer llamadas o mensajes del telefono, '
@@ -953,7 +1026,8 @@ def chat():
 
         return jsonify({'respuesta': respuesta, 'chat_id': chat_id,
                         'urls_abrir': acciones.get('urls_abrir', []),
-                        'busqueda': acciones.get('busqueda')})
+                        'busqueda': acciones.get('busqueda'),
+                        'imagenes': acciones.get('imagenes', [])})
 
     except requests.exceptions.Timeout as e:
         print('[ERROR] Timeout esperando respuesta del proveedor de IA:', e)

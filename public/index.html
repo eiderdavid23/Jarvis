@@ -467,6 +467,9 @@
   .resBusq b { display: inline-block; font-size: 11px; padding: 1px 8px; margin-bottom: 3px; border-radius: 10px; border: 1px solid var(--linea); color: var(--cian); }
   .resBusq span { display: block; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
   .resBusq small { display: block; margin-top: 2px; font-size: 12px; opacity: .6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tarjetaImg { margin: 4px 0 6px 32px; max-width: calc(100% - 32px); background: var(--panel2); border: 1px solid var(--linea); border-radius: 16px; padding: 8px; animation: subir .38s var(--ease) both; }
+  .tarjetaImg img { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .tarjetaImg a { display: inline-block; margin-top: 8px; font-size: 13px; color: var(--cian); text-decoration: none; }
 
   /* --- Tema claro --- */
   [data-tema="claro"] .hoja { box-shadow: 0 -10px 40px rgba(20,60,80,.2); }
@@ -1411,6 +1414,26 @@ function mostrarBusqueda(b) {
   chatInner.appendChild(caja);
   bajarChat();
 }
+function mostrarImagenes(imgs) {
+  (Array.isArray(imgs) ? imgs : []).forEach((im) => {
+    if (!im || !/^image\/(png|jpeg|webp)$/.test(im.mime || '') || !im.datos) return;
+    const src = 'data:' + im.mime + ';base64,' + im.datos;
+    const caja = document.createElement('div');
+    caja.className = 'tarjetaImg';
+    const img = document.createElement('img');
+    img.alt = 'Imagen generada por Jarvis';
+    img.onload = bajarChat;
+    img.src = src;
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = 'jarvis-imagen.' + (im.mime === 'image/png' ? 'png' : im.mime === 'image/webp' ? 'webp' : 'jpg');
+    a.textContent = 'Descargar';
+    caja.appendChild(img);
+    caja.appendChild(a);
+    chatInner.appendChild(caja);
+  });
+  bajarChat();
+}
 function abrirEnlaces(urls) {
   let bloqueado = false;
   urls.map(urlSegura).filter(Boolean).forEach((u) => {
@@ -1482,6 +1505,7 @@ async function enviarMensaje(desdeVoz) {
       agregarMensaje(textoFinal, 'jarvis');
       const busq = (data.busqueda && Array.isArray(data.busqueda.resultados) && data.busqueda.resultados.length) ? data.busqueda : null;
       if (busq) mostrarBusqueda(busq);
+      mostrarImagenes(data.imagenes);
       const aAbrir = Array.from(new Set(urls.concat(data.urls_abrir || [])));
       if (busq && !aAbrir.length) aAbrir.push(urlPrincipal(busq.resultados));
       abrirEnlaces(aAbrir);
