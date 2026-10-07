@@ -177,7 +177,8 @@ HERRAMIENTAS = [
             'Genera una imagen NUEVA con IA a partir de una descripcion y la muestra en el chat. '
             'Usar cuando el usuario pida crear, dibujar, generar o disenar una imagen, foto, '
             'logo, ilustracion o arte. No usar para buscar imagenes que ya existen. Si el pedido '
-            'es vago, inventa detalles razonables en vez de preguntar.'
+            'es vago, inventa detalles razonables en vez de preguntar. Si el usuario pide una '
+            'imagen, llama a esta herramienta de inmediato, sin avisar antes.'
         ),
         'parameters': {
             'type': 'object',
@@ -875,7 +876,9 @@ def texto_capacidades():
         '(5) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
         'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
         'tus chats guardados ni recordatorios (estan en camino), tampoco leer llamadas o mensajes del telefono, '
-        'ni enviar mensajes.'
+        'ni enviar mensajes. REGLA: si el usuario pide crear, dibujar o generar una imagen, '
+        'llama SIEMPRE a la herramienta generar_imagen en ese mismo turno; nunca digas que la '
+        'estas generando ni que esta lista sin haberla llamado.'
     )
 
 

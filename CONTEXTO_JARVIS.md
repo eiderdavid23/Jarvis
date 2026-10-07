@@ -83,6 +83,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **5 oct 2026**: corregido que Jarvis usaba `buscar_persona` para buscar productos en un sitio (abría Instagram y mostraba resultados ajenos). Ahora `buscar_persona` es solo para personas; para un producto o una búsqueda en un sitio, Jarvis pregunta si confirma y, al confirmar, abre con `abrir_url` la búsqueda de ese sitio (Mercado Libre usa el dominio del país; si no lo sabe lo pregunta y lo guarda como recuerdo `pais`). La confirmación depende de las instrucciones al modelo, no de un bloqueo en el código. Se entregó como `parche_busqueda.py`.
 - **7 oct 2026**: generación de imágenes. Herramienta `generar_imagen` (modelo `gemini-2.5-flash-image`, cambiable con `GEMINI_IMAGE_MODEL`): `/chat` devuelve `imagenes` y el navegador las muestra en una tarjeta con botón Descargar. Una por mensaje, solo con Gemini, sin guardarse en el historial. Se entregó como `parche_imagen.py`.
 - **7 oct 2026**: la llave gratis de Gemini no tenía cuota para imágenes, así que `generar_imagen` ahora usa Cloudflare Workers AI (FLUX.1 schnell) cuando existen `CF_ACCOUNT_ID` y `CF_API_TOKEN` en Vercel; si no, vuelve a Gemini. Con Cloudflare también funciona con Groq. Se entregó como `parche_cloudflare.py`.
+- **7 oct 2026**: Jarvis dijo "generando la imagen" sin llamar a `generar_imagen` (no salió nada). Se reforzó la instrucción en la descripción de la herramienta y en `texto_capacidades()`. Se entregó como `parche_imagen_regla.py`.
 
 ---
 
