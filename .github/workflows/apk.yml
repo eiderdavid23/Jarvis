@@ -21,10 +21,13 @@ jobs:
           distribution: temurin
           java-version: 21
       - name: Llave fija de firma
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: jarvis-debug-keystore-v1
+        env:
+          KS: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          mkdir -p ~/.android
+          test -n "$KS"
+          echo "$KS" | base64 -d > ~/.android/debug.keystore
+          keytool -list -keystore ~/.android/debug.keystore -storepass android
       - name: Instalar Capacitor
         working-directory: app
         run: npm install
