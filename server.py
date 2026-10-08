@@ -17,9 +17,11 @@ from flask import Flask, request, jsonify, send_from_directory, Response, g
 
 from comandos_dispositivo import encender_linterna, apagar_linterna, vibrar, estado_bateria
 import supa
+import recs_api
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
+app.register_blueprint(recs_api.bp)
 
 # --- Modelo local (llama-server corriendo en el mismo Termux) ---
 MODELO_LOCAL_URL = os.environ.get('MODELO_LOCAL_URL', 'http://localhost:8081/v1/chat/completions')
