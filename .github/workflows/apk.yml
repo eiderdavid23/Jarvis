@@ -42,6 +42,9 @@ jobs:
       - name: Sincronizar
         working-directory: app
         run: npx cap sync android
+      - name: Parches nativos
+        working-directory: app
+        run: python3 parches.py
       - name: Compilar APK
         working-directory: app/android
         run: ./gradlew assembleDebug

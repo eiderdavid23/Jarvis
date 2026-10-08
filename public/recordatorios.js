@@ -21,9 +21,10 @@
     return new Date(c).toLocaleString('es', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
   function porFecha(a, b) { return new Date(a.cuando) - new Date(b.cuando); }
+  function sinc() { try { if (window.jarvisNativo) window.jarvisNativo.sincronizar(lista); } catch (e) {} }
   function cargar() {
     return api('/recordatorios').then(function (d) {
-      lista = d.recordatorios || []; cargado = true; pintar(); revisar();
+      lista = d.recordatorios || []; cargado = true; pintar(); revisar(); sinc();
     }).catch(function () {});
   }
   function notificar(r) {
@@ -78,7 +79,7 @@
     var b = h('button', 'recBorrar', '✕'); b.type = 'button'; b.setAttribute('aria-label', 'Borrar');
     b.addEventListener('click', function () {
       api('/recordatorios/' + r.id, 'DELETE').then(function () {
-        lista = lista.filter(function (x) { return x.id !== r.id; });
+        lista = lista.filter(function (x) { return x.id !== r.id; }); sinc();
         pintar();
       }).catch(function () { aviso('No pude borrarlo, señor.'); });
     });
@@ -117,7 +118,7 @@
       if (d.getTime() <= Date.now()) { aviso('Esa hora ya pasó, señor.'); return; }
       add.disabled = true;
       api('/recordatorios', 'POST', { texto: t, cuando: d.toISOString() }).then(function (res) {
-        lista.push(res.recordatorio); lista.sort(porFecha);
+        lista.push(res.recordatorio); lista.sort(porFecha); sinc();
         txt.value = ''; fh.value = ''; aviso(''); pintar();
       }).catch(function () { aviso('No pude guardarlo, señor.'); }).then(function () { add.disabled = false; });
     });
