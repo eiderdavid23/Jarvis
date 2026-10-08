@@ -479,6 +479,7 @@
 <link rel="stylesheet" href="/respuestas.css">
 <link rel="stylesheet" href="/tema_claro.css">
 <link rel="stylesheet" href="/splash.css">
+<link rel="stylesheet" href="/acciones_msg.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
@@ -821,6 +822,7 @@ function bajarChat() {
 function agregarMensaje(txt, clase, adjs) {
   const fila = document.createElement('div');
   fila.className = 'fila ' + clase;
+  fila.dataset.raw = txt || '';
   if (clase === 'jarvis') {
     const av = document.createElement('div');
     av.className = 'avatar';
@@ -842,6 +844,7 @@ function agregarMensaje(txt, clase, adjs) {
     b.textContent = txt;
   }
   fila.appendChild(b);
+  if (clase === 'jarvis' && window.accionesMsg) window.accionesMsg(fila, b, txt);
   chatInner.appendChild(fila);
   bajarChat();
   return fila;
@@ -1895,6 +1898,7 @@ document.querySelectorAll('.opTema').forEach((b) => {
 pintarTema();
 </script>
 <script src="/markdown.js"></script>
+<script src="/acciones_msg.js"></script>
 <script src="/auth.js"></script>
 <script src="/voz_ajustes.js"></script>
 <script src="/voz_piper_web.js"></script>

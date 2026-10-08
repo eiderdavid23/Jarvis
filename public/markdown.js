@@ -46,10 +46,11 @@
       var l = lineas[i];
       if (!l.trim()) { i++; continue; }
       if (/^\s*```/.test(l)) {
+        var lang = (l.match(/^\s*```\s*([\w+#-]*)/) || [])[1] || '';
         var cod = []; i++;
         while (i < n && !/^\s*```/.test(lineas[i])) cod.push(lineas[i++]);
         i++;
-        out += '<pre><code>' + esc(cod.join('\n')) + '</code></pre>';
+        out += '<pre' + (lang ? ' data-lang="' + esc(lang) + '"' : '') + '><code>' + esc(cod.join('\n')) + '</code></pre>';
         continue;
       }
       var h = l.match(/^(#{1,6})\s+(.*)$/);
