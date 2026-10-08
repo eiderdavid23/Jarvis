@@ -45,5 +45,25 @@
       if (pendiente) { pendiente = false; sincronizar(ultima); }
     });
   }
-  window.jarvisNativo = { sincronizar: sincronizar };
+  function diagnostico() {
+    var info = [];
+    return permiso().then(function (p) {
+      info.push('Notificaciones: ' + p.display);
+      return LN.checkExactNotificationSetting ? LN.checkExactNotificationSetting() : null;
+    }).then(function (e) {
+      if (e) info.push('Alarmas exactas: ' + e.exact_alarm);
+      var cuando = new Date(Date.now() + 20000);
+      return LN.schedule({ notifications: [{ id: 2147483000, title: 'Jarvis · Prueba', body: 'Aviso nativo funcionando, señor.', schedule: { at: cuando, allowWhileIdle: true } }] });
+    }).then(function () {
+      return LN.getPending();
+    }).then(function (pe) {
+      info.push('Pendientes: ' + (pe.notifications || []).length);
+      info.push('Prueba en 20 s: cierre la app y bloquee el celular.');
+      return info.join(' · ');
+    }).catch(function (e) {
+      info.push('Error: ' + (e && e.message ? e.message : e));
+      return info.join(' · ');
+    });
+  }
+  window.jarvisNativo = { sincronizar: sincronizar, diagnostico: diagnostico };
 })();

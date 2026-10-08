@@ -139,6 +139,11 @@
       perm.addEventListener('click', function () { Notification.requestPermission().then(function () { perm.remove(); }); });
       cuerpo.appendChild(perm);
     }
+    if (window.jarvisNativo && window.jarvisNativo.diagnostico) {
+      var diag = h('button', 'recPerm', 'Probar aviso del teléfono'); diag.type = 'button';
+      diag.addEventListener('click', function () { aviso('Probando…'); window.jarvisNativo.diagnostico().then(aviso); });
+      cuerpo.appendChild(diag);
+    }
     cuerpo.appendChild(h('p', 'recNota', 'Los avisos suenan mientras Jarvis esté abierto, en pantalla o en segundo plano.'));
     contLista = h('div');
     cuerpo.appendChild(contLista);
