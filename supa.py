@@ -272,6 +272,55 @@ def leer_archivo(chat_id, ruta):
     return None, [x['ruta'] for x in c]
 
 
+def archivos_de_proyecto(proyecto_id):
+    return _rest('GET', 'archivos_proyecto', {'proyecto_id': 'eq.' + str(proyecto_id),
+                                              'select': 'origen,ruta,tipo,largo,estado',
+                                              'order': 'origen.asc,ruta.asc', 'limit': '2000'})
+
+
+def guardar_archivos_proyecto(proyecto_id, filas):
+    """Guarda (o actualiza) el texto de los archivos de un proyecto, en tandas."""
+    tanda, peso = [], 0
+
+    def subir():
+        if tanda:
+            _rest('POST', 'archivos_proyecto', {'on_conflict': 'proyecto_id,ruta'}, list(tanda),
+                  {'Prefer': 'resolution=merge-duplicates,return=minimal'}, timeout=40)
+            tanda.clear()
+
+    for f in filas:
+        tanda.append({'user_id': g.usuario_id, 'proyecto_id': str(proyecto_id),
+                      'origen': f['ruta'].split('/')[0][:200], 'ruta': f['ruta'],
+                      'tipo': f['tipo'], 'tam': int(f['tam']), 'largo': len(f['texto']),
+                      'estado': f['estado'], 'texto': f['texto']})
+        peso += len(f['texto']) + 300
+        if peso > 400000:
+            subir()
+            peso = 0
+    subir()
+
+
+def borrar_origen_proyecto(proyecto_id, origen):
+    _rest('DELETE', 'archivos_proyecto', {'proyecto_id': 'eq.' + str(proyecto_id), 'origen': 'eq.' + origen})
+
+
+def leer_archivo_proyecto(proyecto_id, ruta):
+    """Como leer_archivo, pero entre los archivos del proyecto."""
+    cols = 'ruta,tipo,largo,estado,texto'
+    ruta = ruta.strip()
+    base = {'proyecto_id': 'eq.' + str(proyecto_id), 'select': cols, 'limit': '1'}
+    f = _rest('GET', 'archivos_proyecto', dict(base, ruta='eq.' + ruta))
+    if f:
+        return f[0], []
+    patron = '*' + ruta.replace('*', '').replace(',', ' ') + '*'
+    c = _rest('GET', 'archivos_proyecto', {'proyecto_id': 'eq.' + str(proyecto_id), 'select': 'ruta',
+                                           'ruta': 'ilike.' + patron, 'order': 'ruta.asc', 'limit': '10'})
+    if len(c) == 1:
+        f = _rest('GET', 'archivos_proyecto', dict(base, ruta='eq.' + c[0]['ruta']))
+        return (f[0] if f else None), []
+    return None, [x['ruta'] for x in c]
+
+
 # ---------- Rutas de chats ----------
 
 @bp.errorhandler(SupaError)

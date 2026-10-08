@@ -10,3 +10,6 @@ piper/
 piper_voices/
 jarvis_log.txt
 firebase-credenciales.json
+app/node_modules/
+app/android/
+app/assets/

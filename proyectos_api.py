@@ -18,18 +18,22 @@ def _nombre(valor):
     return ' '.join(str(valor or '').split())[:40]
 
 
-def instrucciones_del_chat(chat_id):
-    """Instrucciones del proyecto al que pertenece el chat ('' si no tiene o si falla). Una sola consulta."""
+def proyecto_del_chat(chat_id):
+    """(id del proyecto, instrucciones) del chat. ('', '') si no tiene proyecto o si falla. Una sola consulta."""
     try:
         filas = supa._rest('GET', 'chats', {'id': 'eq.' + str(chat_id),
-                                            'select': 'proyectos(instrucciones)', 'limit': '1'})
+                                            'select': 'proyecto_id,proyectos(instrucciones)', 'limit': '1'})
     except supa.SupaError as e:
-        print('[PROYECTOS] No pude leer las instrucciones del chat:', e)
-        return ''
-    if not filas:
-        return ''
+        print('[PROYECTOS] No pude leer el proyecto del chat:', e)
+        return '', ''
+    if not filas or not filas[0].get('proyecto_id'):
+        return '', ''
     proy = filas[0].get('proyectos') or {}
-    return (proy.get('instrucciones') or '').strip()
+    return filas[0]['proyecto_id'], (proy.get('instrucciones') or '').strip()
+
+
+def instrucciones_del_chat(chat_id):
+    return proyecto_del_chat(chat_id)[1]
 
 
 @bp.route('/proyectos', methods=['GET'])
