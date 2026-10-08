@@ -1,0 +1,54 @@
+name: APK
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Llave fija de firma
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: jarvis-debug-keystore-v1
+      - name: Instalar Capacitor
+        working-directory: app
+        run: npm install
+      - name: Crear proyecto Android
+        working-directory: app
+        run: npx cap add android
+      - name: Icono
+        continue-on-error: true
+        working-directory: app
+        run: |
+          sudo apt-get install -y librsvg2-bin
+          mkdir -p assets
+          rsvg-convert -w 1024 -h 1024 -b '#05070d' ../public/icon.svg -o assets/icon.png
+          npx --yes @capacitor/assets generate --android --iconBackgroundColor '#05070d'
+      - name: Sincronizar
+        working-directory: app
+        run: npx cap sync android
+      - name: Compilar APK
+        working-directory: app/android
+        run: ./gradlew assembleDebug
+      - name: Publicar APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/android/app/build/outputs/apk/debug/app-debug.apk jarvis.apk
+          gh release delete apk-latest --yes --cleanup-tag || true
+          gh release create apk-latest jarvis.apk --title "Jarvis APK" --notes "Última versión"
