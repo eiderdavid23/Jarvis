@@ -3,6 +3,8 @@
   var NS = 'http://www.w3.org/2000/svg';
   var IC = {
     mas: '<circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>',
+    carpeta: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    quitar: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 13h6"/>',
     lapiz: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
     fijar: '<path d="M12 17v5"/><path d="M9 3h6l-1 7 3 3H7l3-3z"/>',
     desfijar: '<path d="M12 17v5"/><path d="M9 3h6l-1 7 3 3H7l3-3z"/><path d="M4 4l16 16"/>',
@@ -62,6 +64,15 @@
     op(c.fijado ? 'desfijar' : 'fijar', c.fijado ? 'Desfijar' : 'Fijar', '', function () {
       editar(c.id, { fijado: !c.fijado }).then(function () { if (window.recargarChats) window.recargarChats(); }).catch(function () {});
     });
+    if (window.proyectosJarvis) {
+      if (c.proyecto_id) {
+        op('quitar', 'Quitar del proyecto', '', function () {
+          editar(c.id, { proyecto_id: null }).then(function () { if (window.recargarChats) window.recargarChats(); }).catch(function () {});
+        });
+      } else {
+        op('carpeta', 'Agregar a un proyecto', '', function () { window.proyectosJarvis.elegir(c, btn); });
+      }
+    }
     op('basura', 'Eliminar', 'peligro', function () { if (window.borrarChatJarvis) window.borrarChatJarvis(c.id); });
     document.body.appendChild(fondo); document.body.appendChild(m);
     var r = btn.getBoundingClientRect(), w = m.offsetWidth, alto = m.offsetHeight;

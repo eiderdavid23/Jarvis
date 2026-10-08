@@ -117,17 +117,18 @@
 
   /* /chat pasa por aqui: agrega la sesion y el chat_id actual */
   window.fetch = function (url, opts) {
-    if (url === '/uso' || String(url).indexOf('/recordatorios') === 0 || String(url).indexOf('/chats/') === 0) return api(url, opts);
+    if (url === '/uso' || String(url).indexOf('/recordatorios') === 0 || String(url).indexOf('/chats/') === 0 || String(url).indexOf('/proyectos') === 0) return api(url, opts);
     if (url === '/chat' && opts && opts.method === 'POST') {
       try {
         const b = JSON.parse(opts.body || '{}');
         if (chatId) b.chat_id = chatId;
+        else if (window.proyectoNuevoId) b.proyecto_id = window.proyectoNuevoId;
         opts = Object.assign({}, opts, { body: JSON.stringify(b) });
       } catch (e) {}
       return api(url, opts).then(async (res) => {
         try {
           const d = await res.clone().json();
-          if (d.chat_id) chatId = d.chat_id;
+          if (d.chat_id) { chatId = d.chat_id; window.proyectoNuevoId = null; }
           if (res.ok) cargarChats();
         } catch (e) {}
         return res;
@@ -284,7 +285,7 @@
 
   /* ---------- lista de chats en el sidebar ---------- */
   function marcarActivo() {
-    document.querySelectorAll('#listaChats .chatItem').forEach((el) => {
+    document.querySelectorAll('#sidebar .chatItem').forEach((el) => {
       el.classList.toggle('activo', el.dataset.id === chatId);
     });
   }
@@ -294,15 +295,20 @@
     try {
       const res = await api('/chats');
       if (!res.ok) return;
-      const chats = await res.json();
+      const todos = await res.json();
+      const chats = window.proyectosJarvis ? await window.proyectosJarvis.pintar(todos, crearFilaChat) : todos;
       lista.innerHTML = '';
-      if (!chats.length) {
+      if (!todos.length) {
         const v = document.createElement('div');
         v.className = 'sbVacio';
         v.textContent = 'Aún no hay chats, señor.';
         lista.appendChild(v);
       }
-      chats.forEach((c) => {
+      chats.forEach((c) => { lista.appendChild(crearFilaChat(c)); });
+      marcarActivo();
+    } catch (e) {}
+  }
+  function crearFilaChat(c) {
         const fila = document.createElement('div');
         fila.className = 'sbItem chatItem';
         fila.dataset.id = c.id;
@@ -317,13 +323,12 @@
         fila.appendChild(del);
         fila.addEventListener('click', () => abrirChat(c.id));
         if (window.menuChat) window.menuChat.decorar(fila, c);
-        lista.appendChild(fila);
-      });
-      marcarActivo();
-    } catch (e) {}
+        return fila;
   }
   window.recargarChats = cargarChats;
+  window.marcarChatActivo = marcarActivo;
   window.borrarChatJarvis = borrarChat;
+  window.confirmarJarvis = confirmarJarvis;
   async function abrirChat(id) {
     try {
       const res = await api('/chats/' + id + '/mensajes');
@@ -394,7 +399,7 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cj.classList.contains('abierto')) cerrarCj(false); });
 
   async function borrarChat(id) {
-    const itemChat = document.querySelector('#listaChats .chatItem[data-id="' + id + '"] .chatTit');
+    const itemChat = document.querySelector('#sidebar .chatItem[data-id="' + id + '"] .chatTit');
     const quiere = await confirmarJarvis({
       titulo: '¿Borrar este chat?',
       nombre: itemChat ? itemChat.textContent : '',

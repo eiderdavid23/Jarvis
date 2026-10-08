@@ -18,10 +18,12 @@ from flask import Flask, request, jsonify, send_from_directory, Response, g
 from comandos_dispositivo import encender_linterna, apagar_linterna, vibrar, estado_bateria
 import supa
 import recs_api
+import proyectos_api
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
 app.register_blueprint(recs_api.bp)
+app.register_blueprint(proyectos_api.bp)
 
 # --- Modelo local (llama-server corriendo en el mismo Termux) ---
 MODELO_LOCAL_URL = os.environ.get('MODELO_LOCAL_URL', 'http://localhost:8081/v1/chat/completions')
@@ -1321,7 +1323,7 @@ def chat():
             return jsonify({'respuesta': 'No recibi ningun mensaje, señor.'}), 400
 
         if not chat_id:
-            chat_id = supa.crear_chat()['id']
+            chat_id = supa.crear_chat(proyecto_id=(data.get('proyecto_id') or '').strip() or None)['id']
 
         g.chat_id = chat_id
         try:
@@ -1356,8 +1358,13 @@ def chat():
         if resumen_previo:
             texto_resumen = (' Resumen de lo hablado antes en ESTE chat (los mensajes viejos ya no se muestran; '
                              'usalo como contexto y no lo menciones salvo que ayude): ' + resumen_previo)
+        instr_proyecto = proyectos_api.instrucciones_del_chat(chat_id)
+        texto_proyecto = ''
+        if instr_proyecto:
+            texto_proyecto = (' INSTRUCCIONES DEL PROYECTO al que pertenece ESTE chat (sigue estas indicaciones '
+                              'junto con tu personalidad de siempre): ' + instr_proyecto)
         system_prompt = (SYSTEM_PROMPT_BASE + texto_capacidades() + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
-                         + texto_recuerdos + texto_resumen + texto_archivos)
+                         + texto_recuerdos + texto_resumen + texto_archivos + texto_proyecto)
 
         turnos = list(historial[-UMBRAL_RESUMEN:])  # mensajes posteriores al resumen (maximo 30)
         texto_modelo, partes_gemini, aviso = armar_mensaje_con_adjuntos(mensaje_usuario, adj, proveedor)

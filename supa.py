@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from urllib.parse import urlencode
@@ -134,6 +135,11 @@ def _rest(metodo, tabla, params=None, cuerpo=None, extra=None, timeout=15):
 
 def listar_chats():
     try:
+        return _rest('GET', 'chats', {'select': 'id,titulo,actualizado,fijado,proyecto_id',
+                                      'order': 'fijado.desc,actualizado.desc', 'limit': '100'})
+    except SupaError:
+        pass
+    try:
         return _rest('GET', 'chats', {'select': 'id,titulo,actualizado,fijado',
                                       'order': 'fijado.desc,actualizado.desc', 'limit': '100'})
     except SupaError:
@@ -141,7 +147,13 @@ def listar_chats():
                                       'order': 'actualizado.desc', 'limit': '100'})
 
 
-def crear_chat(titulo='Nuevo chat'):
+def crear_chat(titulo='Nuevo chat', proyecto_id=None):
+    if proyecto_id:
+        try:
+            return _rest('POST', 'chats', cuerpo={'titulo': titulo, 'proyecto_id': str(proyecto_id)},
+                         extra={'Prefer': 'return=representation'})[0]
+        except SupaError as e:
+            print('[PROYECTOS] No pude crear el chat dentro del proyecto:', e)
     return _rest('POST', 'chats', cuerpo={'titulo': titulo},
                  extra={'Prefer': 'return=representation'})[0]
 
@@ -306,6 +318,16 @@ def api_editar(chat_id):
         campos['titulo'] = t
     if 'fijado' in data:
         campos['fijado'] = bool(data.get('fijado'))
+    if 'proyecto_id' in data:
+        pid = data.get('proyecto_id')
+        if pid:
+            try:
+                pid = str(uuid.UUID(str(pid)))
+            except ValueError:
+                return jsonify({'error': 'proyecto invalido'}), 400
+        else:
+            pid = None
+        campos['proyecto_id'] = pid
     if not campos:
         return jsonify({'error': 'nada que cambiar'}), 400
     try:
