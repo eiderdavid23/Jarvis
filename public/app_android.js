@@ -67,6 +67,18 @@
       });
     }).catch(function () {});
   }
+  function volverDeGoogle(url) {
+    var i = (url || '').indexOf('#');
+    var h = new URLSearchParams(i >= 0 ? url.slice(i + 1) : '');
+    if (!h.get('access_token')) return;
+    try {
+      localStorage.setItem('jarvisAcceso', h.get('access_token'));
+      if (h.get('refresh_token')) localStorage.setItem('jarvisRefresco', h.get('refresh_token'));
+    } catch (e) {}
+    try { if (NAV && NAV.close) NAV.close(); } catch (e) {}
+    location.reload();
+  }
+  if (APP && APP.addListener) APP.addListener('appUrlOpen', function (e) { if (e && e.url && e.url.indexOf('com.david.jarvis://') === 0) volverDeGoogle(e.url); });
   setTimeout(revisar, 4000);
   if (APP && APP.addListener) APP.addListener('appStateChange', function (s) { if (s && s.isActive) revisar(); });
 })();

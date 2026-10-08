@@ -226,7 +226,10 @@
       });
       document.getElementById('authGo').addEventListener('click', enviarAuth);
       document.getElementById('authGoogle').addEventListener('click', () => {
-        location.href = '/auth/google?redirect=' + encodeURIComponent(location.origin);
+        const nat = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        const nav = nat && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+        if (nav && nav.open) nav.open({ url: location.origin + '/auth/google?redirect=' + encodeURIComponent('com.david.jarvis://auth') });
+        else location.href = '/auth/google?redirect=' + encodeURIComponent(location.origin);
       });
       document.getElementById('authPass').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') enviarAuth();

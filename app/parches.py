@@ -23,3 +23,17 @@ b, c2 = re.subn(r'versionName\s*=?\s*"[^"]*"', 'versionName "1.' + n + '"', b)
 assert c1 == 1 and c2 == 1, 'build.gradle: no encontre versionCode o versionName'
 open(g, 'w', encoding='utf-8').write(b)
 print('Version', n)
+
+m = 'android/app/src/main/AndroidManifest.xml'
+t = open(m, encoding='utf-8').read()
+FILTRO = """            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.david.jarvis" />
+            </intent-filter>
+        """
+assert t.count('</activity>') == 1 and 'singleTask' in t, 'manifiesto: actividad no esperada'
+t = t.replace('</activity>', FILTRO + '</activity>')
+open(m, 'w', encoding='utf-8').write(t)
+print('Enlace profundo listo')
