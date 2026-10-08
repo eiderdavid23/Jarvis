@@ -8,3 +8,4 @@
 - Voz local con Piper TTS.
 - Modo Jarvis en segundo plano: escucha continua activada diciendo "Jarvis", con animación del reactor mientras escucha y responde.
 - Botones bajo cada respuesta (copiar, compartir, escuchar, me gusta, no me gusta, repetir) y barra de copiar/ampliar en los bloques de código.
+- Recordatorios: panel en el sidebar, avisos con la app abierta (cartel, notificación y voz) y creación, lista y borrado por chat con Jarvis.
