@@ -1,0 +1,27 @@
+/* Menú de opciones de cada chat (Cambiar nombre, Fijar, Eliminar) */
+.chatMas {
+  flex-shrink: 0; width: 30px; height: 30px; margin: -4px -4px -4px 0; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 8px; background: none; color: var(--suave);
+}
+.chatMas svg { width: 18px; height: 18px; }
+.chatMas:active { background: rgba(127,127,127,.2); }
+.chatPin { flex-shrink: 0; display: inline-flex; margin-right: -4px; color: var(--cian); }
+.chatPin svg { width: 14px; height: 14px; }
+.chatEdit {
+  flex: 1; min-width: 0; padding: 4px 8px; font: inherit; color: inherit;
+  background: rgba(127,127,127,.15); border: 1px solid var(--cian); border-radius: 8px; outline: none;
+}
+.chatMenuFondo { position: fixed; inset: 0; z-index: 80; }
+.chatMenu {
+  position: fixed; z-index: 81; min-width: 220px; padding: 6px;
+  background: var(--panel); color: var(--texto); border: 1px solid var(--linea);
+  border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45);
+}
+.chatMenu button {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px; border: 0;
+  border-radius: 10px; background: none; color: inherit; font-size: 15px; text-align: left;
+}
+.chatMenu button:active { background: rgba(127,127,127,.18); }
+.chatMenu button.peligro { color: var(--rojo); }
+.chatMenu svg { width: 19px; height: 19px; flex-shrink: 0; }

@@ -133,8 +133,12 @@ def _rest(metodo, tabla, params=None, cuerpo=None, extra=None, timeout=15):
 
 
 def listar_chats():
-    return _rest('GET', 'chats', {'select': 'id,titulo,actualizado',
-                                  'order': 'actualizado.desc', 'limit': '100'})
+    try:
+        return _rest('GET', 'chats', {'select': 'id,titulo,actualizado,fijado',
+                                      'order': 'fijado.desc,actualizado.desc', 'limit': '100'})
+    except SupaError:
+        return _rest('GET', 'chats', {'select': 'id,titulo,actualizado',
+                                      'order': 'actualizado.desc', 'limit': '100'})
 
 
 def crear_chat(titulo='Nuevo chat'):
@@ -287,6 +291,27 @@ def api_mensajes(chat_id):
 @requiere_login
 def api_borrar(chat_id):
     borrar_chat(chat_id)
+    return jsonify({'ok': True})
+
+
+@bp.route('/chats/<uuid:chat_id>', methods=['PATCH'])
+@requiere_login
+def api_editar(chat_id):
+    data = request.get_json(silent=True) or {}
+    campos = {}
+    if 'titulo' in data:
+        t = ' '.join(str(data.get('titulo') or '').split())[:40]
+        if not t:
+            return jsonify({'error': 'titulo vacio'}), 400
+        campos['titulo'] = t
+    if 'fijado' in data:
+        campos['fijado'] = bool(data.get('fijado'))
+    if not campos:
+        return jsonify({'error': 'nada que cambiar'}), 400
+    try:
+        _rest('PATCH', 'chats', {'id': 'eq.' + str(chat_id)}, campos)
+    except SupaError as e:
+        return _error_supa(e)
     return jsonify({'ok': True})
 
 

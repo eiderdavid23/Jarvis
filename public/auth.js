@@ -117,7 +117,7 @@
 
   /* /chat pasa por aqui: agrega la sesion y el chat_id actual */
   window.fetch = function (url, opts) {
-    if (url === '/uso' || String(url).indexOf('/recordatorios') === 0) return api(url, opts);
+    if (url === '/uso' || String(url).indexOf('/recordatorios') === 0 || String(url).indexOf('/chats/') === 0) return api(url, opts);
     if (url === '/chat' && opts && opts.method === 'POST') {
       try {
         const b = JSON.parse(opts.body || '{}');
@@ -316,11 +316,14 @@
         fila.appendChild(tit);
         fila.appendChild(del);
         fila.addEventListener('click', () => abrirChat(c.id));
+        if (window.menuChat) window.menuChat.decorar(fila, c);
         lista.appendChild(fila);
       });
       marcarActivo();
     } catch (e) {}
   }
+  window.recargarChats = cargarChats;
+  window.borrarChatJarvis = borrarChat;
   async function abrirChat(id) {
     try {
       const res = await api('/chats/' + id + '/mensajes');
