@@ -153,5 +153,6 @@
   }
   setInterval(tick, 20000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) tick(); });
+  window.jarvisRecordatorios = { recargar: cargar };
   setTimeout(tick, 1500);
 })();

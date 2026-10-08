@@ -216,6 +216,42 @@ HERRAMIENTAS = [
             'required': ['ruta']
         }
     },
+    {
+        'name': 'crear_recordatorio',
+        'description': (
+            'Crea un recordatorio que sonara a su hora. Usar cuando el usuario pida que le recuerdes algo '
+            '("recuerdame...", "avisame...", "ponme un recordatorio..."). Calcula fecha_hora a partir de la fecha '
+            'y hora ACTUAL que tienes, en la zona del usuario, formato YYYY-MM-DD HH:MM en 24 horas. Si dio el dia '
+            'pero no la hora, preguntale la hora antes de crearlo. Despues confirma de forma breve con el dia y la hora.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'texto': {'type': 'string', 'description': 'Que hay que recordarle, en una frase corta y clara'},
+                'fecha_hora': {'type': 'string', 'description': 'Fecha y hora local del usuario, YYYY-MM-DD HH:MM (24 h)'}
+            },
+            'required': ['texto', 'fecha_hora']
+        }
+    },
+    {
+        'name': 'listar_recordatorios',
+        'description': 'Lista los recordatorios pendientes del usuario. Usar cuando pregunte que recordatorios tiene.',
+        'parameters': {'type': 'object', 'properties': {}}
+    },
+    {
+        'name': 'borrar_recordatorio',
+        'description': (
+            'Borra un recordatorio del usuario. Pasa unas palabras del texto del recordatorio (o su id si ya lo '
+            'listaste). Si hay varios que coinciden, devuelve candidatos: preguntale al usuario cual.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'texto': {'type': 'string', 'description': 'Palabras del recordatorio a borrar'},
+                'id': {'type': 'string', 'description': 'Id exacto, si lo conoces por listar_recordatorios'}
+            }
+        }
+    },
 ]
 
 
@@ -433,6 +469,12 @@ def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
             return {'ok': True}
         except supa.SupaError as e:
             return {'ok': False, 'error': str(e)}
+
+    if nombre in ('crear_recordatorio', 'listar_recordatorios', 'borrar_recordatorio'):
+        res = recs_api.herramienta(nombre, argumentos, getattr(g, 'zona_horaria', 'UTC'))
+        if nombre != 'listar_recordatorios' and res.get('ok'):
+            acciones_frontend['recordatorios'] = True
+        return res
 
     if nombre == 'leer_archivo':
         ruta = (argumentos.get('ruta') or '').strip()
@@ -1151,9 +1193,11 @@ def texto_capacidades():
         'las busquedas dentro de un sitio se hacen tras pedir confirmacion. Generas imagenes nuevas '
         'con IA a partir de una descripcion (con Gemini; con Groq solo si hay Cloudflare configurado) y las muestras en el chat; '
         'no se guardan en el historial. ' + personas + telefono +
-        '(5) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
+        '(5) Recordatorios: los creas, listas y borras con las herramientas crear_recordatorio, listar_recordatorios y '
+        'borrar_recordatorio; suenan a su hora mientras la app este abierta, no con la app cerrada. '
+        '(6) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
         'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
-        'tus chats guardados ni recordatorios (estan en camino), tampoco leer llamadas o mensajes del telefono, '
+        'tus chats guardados, tampoco leer llamadas o mensajes del telefono, '
         'ni enviar mensajes. REGLA: si el usuario pide crear, dibujar o generar una imagen, '
         'llama SIEMPRE a la herramienta generar_imagen en ese mismo turno; nunca digas que la '
         'estas generando ni que esta lista sin haberla llamado.'
@@ -1249,6 +1293,7 @@ def chat():
         data = request.get_json()
         mensaje_usuario = (data.get('mensaje', '') or '').strip()
         zona_horaria = data.get('zona_horaria', '') or 'UTC'
+        g.zona_horaria = zona_horaria
         chat_id = (data.get('chat_id') or '').strip()
         nivel = nivel_pensamiento(request.headers.get('X-Pensamiento', ''))
 
@@ -1354,7 +1399,8 @@ def chat():
         return jsonify({'respuesta': respuesta, 'chat_id': chat_id,
                         'urls_abrir': acciones.get('urls_abrir', []),
                         'busqueda': acciones.get('busqueda'),
-                        'imagenes': acciones.get('imagenes', [])})
+                        'imagenes': acciones.get('imagenes', []),
+                        'recordatorios_cambio': bool(acciones.get('recordatorios'))})
 
     except requests.exceptions.Timeout as e:
         print('[ERROR] Timeout esperando respuesta del proveedor de IA:', e)

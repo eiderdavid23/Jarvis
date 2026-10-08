@@ -1515,6 +1515,7 @@ async function enviarMensaje(desdeVoz) {
       setEstado('reposo', 'En reposo');
     } else {
       cargarUso();
+      if (data.recordatorios_cambio && window.jarvisRecordatorios) window.jarvisRecordatorios.recargar();
       const { textoLimpio, urls } = procesarAcciones(data.respuesta || '');
       textoFinal = textoLimpio.replace(/`/g, '');
       agregarMensaje(textoFinal, 'jarvis');
