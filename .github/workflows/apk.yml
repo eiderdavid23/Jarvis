@@ -44,6 +44,8 @@ jobs:
         run: npx cap sync android
       - name: Parches nativos
         working-directory: app
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
         run: python3 parches.py
       - name: Compilar APK
         working-directory: app/android
@@ -54,4 +56,4 @@ jobs:
         run: |
           cp app/android/app/build/outputs/apk/debug/app-debug.apk jarvis.apk
           gh release delete apk-latest --yes --cleanup-tag || true
-          gh release create apk-latest jarvis.apk --title "Jarvis APK" --notes "Última versión"
+          gh release create apk-latest jarvis.apk --title "Jarvis APK" --notes "build ${{ github.run_number }}"
