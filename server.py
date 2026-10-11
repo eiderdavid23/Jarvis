@@ -686,6 +686,34 @@ def nivel_pensamiento(valor):
     return v if v in NIVELES else 'medio'
 
 
+PALABRAS_DIFICILES = (
+    'codigo', 'código', 'programa', 'script', 'funcion', 'función', 'error', 'bug',
+    'depura', 'optimiza', 'algoritmo', 'calcula', 'demuestra', 'paso a paso',
+    'analiza', 'compara', 'diseña', 'arquitectura', 'estrategia', 'resuelve',
+    'ecuacion', 'ecuación', 'integral', 'derivada', 'refactor', 'a fondo',
+    'en detalle', 'investiga', 'planifica', 'explica por que', 'explica por qué')
+
+
+def _nivel_automatico(nivel, mensaje, adj):
+    """Si el usuario esta en Medio y la tarea parece dificil, sube a Alto solo esta vez."""
+    if nivel != 'medio':
+        return nivel
+    m = (mensaje or '').lower()
+    claves = sum(1 for p in PALABRAS_DIFICILES if p in m)
+    dificil = (len(m) > 450 or '```' in m or adj.get('zips') or adj.get('pdfs')
+               or claves >= 2 or (claves == 1 and len(m) > 120))
+    return 'alto' if dificil else nivel
+
+
+def _evento_nivel(nivel):
+    try:
+        cola = getattr(g, 'cola_pasos', None)
+        if cola is not None:
+            cola.put(('nivel', nivel))
+    except Exception:
+        pass
+
+
 def preparar_adjuntos(adjuntos):
     """Valida y clasifica los adjuntos. Lanza AdjuntoError con un mensaje para el usuario."""
     res = {'nombres': [], 'imagenes': [], 'pdfs': [], 'textos': [], 'zips': []}
@@ -1625,10 +1653,20 @@ def _chat_interno():
             turno_actual['partes_gemini'] = partes_gemini
         turnos.append(turno_actual)
 
-        if proveedor == 'groq':
-            respuesta, acciones = generar_groq(system_prompt, turnos, api_key, nivel)
-        else:
-            respuesta, acciones = generar_gemini(system_prompt, turnos, api_key, nivel)
+        nivel_usuario = nivel
+        nivel = _nivel_automatico(nivel, mensaje_usuario, adj)
+        if nivel != nivel_usuario:
+            _paso('Pregunta difícil: cambiando a razonamiento ' + nivel)
+            _evento_nivel(nivel)
+        try:
+            if proveedor == 'groq':
+                respuesta, acciones = generar_groq(system_prompt, turnos, api_key, nivel)
+            else:
+                respuesta, acciones = generar_gemini(system_prompt, turnos, api_key, nivel)
+        finally:
+            if nivel != nivel_usuario:
+                _paso('Volviendo a razonamiento ' + nivel_usuario)
+                _evento_nivel(None)
 
         if not respuesta.strip():
             respuesta = 'Parece que mis circuitos se distrajeron un instante, señor. ¿Podría repetirlo?'
@@ -1722,7 +1760,9 @@ def chat():
             except queue.Empty:
                 yield json.dumps({'t': 'vivo'}) + '\n'
                 continue
-            if item[0] == 'paso':
+            if item[0] == 'nivel':
+                yield json.dumps({'t': 'nivel', 'nivel': item[1]}) + '\n'
+            elif item[0] == 'paso':
                 yield json.dumps({'t': 'paso', 'texto': item[1]}, ensure_ascii=False) + '\n'
             else:
                 yield json.dumps({'t': 'final', 'status': item[1], 'data': item[2]}, ensure_ascii=False) + '\n'

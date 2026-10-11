@@ -1096,6 +1096,10 @@ function actualizarPildora() {
   document.getElementById('pildoraNivel').textContent = NOMBRES_NIVEL[n];
   document.querySelectorAll('.filaNivel').forEach((f) => f.classList.toggle('on', f.dataset.nivel === n));
 }
+window.jarvisNivelVisual = function (n) {
+  if (!n) { actualizarPildora(); return; }
+  document.getElementById('pildoraNivel').textContent = NOMBRES_NIVEL[n] + ' (auto)';
+};
 document.querySelectorAll('.filaNivel').forEach((f) => {
   f.addEventListener('click', () => {
     try { localStorage.setItem('jarvisPensamiento', f.dataset.nivel); } catch (e) {}
@@ -1547,6 +1551,7 @@ async function enviarMensaje(desdeVoz) {
   } catch (err) {
     escribiendo.remove();
     if (panel) panel.terminar();
+    actualizarPildora();
     textoFinal = 'Error de conexion, señor.';
     agregarMensaje(textoFinal, 'jarvis');
     setEstado('reposo', 'En reposo');

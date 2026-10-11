@@ -71,6 +71,7 @@
       let o;
       try { o = JSON.parse(l); } catch (e) { return; }
       if (o.t === 'paso' && alPaso) { vioPaso = true; alPaso(o.texto); }
+      else if (o.t === 'nivel' && window.jarvisNivelVisual) window.jarvisNivelVisual(o.nivel);
       else if (o.t === 'final') final = o;
     }
     for (;;) {
@@ -83,6 +84,7 @@
     }
     linea(resto + dec.decode());
     clearTimeout(lento);
+    if (window.jarvisNivelVisual) window.jarvisNivelVisual(null);
     if (!final) return { ok: false, data: { respuesta: 'Se cortó la conexión, señor.' } };
     const ok = final.status < 400;
     if (window.jarvisChatListo) window.jarvisChatListo(final.data, ok);
