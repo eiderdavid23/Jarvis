@@ -656,7 +656,8 @@ MAX_ADJUNTOS = 5
 MAX_TOTAL_ADJUNTOS = 3300000   # caracteres base64 sumados (Vercel limita el cuerpo a ~4.5 MB)
 MAX_TEXTO_ADJUNTO = 20000      # caracteres que se leen de cada archivo de texto o PDF
 MAX_PAGINAS_PDF = 40
-TIMEOUT_IA = 55
+TIMEOUT_IA = 45
+TIMEOUT_RESPALDO = 40
 
 IMAGENES_OK = {'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'}
 TIPOS_TEXTO = {'application/json', 'application/xml', 'application/javascript',
@@ -1055,17 +1056,38 @@ def guardar_uso_pendiente():
             print('[USO] No pude guardar el uso en Supabase (¿ejecutaste supabase_uso.sql?):', e)
 
 
-def _post_gemini(modelo, cuerpo, gen_config, api_key):
-    resp = requests.post(url_gemini(modelo), params={'key': api_key}, json=cuerpo, timeout=TIMEOUT_IA)
+def _pensar_poco(gen_config):
+    tc = gen_config.get('thinkingConfig')
+    if not tc:
+        return
+    if 'thinkingLevel' in tc:
+        tc['thinkingLevel'] = 'low'
+    elif 'thinkingBudget' in tc:
+        tc['thinkingBudget'] = min(tc['thinkingBudget'], 1024)
+
+
+def _post_gemini(modelo, cuerpo, gen_config, api_key, espera=None):
+    espera = espera or TIMEOUT_IA
+    resp = requests.post(url_gemini(modelo), params={'key': api_key}, json=cuerpo, timeout=espera)
     if resp.status_code == 400 and 'thinkingConfig' in gen_config:
         print('[GEMINI] 400 con thinkingConfig; reintento sin pensamiento extendido. Cuerpo:', resp.text[:500])
         gen_config.pop('thinkingConfig', None)
-        resp = requests.post(url_gemini(modelo), params={'key': api_key}, json=cuerpo, timeout=TIMEOUT_IA)
+        resp = requests.post(url_gemini(modelo), params={'key': api_key}, json=cuerpo, timeout=espera)
     return resp
 
 
 def llamar_gemini(cuerpo, gen_config, api_key):
-    resp = _post_gemini(GEMINI_MODEL, cuerpo, gen_config, api_key)
+    hay_respaldo = bool(GEMINI_MODEL_RESPALDO and GEMINI_MODEL_RESPALDO != GEMINI_MODEL)
+    try:
+        resp = _post_gemini(GEMINI_MODEL, cuerpo, gen_config, api_key)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+        if not hay_respaldo:
+            raise
+        print(f'[GEMINI] {GEMINI_MODEL} no respondio a tiempo ({e.__class__.__name__}); uso {GEMINI_MODEL_RESPALDO} con menos pensamiento.')
+        _pensar_poco(gen_config)
+        resp = _post_gemini(GEMINI_MODEL_RESPALDO, cuerpo, gen_config, api_key, TIMEOUT_RESPALDO)
+        contar_uso('gemini', resp)
+        return resp
     if (resp.status_code in (404, 429, 500, 502, 503, 504)
             and GEMINI_MODEL_RESPALDO and GEMINI_MODEL_RESPALDO != GEMINI_MODEL):
         print(f'[GEMINI] {GEMINI_MODEL} respondio {resp.status_code}; uso el respaldo {GEMINI_MODEL_RESPALDO}.')
