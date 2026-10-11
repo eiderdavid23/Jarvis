@@ -1536,7 +1536,7 @@ async function enviarMensaje(desdeVoz) {
       cargarUso();
       if (data.recordatorios_cambio && window.jarvisRecordatorios) window.jarvisRecordatorios.recargar();
       const { textoLimpio, urls } = procesarAcciones(data.respuesta || '');
-      textoFinal = textoLimpio.replace(/`/g, '');
+      textoFinal = textoLimpio;
       agregarMensaje(textoFinal, 'jarvis');
       const busq = (data.busqueda && Array.isArray(data.busqueda.resultados) && data.busqueda.resultados.length) ? data.busqueda : null;
       if (busq) mostrarBusqueda(busq);
