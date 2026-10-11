@@ -6,6 +6,8 @@ import zipfile
 import base64
 import tempfile
 import traceback
+import queue
+import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -13,7 +15,7 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-from flask import Flask, request, jsonify, send_from_directory, Response, g
+from flask import Flask, request, jsonify, send_from_directory, Response, g, copy_current_request_context
 
 from comandos_dispositivo import encender_linterna, apagar_linterna, vibrar, estado_bateria
 import supa
@@ -419,7 +421,47 @@ def generar_imagen(descripcion, api_key):
     return None, sin_imagen
 
 
+PASOS_HERRAMIENTAS = {
+    'buscar_persona': 'Buscando a {consulta} en la web',
+    'buscar_estructuras_minecraft': 'Calculando estructuras en tu semilla',
+    'generar_imagen': 'Generando la imagen',
+    'leer_archivo': 'Leyendo el archivo',
+    'abrir_url': 'Preparando el enlace',
+}
+
+
+def _paso(texto):
+    """Avisa al navegador lo que Jarvis esta haciendo (solo si pidio pasos en vivo)."""
+    try:
+        cola = getattr(g, 'cola_pasos', None)
+        if cola is None or not texto or getattr(g, 'ultimo_paso', None) == texto:
+            return
+        g.ultimo_paso = texto
+        cola.put(('paso', texto))
+    except Exception:
+        pass
+
+
+def _paso_final():
+    """Despues de usar una herramienta, avisa que ya esta armando la respuesta."""
+    if getattr(g, 'ultimo_paso', None):
+        _paso('Escribiendo la respuesta')
+
+
+def _paso_herramienta(nombre, argumentos):
+    plantilla = PASOS_HERRAMIENTAS.get(nombre)
+    if not plantilla:
+        return
+    consulta = str((argumentos or {}).get('consulta') or 'esa persona').strip()[:40]
+    _paso(plantilla.replace('{consulta}', consulta))
+
+
 def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
+    _paso_herramienta(nombre, argumentos)
+    return _ejecutar_herramienta(nombre, argumentos, acciones_frontend)
+
+
+def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
     """Ejecuta una herramienta real y devuelve un dict con el resultado para el modelo.
     acciones_frontend se va llenando con cosas que el NAVEGADOR debe hacer
     (como abrir una pestana), porque el backend no puede hacerlo directamente.
@@ -1088,6 +1130,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
             partes_respuesta.append({'functionResponse': {'name': nombre, 'response': resultado}})
 
         contenidos.append({'role': 'user', 'parts': partes_respuesta})
+        _paso_final()
 
     return 'Me enrede pensando demasiado en eso, señor. ¿Puede reformularlo?', acciones
 
@@ -1137,6 +1180,7 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
                 'tool_call_id': tc['id'],
                 'content': json.dumps(resultado, ensure_ascii=False)
             })
+        _paso_final()
 
     return 'Me enrede pensando demasiado en eso, señor. ¿Puede reformularlo?', acciones
 
@@ -1472,9 +1516,8 @@ def guardar_meta_uso():
     return jsonify({'ok': True})
 
 
-@app.route('/chat', methods=['POST'])
 @supa.requiere_login
-def chat():
+def _chat_interno():
     try:
         data = request.get_json()
         mensaje_usuario = (data.get('mensaje', '') or '').strip()
@@ -1627,6 +1670,43 @@ def chat():
 
     finally:
         guardar_uso_pendiente()
+
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    if request.headers.get('X-Pasos', '') != '1':
+        return _chat_interno()
+    request.get_data(cache=True)
+    cola = queue.Queue()
+
+    @copy_current_request_context
+    def trabajo():
+        g.cola_pasos = cola
+        try:
+            r = app.make_response(_chat_interno())
+            datos = r.get_json(silent=True) or {'respuesta': 'Algo ha fallado de mi lado, señor.'}
+            cola.put(('final', r.status_code, datos))
+        except Exception:
+            traceback.print_exc()
+            cola.put(('final', 500, {'respuesta': 'Algo ha fallado de mi lado, señor.'}))
+
+    threading.Thread(target=trabajo, daemon=True).start()
+
+    def emitir():
+        while True:
+            try:
+                item = cola.get(timeout=20)
+            except queue.Empty:
+                yield json.dumps({'t': 'vivo'}) + '\n'
+                continue
+            if item[0] == 'paso':
+                yield json.dumps({'t': 'paso', 'texto': item[1]}, ensure_ascii=False) + '\n'
+            else:
+                yield json.dumps({'t': 'final', 'status': item[1], 'data': item[2]}, ensure_ascii=False) + '\n'
+                break
+
+    return Response(emitir(), mimetype='application/x-ndjson',
+                    headers={'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no'})
 
 
 import logging

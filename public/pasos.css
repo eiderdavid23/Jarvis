@@ -1,0 +1,29 @@
+/* Pasos en vivo de Jarvis */
+.pasosBox { margin-left: 34px; font-size: 14px; color: var(--suave); }
+.pasosCab {
+  display: flex; align-items: center; gap: 8px; max-width: 100%;
+  padding: 4px 0; background: none; border: 0; color: inherit; font: inherit; text-align: left;
+}
+.pasosTit { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pasosBox.trabajando .pasosTit { animation: pasosBrillo 1.6s infinite ease-in-out; }
+.pasosRueda {
+  flex: none; width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--linea); border-top-color: var(--cian);
+  animation: pasosGiro .9s linear infinite;
+}
+.pasosBox:not(.trabajando) .pasosRueda {
+  animation: none; border: 0; width: 7px; height: 7px; background: var(--suave); opacity: .6;
+}
+.pasosFlecha { flex: none; transition: transform .2s; opacity: .7; }
+.pasosBox.abierto .pasosFlecha { transform: rotate(90deg); }
+.pasosLista { display: none; list-style: none; margin: 4px 0 2px 5px; padding: 0 0 0 16px; border-left: 1px solid var(--linea); }
+.pasosBox.abierto .pasosLista { display: block; }
+.pasosLista li { position: relative; padding: 4px 0; line-height: 1.4; }
+.pasosLista li::before {
+  content: ''; position: absolute; left: -20px; top: 11px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--suave); opacity: .5;
+}
+.pasosLista li.activo { color: var(--texto); }
+.pasosLista li.activo::before { background: var(--cian); opacity: 1; }
+@keyframes pasosGiro { to { transform: rotate(360deg); } }
+@keyframes pasosBrillo { 50% { opacity: .5; } }

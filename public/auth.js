@@ -126,6 +126,7 @@
         opts = Object.assign({}, opts, { body: JSON.stringify(b) });
       } catch (e) {}
       return api(url, opts).then(async (res) => {
+        if ((res.headers.get('content-type') || '').indexOf('ndjson') >= 0) return res;
         try {
           const d = await res.clone().json();
           if (d.chat_id) { chatId = d.chat_id; window.proyectoNuevoId = null; }
@@ -135,6 +136,11 @@
       });
     }
     return fetchOrig(url, opts);
+  };
+
+  window.jarvisChatListo = function (d, ok) {
+    if (d && d.chat_id) { chatId = d.chat_id; window.proyectoNuevoId = null; }
+    if (ok) cargarChats();
   };
 
   /* ---------- pantalla de login ---------- */

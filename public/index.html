@@ -485,6 +485,7 @@
 <link rel="stylesheet" href="/proyectos.css">
 <link rel="stylesheet" href="/herramientas.css">
 <link rel="stylesheet" href="/sidebar_orden.css">
+<link rel="stylesheet" href="/pasos.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
@@ -1497,12 +1498,14 @@ async function enviarMensaje(desdeVoz) {
   const llaveGroq = localStorage.getItem('jarvisGroqKey') || '';
   let textoFinal = '';
   let hablarAhora = false;
+  let panel = null;
 
   try {
     const res = await fetch('/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Pasos': '1',
         'X-Proveedor': proveedor,
         'X-Gemini-Key': llaveGemini,
         'X-Groq-Key': llaveGroq,
@@ -1513,9 +1516,15 @@ async function enviarMensaje(desdeVoz) {
         ? { mensaje, zona_horaria: zonaHoraria, adjuntos: adj.map((a) => ({ nombre: a.nombre, tipo: a.tipo, datos: a.datos })) }
         : { mensaje, zona_horaria: zonaHoraria })
     });
-    const data = await res.json();
+    const leido = await window.jarvisLeerChat(res, (t) => {
+      if (!panel) panel = window.jarvisPasos.crear(escribiendo);
+      panel.agregar(t);
+      setEstado('pensando', t);
+    });
+    const data = leido.data;
     escribiendo.remove();
-    if (!res.ok) {
+    if (panel) panel.terminar();
+    if (!leido.ok) {
       textoFinal = data.respuesta || data.error || 'Algo ha fallado de mi lado, señor.';
       agregarMensaje(textoFinal, 'jarvis');
       setEstado('reposo', 'En reposo');
@@ -1537,6 +1546,7 @@ async function enviarMensaje(desdeVoz) {
     }
   } catch (err) {
     escribiendo.remove();
+    if (panel) panel.terminar();
     textoFinal = 'Error de conexion, señor.';
     agregarMensaje(textoFinal, 'jarvis');
     setEstado('reposo', 'En reposo');
@@ -1910,6 +1920,7 @@ document.querySelectorAll('.opTema').forEach((b) => {
 pintarTema();
 </script>
 <script src="/markdown.js"></script>
+<script src="/pasos.js"></script>
 <script src="/acciones_msg.js"></script>
 <script src="/menu_chats.js"></script>
 <script src="/proyectos.js"></script>
