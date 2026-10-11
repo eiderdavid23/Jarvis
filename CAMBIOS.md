@@ -13,3 +13,4 @@
 - Proyectos: carpetas en el sidebar que agrupan chats, con instrucciones propias opcionales para Jarvis, agregar y quitar chats, y Nuevo chat aquí.
 - Minecraft: con la semilla del mundo, Jarvis ubica aldeas, templos, monumentos y otras estructuras y muestra un mapa en el chat.
 - Panel Herramientas en el sidebar: interruptores para activar o desactivar Minecraft, memoria, recordatorios, imágenes, búsqueda de personas, enlaces, archivos y teléfono.
+- Sidebar ordenado: las secciones se pliegan y abren tocando su título, y Ajustes queda al final.

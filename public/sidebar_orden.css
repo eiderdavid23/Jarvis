@@ -1,0 +1,12 @@
+/* Sidebar ordenado: secciones plegables */
+.sbSeccion[data-plegable] {
+  display: flex; align-items: center; gap: 6px; padding: 14px 12px 6px; cursor: pointer;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.sbSeccion[data-plegable]:active { color: var(--cian); }
+.sbFlecha { width: 12px; height: 12px; flex-shrink: 0; transition: transform .18s; transform: rotate(90deg); }
+.sbSeccion.plegada .sbFlecha { transform: none; }
+.sbSeccion[data-plegable].proyTit { justify-content: flex-start; }
+.sbSeccion[data-plegable] .proyNuevo { margin-left: auto; }
+.sbOculto { display: none !important; }
+#sidebar .sbTop { padding-bottom: 10px; }
