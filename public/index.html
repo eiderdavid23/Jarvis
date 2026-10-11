@@ -483,6 +483,7 @@
 <link rel="stylesheet" href="/recordatorios.css">
 <link rel="stylesheet" href="/menu_chats.css">
 <link rel="stylesheet" href="/proyectos.css">
+<link rel="stylesheet" href="/herramientas.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
@@ -1504,7 +1505,8 @@ async function enviarMensaje(desdeVoz) {
         'X-Proveedor': proveedor,
         'X-Gemini-Key': llaveGemini,
         'X-Groq-Key': llaveGroq,
-        'X-Pensamiento': nivelPensamiento()
+        'X-Pensamiento': nivelPensamiento(),
+        'X-Herramientas-Off': (window.herramientasOff ? window.herramientasOff() : '')
       },
       body: JSON.stringify(adj.length
         ? { mensaje, zona_horaria: zonaHoraria, adjuntos: adj.map((a) => ({ nombre: a.nombre, tipo: a.tipo, datos: a.datos })) }
@@ -1917,6 +1919,7 @@ pintarTema();
 <script src="/nativo.js"></script>
 <script src="/app_android.js"></script>
 <script src="/recordatorios.js"></script>
+<script src="/herramientas.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

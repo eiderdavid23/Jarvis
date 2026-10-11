@@ -424,6 +424,10 @@ def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
     acciones_frontend se va llenando con cosas que el NAVEGADOR debe hacer
     (como abrir una pestana), porque el backend no puede hacerlo directamente.
     """
+    if nombre in _apagadas():
+        return {'ok': False, 'error': 'Esa herramienta esta desactivada por el usuario en el panel '
+                                    'Herramientas; dile que la active si quiere usarla.'}
+
     if nombre == 'abrir_url':
         url = (argumentos.get('url') or '').strip()
         if not url:
@@ -546,12 +550,58 @@ def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
     return {'ok': False, 'error': f'herramienta desconocida: {nombre}'}
 
 
+# --- Panel Herramientas: grupos que el usuario puede apagar desde el sidebar ---
+GRUPOS_HERRAMIENTAS = {
+    'minecraft': ('Minecraft', ['buscar_estructuras_minecraft']),
+    'memoria': ('Memoria', ['guardar_recuerdo', 'olvidar_recuerdo']),
+    'recordatorios': ('Recordatorios', ['crear_recordatorio', 'listar_recordatorios', 'borrar_recordatorio']),
+    'imagenes': ('Imagenes', ['generar_imagen']),
+    'personas': ('Buscar personas', ['buscar_persona']),
+    'enlaces': ('Abrir enlaces', ['abrir_url']),
+    'archivos': ('Archivos', ['leer_archivo']),
+    'telefono': ('Telefono', ['encender_linterna', 'apagar_linterna', 'vibrar', 'consultar_bateria']),
+}
+
+
+def herramientas_apagadas(header):
+    # 'minecraft,memoria' -> conjunto con los nombres de las herramientas apagadas
+    apagadas = set()
+    for gid in (header or '').split(','):
+        grupo = GRUPOS_HERRAMIENTAS.get(gid.strip())
+        if grupo:
+            apagadas.update(grupo[1])
+    return apagadas
+
+
+def _apagadas():
+    try:
+        return g.get('apagadas') or set()
+    except RuntimeError:
+        return set()
+
+
+def _activas():
+    off = _apagadas()
+    return [h for h in HERRAMIENTAS if h['name'] not in off]
+
+
+def texto_apagadas():
+    off = _apagadas()
+    nombres = [n for n, herr in GRUPOS_HERRAMIENTAS.values() if herr[0] in off]
+    if not nombres:
+        return ''
+    return (' HERRAMIENTAS DESACTIVADAS por el usuario en el panel Herramientas: ' + ', '.join(nombres) +
+            '. Ahora mismo no las tienes; si pide algo de eso, dile en una frase que la active en el panel '
+            'Herramientas del menu lateral. No intentes hacerlo de otra forma.')
+
+
 def construir_tools_gemini():
-    return [{'functionDeclarations': HERRAMIENTAS}]
+    activas = _activas()
+    return [{'functionDeclarations': activas}] if activas else []
 
 
 def construir_tools_groq():
-    return [{'type': 'function', 'function': h} for h in HERRAMIENTAS]
+    return [{'type': 'function', 'function': h} for h in _activas()]
 
 
 MAX_VUELTAS_HERRAMIENTAS = 8
@@ -1010,7 +1060,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
         resp = llamar_gemini({
             'system_instruction': {'parts': [{'text': system_prompt}]},
             'contents': contenidos,
-            'tools': construir_tools_gemini(),
+            **({'tools': construir_tools_gemini()} if _activas() else {}),
             'generationConfig': gen_config
         }, gen_config, api_key)
         print(f'[GEMINI] Respuesta HTTP: {resp.status_code}')
@@ -1058,8 +1108,7 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
             'model': GROQ_MODEL,
             'messages': mensajes,
             'temperature': 0.7,
-            'tools': tools,
-            'tool_choice': 'auto',
+            **({'tools': tools, 'tool_choice': 'auto'} if tools else {}),
             **cfg_groq
         }, cfg_groq, api_key)
         print(f'[GROQ] Respuesta HTTP: {resp.status_code}')
@@ -1232,7 +1281,10 @@ def texto_capacidades():
         'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. ' + personas + telefono +
         '(5) Recordatorios: los creas, listas y borras con las herramientas crear_recordatorio, listar_recordatorios y '
         'borrar_recordatorio; suenan a su hora mientras la app este abierta, no con la app cerrada. '
-        '(6) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
+        '(6) Herramientas: el menu lateral tiene un panel con interruptores para activar o desactivar '
+        'Minecraft, memoria, recordatorios, imagenes, busqueda de personas, enlaces, archivos y telefono; '
+        'lo que esta apagado no lo puedes usar. '
+        '(7) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
         'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
         'tus chats guardados, tampoco leer llamadas o mensajes del telefono, '
         'ni enviar mensajes. REGLA: si el usuario pide crear, dibujar o generar una imagen, '
@@ -1430,6 +1482,7 @@ def chat():
         g.zona_horaria = zona_horaria
         chat_id = (data.get('chat_id') or '').strip()
         nivel = nivel_pensamiento(request.headers.get('X-Pensamiento', ''))
+        g.apagadas = herramientas_apagadas(request.headers.get('X-Herramientas-Off', ''))
 
         proveedor = (request.headers.get('X-Proveedor', '') or 'gemini').strip().lower()
         if proveedor not in ('gemini', 'groq'):
@@ -1476,7 +1529,7 @@ def chat():
             ahora = datetime.now()
         fecha_hora_str = ahora.strftime('%A %d de %B de %Y, %H:%M')
 
-        recuerdos = supa.cargar_recuerdos()
+        recuerdos = [] if 'guardar_recuerdo' in _apagadas() else supa.cargar_recuerdos()
         texto_recuerdos = ''
         if recuerdos:
             texto_recuerdos = ' Datos importantes que ya sabes del usuario: ' + '; '.join(
@@ -1497,7 +1550,8 @@ def chat():
             texto_proyecto = (' INSTRUCCIONES DEL PROYECTO al que pertenece ESTE chat (sigue estas indicaciones '
                               'junto con tu personalidad de siempre): ' + instr_proyecto)
         system_prompt = (SYSTEM_PROMPT_BASE + texto_capacidades() + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
-                         + texto_recuerdos + texto_resumen + texto_archivos + texto_archivos_proy + texto_proyecto)
+                         + texto_recuerdos + texto_resumen + texto_archivos + texto_archivos_proy + texto_proyecto
+                         + texto_apagadas())
 
         turnos = list(historial[-UMBRAL_RESUMEN:])  # mensajes posteriores al resumen (maximo 30)
         texto_modelo, partes_gemini, aviso = armar_mensaje_con_adjuntos(mensaje_usuario, adj, proveedor)

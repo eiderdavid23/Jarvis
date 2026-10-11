@@ -11,3 +11,5 @@
 - Recordatorios: panel en el sidebar, avisos con la app abierta (cartel, notificación y voz) y creación, lista y borrado por chat con Jarvis.
 - Menú ⋯ en cada chat del sidebar: cambiar nombre, fijar y eliminar.
 - Proyectos: carpetas en el sidebar que agrupan chats, con instrucciones propias opcionales para Jarvis, agregar y quitar chats, y Nuevo chat aquí.
+- Minecraft: con la semilla del mundo, Jarvis ubica aldeas, templos, monumentos y otras estructuras y muestra un mapa en el chat.
+- Panel Herramientas en el sidebar: interruptores para activar o desactivar Minecraft, memoria, recordatorios, imágenes, búsqueda de personas, enlaces, archivos y teléfono.

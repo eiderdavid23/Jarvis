@@ -1,0 +1,21 @@
+/* Panel Herramientas del sidebar */
+.hrCont { padding: 0 0 4px; }
+.hrFila {
+  display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 10px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hrFila:active { background: rgba(0,229,255,.08); }
+.hrTxt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hrTxt b { font-size: 14px; font-weight: 600; }
+.hrTxt small { font-size: 11px; color: var(--suave, #5d8590); line-height: 1.3; margin-top: 1px; }
+.hrFila input { position: absolute; opacity: 0; pointer-events: none; }
+.hrSw {
+  position: relative; flex-shrink: 0; width: 38px; height: 22px; border-radius: 11px;
+  background: rgba(127,127,127,.35); transition: background .18s;
+}
+.hrSw::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; transition: transform .18s;
+}
+.hrFila input:checked + .hrSw { background: var(--cian, #00e5ff); }
+.hrFila input:checked + .hrSw::after { transform: translateX(16px); }
