@@ -2,7 +2,7 @@
 
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
-Última actualización: 7 oct 2026
+Última actualización: 11 oct 2026
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -95,6 +95,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **7 oct 2026**: la voz premium ya no se pierde en respuestas largas. El tope fijo de 400 letras por respuesta (`LIMITE` en `public/voz_premium.js`) ahora es el selector "Largo máximo" en Ajustes > Voz: Corto 400, Medio 1.500 (por defecto), Largo 4.000 o Sin límite. El tope por frase del servidor (300 letras) no cambia, porque las frases ya se cortan antes. Si el usuario interrumpe a Jarvis, las frases que faltan no se piden y no gastan créditos. Se entregó como `parche_voz_largo.py`.
 - **7 oct 2026**: menú ⋯ en los chats del sidebar: Cambiar nombre, Fijar / Desfijar y Eliminar (`public/menu_chats.js` y `menu_chats.css`, `supabase_fijado.sql`).
 - **7 oct 2026**: Fase 2, proyectos. Carpetas en el sidebar que agrupan chats, con instrucciones propias opcionales para Jarvis (ver Proyectos en la sección 2). Se entregó como `supabase_proyectos.sql`, `proyectos_api.py`, `public/proyectos.js`, `public/proyectos.css`, `parche_proyectos_back.py` y `parche_proyectos_front.py`. Probado con Supabase simulado y en Chrome headless (crear, renombrar, instrucciones, mover chats, Nuevo chat aquí, eliminar); falta confirmar en el celular que Jarvis sigue las instrucciones del proyecto. Se dejaron fuera, para otra fase, los archivos compartidos por proyecto.
+- **11 oct 2026**: Minecraft. Herramienta `buscar_estructuras_minecraft` (`minecraft.py`): con la semilla del mundo y la posición del jugador localiza aldeas, templos, monumentos, mansiones, ciudades ancestrales, portales, etc. (Bedrock por defecto, Java opcional) y el chat muestra un mapa radar con lista tocable (`public/mapa_mc.js`; tocar una fila copia sus coordenadas). El cálculo lo hace la API pública gratuita de SeedFinder (mineseedfinder.com, 60 consultas por minuto por IP; motor abierto de Pedro Vinicius sobre cubiomes); se puede apuntar a un servidor propio con la variable `SEEDFINDER_URL`. Límites: es una predicción (el propio proyecto reporta falsos positivos en naufragios, mansiones, avanzadas de saqueadores y ruinas de sendero, y la confirmación dentro del juego sigue pendiente); depende de un servicio de terceros; el mapa es de puntos, sin biomas, y no se guarda en el historial. Se entregó como `parche_minecraft.py`.
 
 ---
 

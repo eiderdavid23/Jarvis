@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import requests
 from flask import Blueprint, request, jsonify, g, redirect
@@ -393,6 +393,8 @@ def google():
     if not _url():
         return jsonify({'error': 'Supabase no esta configurado en el servidor'}), 500
     destino = request.args.get('redirect', '')
+    if destino != 'com.david.jarvis://auth' and urlparse(destino).netloc != request.host:
+        destino = request.host_url
     return redirect(_url() + '/auth/v1/authorize?' +
                     urlencode({'provider': 'google', 'redirect_to': destino}))
 

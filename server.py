@@ -17,6 +17,7 @@ from flask import Flask, request, jsonify, send_from_directory, Response, g
 
 from comandos_dispositivo import encender_linterna, apagar_linterna, vibrar, estado_bateria
 import supa
+import minecraft
 import recs_api
 import proyectos_api
 
@@ -254,6 +255,31 @@ HERRAMIENTAS = [
             }
         }
     },
+    {
+        'name': 'buscar_estructuras_minecraft',
+        'description': (
+            'Localiza estructuras de Minecraft (aldeas, templos, monumentos oceanicos, mansiones, ciudades '
+            'ancestrales, portales, tesoros enterrados...) a partir de la SEMILLA del mundo y la posicion del '
+            'jugador, y muestra un mapa en el chat. Usar cuando el usuario pida encontrar o ubicar algo de su '
+            'mundo de Minecraft. Si no sabes la semilla, pidesela (Bedrock: Ajustes del mundo, Semilla; Java: '
+            'comando /seed). Si no sabes donde esta el jugador, pidele sus coordenadas (activar Mostrar '
+            'coordenadas); si no las da, usa 0 y 0 y avisalo. Por defecto Bedrock. No inventes coordenadas: '
+            'usa solo lo que devuelva esta herramienta.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'semilla': {'type': 'string', 'description': 'Semilla numerica del mundo, como texto (puede ser negativa)'},
+                'tipos': {'type': 'string', 'description': 'Que buscar, separado por comas. Ej: "aldea" o "monumento oceanico, mansion". Opciones: aldea, templo del desierto, templo de la jungla, choza de bruja, iglu, ruina oceanica, naufragio, monumento oceanico, mansion, avanzada de saqueadores, portal en ruinas, ciudad ancestral, tesoro enterrado, mina abandonada, ruinas de sendero, camara de pruebas'},
+                'x': {'type': 'integer', 'description': 'Coordenada X actual del jugador'},
+                'z': {'type': 'integer', 'description': 'Coordenada Z actual del jugador'},
+                'radio': {'type': 'integer', 'description': 'Radio de busqueda en bloques (por defecto 3000, maximo 16000)'},
+                'cantidad': {'type': 'integer', 'description': 'Cuantas de cada tipo mostrar (por defecto 3, maximo 10)'},
+                'edicion': {'type': 'string', 'description': 'bedrock (por defecto) o java'}
+            },
+            'required': ['semilla', 'tipos']
+        }
+    },
 ]
 
 
@@ -432,6 +458,12 @@ def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
             return {'ok': False, 'error': error}
         acciones_frontend['imagenes'].append(imagen)
         return {'ok': True, 'mensaje': 'La imagen ya se muestra al usuario en el chat. Comenta brevemente, sin describirla en detalle.'}
+
+    if nombre == 'buscar_estructuras_minecraft':
+        resultado, mapa = minecraft.buscar(argumentos)
+        if mapa:
+            acciones_frontend['mapa_mc'] = mapa
+        return resultado
 
     if nombre == 'encender_linterna':
         ok = encender_linterna()
@@ -1196,7 +1228,8 @@ def texto_capacidades():
         'busqueda dentro de un sitio (Mercado Libre, Amazon, YouTube...) en una pestana nueva, '
         'las busquedas dentro de un sitio se hacen tras pedir confirmacion. Generas imagenes nuevas '
         'con IA a partir de una descripcion (con Gemini; con Groq solo si hay Cloudflare configurado) y las muestras en el chat; '
-        'no se guardan en el historial. ' + personas + telefono +
+        'no se guardan en el historial. Con la semilla de un mundo de Minecraft (Bedrock o Java) localizas '
+        'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. ' + personas + telefono +
         '(5) Recordatorios: los creas, listas y borras con las herramientas crear_recordatorio, listar_recordatorios y '
         'borrar_recordatorio; suenan a su hora mientras la app este abierta, no con la app cerrada. '
         '(6) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
@@ -1507,7 +1540,8 @@ def chat():
                         'urls_abrir': acciones.get('urls_abrir', []),
                         'busqueda': acciones.get('busqueda'),
                         'imagenes': acciones.get('imagenes', []),
-                        'recordatorios_cambio': bool(acciones.get('recordatorios'))})
+                        'recordatorios_cambio': bool(acciones.get('recordatorios')),
+                        'mapa_mc': acciones.get('mapa_mc')})
 
     except requests.exceptions.Timeout as e:
         print('[ERROR] Timeout esperando respuesta del proveedor de IA:', e)

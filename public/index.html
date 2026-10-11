@@ -715,6 +715,7 @@
   </div>
 </div>
 <script src="/ondas.js"></script>
+<script src="/mapa_mc.js"></script>
 <script>
 /* ========== Orbe ========== */
 const body = document.body;
@@ -1524,6 +1525,7 @@ async function enviarMensaje(desdeVoz) {
       const busq = (data.busqueda && Array.isArray(data.busqueda.resultados) && data.busqueda.resultados.length) ? data.busqueda : null;
       if (busq) mostrarBusqueda(busq);
       mostrarImagenes(data.imagenes);
+      if (data.mapa_mc) mostrarMapaMc(data.mapa_mc);
       const aAbrir = Array.from(new Set(urls.concat(data.urls_abrir || [])));
       if (busq && !aAbrir.length) aAbrir.push(urlPrincipal(busq.resultados));
       abrirEnlaces(aAbrir);
