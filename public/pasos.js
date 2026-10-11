@@ -20,6 +20,8 @@
     });
     let activo = null;
     let total = 0;
+    let soloPensar = true;
+    const t0 = (window.jarvisPasos && window.jarvisPasos.t0) || Date.now();
 
     function cerrarActivo() {
       if (activo) { activo.classList.remove('activo'); activo.classList.add('hecho'); }
@@ -33,6 +35,7 @@
         lista.appendChild(li);
         activo = li;
         total++;
+        if (texto !== 'Pensando') soloPensar = false;
         tit.textContent = texto + '…';
         bajar();
       },
@@ -40,7 +43,10 @@
         cerrarActivo();
         activo = null;
         caja.classList.remove('trabajando');
-        tit.textContent = 'Resumen · ' + total + (total === 1 ? ' paso' : ' pasos');
+        const seg = Math.max(1, Math.round((Date.now() - t0) / 1000));
+        if (soloPensar) caja.classList.add('simple');
+        tit.textContent = soloPensar ? 'Pensó durante ' + seg + ' s'
+          : 'Resumen · ' + total + (total === 1 ? ' paso' : ' pasos');
       }
     };
   }
@@ -54,12 +60,17 @@
     const dec = new TextDecoder();
     let resto = '';
     let final = null;
+    let vioPaso = false;
+    window.jarvisPasos.t0 = Date.now();
+    const lento = setTimeout(() => {
+      if (!vioPaso && !final && alPaso) alPaso('Pensando');
+    }, 1500);
     function linea(l) {
       l = l.trim();
       if (!l) return;
       let o;
       try { o = JSON.parse(l); } catch (e) { return; }
-      if (o.t === 'paso' && alPaso) alPaso(o.texto);
+      if (o.t === 'paso' && alPaso) { vioPaso = true; alPaso(o.texto); }
       else if (o.t === 'final') final = o;
     }
     for (;;) {
@@ -71,6 +82,7 @@
       partes.forEach(linea);
     }
     linea(resto + dec.decode());
+    clearTimeout(lento);
     if (!final) return { ok: false, data: { respuesta: 'Se cortó la conexión, señor.' } };
     const ok = final.status < 400;
     if (window.jarvisChatListo) window.jarvisChatListo(final.data, ok);
