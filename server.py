@@ -1693,6 +1693,7 @@ def chat():
     threading.Thread(target=trabajo, daemon=True).start()
 
     def emitir():
+        yield json.dumps({'t': 'vivo'}) + '\n'
         while True:
             try:
                 item = cola.get(timeout=20)
