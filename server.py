@@ -671,9 +671,14 @@ NIVELES = ('bajo', 'medio', 'alto')
 ALIAS_NIVEL = {'low': 'bajo', 'medium': 'medio', 'high': 'alto'}
 NIVEL_EN = {'bajo': 'low', 'medio': 'medium', 'alto': 'high'}
 # El pensamiento cuenta dentro del limite de salida, por eso se sube segun el nivel.
-TOKENS_GEMINI = {'bajo': 2048, 'medio': 4096, 'alto': 8192}
+TOKENS_GEMINI = {'bajo': 8192, 'medio': 32768, 'alto': 65536}
 BUDGET_GEMINI = {'bajo': 1024, 'medio': 2048, 'alto': 4096}   # solo para Gemini 2.5
 TOKENS_GROQ = {'bajo': 1500, 'medio': 3000, 'alto': 4500}
+MAX_CONTINUACIONES = 3   # veces que se le pide seguir si la respuesta se corta por el limite de tokens
+PROMPT_CONTINUAR = ('Continua exactamente desde donde te quedaste, sin repetir nada de lo ya escrito, '
+                    'sin saludar ni explicar. Si estabas dentro de un bloque de codigo, sigue dentro de ese '
+                    'mismo bloque sin abrir otro.')
+NOTA_CORTADA = '\n\n(La respuesta se corto por ser muy larga, señor. Pidame que continue y sigo desde ahi.)'
 
 
 class AdjuntoError(Exception):
@@ -1154,7 +1159,8 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
     acciones['_llave'] = api_key
     gen_config = config_gemini(nivel)
 
-    for _ in range(MAX_VUELTAS_HERRAMIENTAS):
+    acumulado, continuaciones = '', 0
+    for _ in range(MAX_VUELTAS_HERRAMIENTAS + MAX_CONTINUACIONES):
         print(f'[GEMINI] Llamando a {GEMINI_URL} con modelo {GEMINI_MODEL}...')
         resp = llamar_gemini({
             'system_instruction': {'parts': [{'text': system_prompt}]},
@@ -1168,15 +1174,31 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
         resp.raise_for_status()
         data = resp.json()
 
-        contenido_modelo = data['candidates'][0]['content']
+        cand = (data.get('candidates') or [{}])[0]
+        contenido_modelo = cand.get('content') or {}
+        motivo = cand.get('finishReason', '')
+        if not contenido_modelo.get('parts'):
+            print('[GEMINI] Respuesta sin contenido. finishReason:', motivo)
+            if acumulado.strip():
+                return (acumulado + NOTA_CORTADA).strip(), acciones
+            if motivo == 'MAX_TOKENS':
+                return 'Me quede sin espacio para responder, señor. Suba el nivel de pensamiento o pidamelo por partes.', acciones
+            return 'No logre generar una respuesta, señor. Intente de nuevo.', acciones
         contenidos.append(contenido_modelo)
 
         partes = contenido_modelo.get('parts', [])
         llamadas = [p['functionCall'] for p in partes if 'functionCall' in p]
 
         if not llamadas:
-            texto = ''.join(p.get('text', '') for p in partes)
-            return texto.strip(), acciones
+            acumulado += ''.join(p.get('text', '') for p in partes)
+            if motivo == 'MAX_TOKENS':
+                if continuaciones < MAX_CONTINUACIONES:
+                    continuaciones += 1
+                    print(f'[GEMINI] Respuesta cortada por limite de tokens; pido que continue ({continuaciones}/{MAX_CONTINUACIONES}).')
+                    contenidos.append({'role': 'user', 'parts': [{'text': PROMPT_CONTINUAR}]})
+                    continue
+                acumulado += NOTA_CORTADA
+            return acumulado.strip(), acciones
 
         partes_respuesta = []
         for llamada in llamadas:
@@ -1202,7 +1224,8 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
     tools = construir_tools_groq()
     cfg_groq = {'max_tokens': TOKENS_GROQ[nivel], 'reasoning_effort': NIVEL_EN[nivel]}
 
-    for _ in range(MAX_VUELTAS_HERRAMIENTAS):
+    acumulado, continuaciones = '', 0
+    for _ in range(MAX_VUELTAS_HERRAMIENTAS + MAX_CONTINUACIONES):
         print(f'[GROQ] Llamando a {GROQ_URL} con modelo {GROQ_MODEL}...')
         resp = llamar_groq({
             'model': GROQ_MODEL,
@@ -1217,12 +1240,21 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
         resp.raise_for_status()
         data = resp.json()
 
-        msg = data['choices'][0]['message']
+        eleccion = data['choices'][0]
+        msg = eleccion['message']
         mensajes.append(msg)
 
         tool_calls = msg.get('tool_calls') or []
         if not tool_calls:
-            return (msg.get('content') or '').strip(), acciones
+            acumulado += msg.get('content') or ''
+            if eleccion.get('finish_reason') == 'length':
+                if continuaciones < MAX_CONTINUACIONES:
+                    continuaciones += 1
+                    print(f'[GROQ] Respuesta cortada por limite de tokens; pido que continue ({continuaciones}/{MAX_CONTINUACIONES}).')
+                    mensajes.append({'role': 'user', 'content': PROMPT_CONTINUAR})
+                    continue
+                acumulado += NOTA_CORTADA
+            return acumulado.strip(), acciones
 
         for tc in tool_calls:
             nombre = tc['function']['name']
@@ -1720,7 +1752,8 @@ def _chat_interno():
         traceback.print_exc()
         if e.response is not None and e.response.status_code in (400, 401, 403):
             return jsonify({'respuesta': 'La llave configurada parece invalida o sin permisos, señor. Revisela en Ajustes.'}), 401
-        return jsonify({'respuesta': 'El proveedor de IA respondio con un error, señor.'}), 502
+        codigo = e.response.status_code if e.response is not None else '?'
+        return jsonify({'respuesta': f'El proveedor de IA respondio con un error ({codigo}), señor.'}), 502
 
     except requests.exceptions.ConnectionError as e:
         print('[ERROR] ConnectionError hablando con el proveedor de IA:', e)
