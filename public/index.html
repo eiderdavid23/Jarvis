@@ -486,6 +486,7 @@
 <link rel="stylesheet" href="/herramientas.css">
 <link rel="stylesheet" href="/sidebar_orden.css">
 <link rel="stylesheet" href="/pasos.css">
+<link rel="stylesheet" href="/guia_llave.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
@@ -1532,6 +1533,7 @@ async function enviarMensaje(desdeVoz) {
       textoFinal = data.respuesta || data.error || 'Algo ha fallado de mi lado, señor.';
       agregarMensaje(textoFinal, 'jarvis');
       setEstado('reposo', 'En reposo');
+      if (data.necesita_llave && window.jarvisGuiaLlave) window.jarvisGuiaLlave.abrir(data.necesita_llave, mensaje);
     } else {
       cargarUso();
       if (data.recordatorios_cambio && window.jarvisRecordatorios) window.jarvisRecordatorios.recargar();
@@ -1926,6 +1928,7 @@ pintarTema();
 </script>
 <script src="/markdown.js"></script>
 <script src="/pasos.js"></script>
+<script src="/guia_llave.js"></script>
 <script src="/acciones_msg.js"></script>
 <script src="/menu_chats.js"></script>
 <script src="/proyectos.js"></script>

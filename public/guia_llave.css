@@ -1,0 +1,41 @@
+/* Guía paso a paso para conseguir y pegar la llave de IA */
+.glFondo {
+  position: fixed; inset: 0; z-index: 99999; display: none; align-items: flex-end; justify-content: center;
+  background: rgba(0,0,0,.5); -webkit-tap-highlight-color: transparent;
+}
+.glFondo.abierto { display: flex; }
+.glHoja {
+  width: 100%; max-width: 460px; max-height: 92vh; overflow-y: auto; box-sizing: border-box;
+  background: var(--panel, #fff); color: var(--texto, #1a1a1a); border: 1px solid var(--linea, rgba(0,0,0,.14));
+  border-radius: 22px 22px 0 0; padding: 22px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  font-family: inherit; box-shadow: 0 -10px 40px rgba(0,0,0,.25);
+}
+@media (min-width: 560px) { .glFondo { align-items: center; } .glHoja { border-radius: 22px; } }
+.glHoja h2 { margin: 0 0 6px; font-size: 20px; font-weight: 650; }
+.glIntro { margin: 0 0 16px; font-size: 14px; line-height: 1.45; color: var(--suave, #6b6b6b); }
+.glPaso { display: flex; gap: 12px; margin-bottom: 14px; }
+.glNum {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; background: var(--panel2, #f6f6f6); border: 1px solid var(--linea, rgba(0,0,0,.14));
+}
+.glTxt { flex: 1; min-width: 0; font-size: 14px; line-height: 1.45; }
+.glTxt b { font-weight: 650; }
+.glBtn {
+  display: inline-block; box-sizing: border-box; border: 1px solid var(--linea, rgba(0,0,0,.14)); background: var(--panel2, #f6f6f6);
+  color: var(--texto, #1a1a1a); border-radius: 12px; padding: 11px 16px; font-size: 14px; font-weight: 600; font-family: inherit;
+  text-decoration: none; cursor: pointer; margin-top: 8px;
+}
+.glBtn.prim { background: var(--acento, var(--cian, #00e5ff)); border-color: transparent; color: #00181d; }
+[data-tema="claro"] .glBtn.prim { color: #fff; }
+.glBtn:disabled { opacity: .55; }
+.glFila { display: flex; gap: 8px; margin-top: 8px; }
+.glCampo {
+  flex: 1; min-width: 0; box-sizing: border-box; background: var(--panel2, #f6f6f6); color: var(--texto, #1a1a1a);
+  border: 1px solid var(--linea, rgba(0,0,0,.14)); border-radius: 12px; padding: 12px; font-size: 15px; font-family: inherit;
+}
+.glFila .glBtn { margin-top: 0; }
+.glEstado { min-height: 20px; margin: 4px 0 2px; font-size: 13px; line-height: 1.4; }
+.glEstado.ok { color: var(--verde, #1a9e55); }
+.glEstado.err { color: var(--rojo, #d83a3a); }
+.glPie { margin: 12px 0 0; font-size: 12px; line-height: 1.4; color: var(--suave, #6b6b6b); }
+.glCerrar { display: block; width: 100%; margin-top: 10px; background: none; border: 0; color: var(--suave, #6b6b6b); font-size: 14px; padding: 10px; cursor: pointer; font-family: inherit; }

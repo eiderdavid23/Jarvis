@@ -1613,6 +1613,39 @@ def guardar_meta_uso():
     return jsonify({'ok': True})
 
 
+def _llave_servidor_permitida():
+    """Solo los correos de LLAVE_SERVIDOR_EMAILS usan la llave del servidor. Sin esa variable, todos (como antes)."""
+    lista = [e.strip().lower() for e in os.environ.get('LLAVE_SERVIDOR_EMAILS', '').split(',') if e.strip()]
+    return not lista or (getattr(g, 'email', '') or '').lower() in lista
+
+
+@app.route('/llave/probar', methods=['POST'])
+@supa.requiere_login
+def probar_llave():
+    data = request.get_json(silent=True) or {}
+    proveedor = (data.get('proveedor') or 'gemini').strip().lower()
+    llave = (data.get('llave') or '').strip()
+    if proveedor not in ('gemini', 'groq') or len(llave) < 20 or len(llave) > 200 or any(c.isspace() for c in llave):
+        return jsonify({'ok': False, 'motivo': 'formato'})
+    try:
+        if proveedor == 'gemini':
+            r = requests.get('https://generativelanguage.googleapis.com/v1beta/models',
+                             headers={'x-goog-api-key': llave}, params={'pageSize': 1}, timeout=15)
+        else:
+            r = requests.get('https://api.groq.com/openai/v1/models',
+                             headers={'Authorization': 'Bearer ' + llave}, timeout=15)
+    except requests.exceptions.RequestException as e:
+        print('[LLAVE] No pude probar la llave:', e.__class__.__name__)
+        return jsonify({'ok': False, 'motivo': 'red'})
+    if r.status_code == 200:
+        return jsonify({'ok': True})
+    if r.status_code in (400, 401, 403):
+        return jsonify({'ok': False, 'motivo': 'invalida'})
+    if r.status_code == 429:
+        return jsonify({'ok': False, 'motivo': 'ocupado'})
+    return jsonify({'ok': False, 'motivo': 'google'})
+
+
 @supa.requiere_login
 def _chat_interno():
     try:
@@ -1631,14 +1664,15 @@ def _chat_interno():
         llave_gemini_navegador = request.headers.get('X-Gemini-Key', '').strip()
         llave_groq_navegador = request.headers.get('X-Groq-Key', '').strip()
 
+        usa_servidor = _llave_servidor_permitida()
         if proveedor == 'groq':
-            api_key = llave_groq_navegador or GROQ_API_KEY
+            api_key = llave_groq_navegador or (GROQ_API_KEY if usa_servidor else '')
             if not api_key:
-                return jsonify({'respuesta': 'No tengo una llave de Groq configurada, señor. Agreguela en Ajustes o en el archivo .env.'}), 400
+                return jsonify({'respuesta': 'Para hablar conmigo necesita su propia llave gratuita de Groq, señor. Se la explico paso a paso.', 'necesita_llave': 'groq'}), 400
         else:
-            api_key = llave_gemini_navegador or GEMINI_API_KEY
+            api_key = llave_gemini_navegador or (GEMINI_API_KEY if usa_servidor else '')
             if not api_key:
-                return jsonify({'respuesta': 'No tengo una llave de Gemini configurada, señor. Agreguela en Ajustes o en el archivo .env.'}), 400
+                return jsonify({'respuesta': 'Para hablar conmigo necesita su propia llave gratuita de Google, señor. Se la explico paso a paso.', 'necesita_llave': 'gemini'}), 400
 
         try:
             adj = preparar_adjuntos(data.get('adjuntos'))
