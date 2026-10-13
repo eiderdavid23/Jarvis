@@ -487,6 +487,7 @@
 <link rel="stylesheet" href="/sidebar_orden.css">
 <link rel="stylesheet" href="/pasos.css">
 <link rel="stylesheet" href="/guia_llave.css">
+<link rel="stylesheet" href="/ajustes_nuevo.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
@@ -662,7 +663,7 @@
           </div>
         </div>
 
-        <p style="font-size:11px; opacity:0.7;">Las llaves se guardan solo en este navegador y se envian al servidor con cada mensaje. Si no guardas una llave aqui, Jarvis usa la que tenga configurada en el archivo .env del servidor.</p>
+        <p style="font-size:11px; opacity:0.7;">Tus llaves se guardan cifradas en tu cuenta y se copian a este dispositivo. Cada cuenta usa solo su propia llave.</p>
       </div>
 
       <div class="vistaAjuste" id="tabVoz">
@@ -1847,10 +1848,12 @@ btnGuardarLlaveGemini.addEventListener('click', () => {
   if (!valor) return;
   localStorage.setItem('jarvisGeminiKey', valor);
   actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.guardar('gemini', valor);
 });
 btnBorrarLlaveGemini.addEventListener('click', () => {
   localStorage.removeItem('jarvisGeminiKey');
   actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.borrar('gemini');
 });
 btnVerLlaveGemini.addEventListener('click', () => {
   campoLlaveGemini.classList.toggle('campoClave');
@@ -1861,10 +1864,12 @@ btnGuardarLlaveGroq.addEventListener('click', () => {
   if (!valor) return;
   localStorage.setItem('jarvisGroqKey', valor);
   actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.guardar('groq', valor);
 });
 btnBorrarLlaveGroq.addEventListener('click', () => {
   localStorage.removeItem('jarvisGroqKey');
   actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.borrar('groq');
 });
 btnVerLlaveGroq.addEventListener('click', () => {
   campoLlaveGroq.classList.toggle('campoClave');
@@ -1941,6 +1946,8 @@ pintarTema();
 <script src="/recordatorios.js"></script>
 <script src="/herramientas.js"></script>
 <script src="/sidebar_orden.js"></script>
+<script src="/llaves_cuenta.js"></script>
+<script src="/ajustes_nuevo.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

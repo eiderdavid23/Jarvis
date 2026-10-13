@@ -19,7 +19,7 @@
     var rec = document.querySelector('.recPanel .recX');
     if (rec) { rec.click(); return true; }
     var aj = document.getElementById('overlayAjustes');
-    if (aj && aj.classList.contains('abierto') && typeof window.cerrarAjustes === 'function') { window.cerrarAjustes(); return true; }
+    if (aj && aj.classList.contains('abierto') && typeof window.cerrarAjustes === 'function') { if (window.ajustesAtras && window.ajustesAtras()) return true; window.cerrarAjustes(); return true; }
     if (document.body.classList.contains('sb-abierto') && typeof window.cerrarSidebar === 'function') { window.cerrarSidebar(); return true; }
     return false;
   }

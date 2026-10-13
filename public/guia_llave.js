@@ -33,7 +33,7 @@
       '<button type="button" class="glBtn glPegar">Pegar</button></div></div></div>' +
       '<div class="glEstado"></div>' +
       '<button type="button" class="glBtn prim glGuardar" style="width:100%">Probar y guardar</button>' +
-      '<p class="glPie">La llave se guarda solo en este dispositivo y se usa únicamente para hablar con la IA a través de Jarvis. No la compartas con nadie.</p>' +
+      '<p class="glPie">La llave se guarda cifrada en tu cuenta de Jarvis, así la tienes en todos tus dispositivos, y se usa únicamente para hablar con la IA a través de Jarvis. No la compartas con nadie.</p>' +
       '<button type="button" class="glCerrar">Ahora no</button></div>';
     document.body.appendChild(caja);
     caja.addEventListener('click', (e) => { if (e.target === caja) cerrar(); });
@@ -114,7 +114,9 @@
     localStorage.setItem(PROV[prov].clave, llave);
     localStorage.setItem('jarvisProveedor', prov);
     try { actualizarBadgesLlaves(); actualizarProveedorUI(); } catch (e) { /* solo refresca Ajustes */ }
-    estado('ok', '✓ Llave lista');
+    let enCuenta = false;
+    try { enCuenta = window.llavesCuenta ? await window.llavesCuenta.guardar(prov, llave) : false; } catch (e) { enCuenta = false; }
+    estado('ok', enCuenta ? '✓ Llave guardada en tu cuenta' : '✓ Llave lista en este dispositivo');
     setTimeout(() => { cerrar(); reenviar(); }, 700);
   }
 

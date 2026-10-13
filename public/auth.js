@@ -81,6 +81,7 @@
     if (d.access_token) localStorage.setItem(K.acc, d.access_token);
     if (d.refresh_token) localStorage.setItem(K.ref, d.refresh_token);
     if (d.email) localStorage.setItem(K.mail, d.email);
+    try { window.dispatchEvent(new Event('jarvis-sesion')); } catch (e) {}
   }
   function limpiarSesion() {
     Object.values(K).forEach((k) => localStorage.removeItem(k));
@@ -117,7 +118,7 @@
 
   /* /chat pasa por aqui: agrega la sesion y el chat_id actual */
   window.fetch = function (url, opts) {
-    if (url === '/uso' || String(url).indexOf('/recordatorios') === 0 || String(url).indexOf('/chats/') === 0 || String(url).indexOf('/proyectos') === 0) return api(url, opts);
+    if (url === '/uso' || String(url).indexOf('/recordatorios') === 0 || String(url).indexOf('/chats/') === 0 || String(url).indexOf('/proyectos') === 0 || String(url).indexOf('/llave') === 0) return api(url, opts);
     if (url === '/chat' && opts && opts.method === 'POST') {
       try {
         const b = JSON.parse(opts.body || '{}');
@@ -524,6 +525,7 @@
     syCard.classList.add('despide');
     setTimeout(() => {
       try { if (vozActiva) salirVoz(); detenerHabla(); } catch (e) {}
+      try { if (window.llavesCuenta) window.llavesCuenta.alSalir(); } catch (e) {}
       limpiarSesion();
       cerrarSidebar();
       reiniciarVista();

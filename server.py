@@ -22,11 +22,13 @@ import supa
 import minecraft
 import recs_api
 import proyectos_api
+import llaves_api
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
 app.register_blueprint(recs_api.bp)
 app.register_blueprint(proyectos_api.bp)
+app.register_blueprint(llaves_api.bp)
 
 # --- Modelo local (llama-server corriendo en el mismo Termux) ---
 MODELO_LOCAL_URL = os.environ.get('MODELO_LOCAL_URL', 'http://localhost:8081/v1/chat/completions')
@@ -1666,11 +1668,11 @@ def _chat_interno():
 
         usa_servidor = _llave_servidor_permitida()
         if proveedor == 'groq':
-            api_key = llave_groq_navegador or (GROQ_API_KEY if usa_servidor else '')
+            api_key = llave_groq_navegador or llaves_api.llave_de('groq') or (GROQ_API_KEY if usa_servidor else '')
             if not api_key:
                 return jsonify({'respuesta': 'Para hablar conmigo necesita su propia llave gratuita de Groq, señor. Se la explico paso a paso.', 'necesita_llave': 'groq'}), 400
         else:
-            api_key = llave_gemini_navegador or (GEMINI_API_KEY if usa_servidor else '')
+            api_key = llave_gemini_navegador or llaves_api.llave_de('gemini') or (GEMINI_API_KEY if usa_servidor else '')
             if not api_key:
                 return jsonify({'respuesta': 'Para hablar conmigo necesita su propia llave gratuita de Google, señor. Se la explico paso a paso.', 'necesita_llave': 'gemini'}), 400
 
