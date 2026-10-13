@@ -656,8 +656,8 @@ MAX_ADJUNTOS = 5
 MAX_TOTAL_ADJUNTOS = 3300000   # caracteres base64 sumados (Vercel limita el cuerpo a ~4.5 MB)
 MAX_TEXTO_ADJUNTO = 20000      # caracteres que se leen de cada archivo de texto o PDF
 MAX_PAGINAS_PDF = 40
-TIMEOUT_IA = 45
-TIMEOUT_RESPALDO = 40
+TIMEOUT_IA = int(os.environ.get('TIMEOUT_IA', '85'))
+TIMEOUT_RESPALDO = int(os.environ.get('TIMEOUT_RESPALDO', '60'))
 
 IMAGENES_OK = {'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'}
 TIPOS_TEXTO = {'application/json', 'application/xml', 'application/javascript',
@@ -699,8 +699,10 @@ def _nivel_automatico(nivel, mensaje, adj):
     if nivel != 'medio':
         return nivel
     m = (mensaje or '').lower()
+    if len(m) > 1500:
+        return nivel
     claves = sum(1 for p in PALABRAS_DIFICILES if p in m)
-    dificil = (len(m) > 450 or '```' in m or adj.get('zips') or adj.get('pdfs')
+    dificil = (adj.get('zips') or adj.get('pdfs')
                or claves >= 2 or (claves == 1 and len(m) > 120))
     return 'alto' if dificil else nivel
 
@@ -1031,6 +1033,11 @@ def mapa_archivos(chat_id):
 
 def config_gemini(nivel):
     cfg = {'temperature': 0.7, 'maxOutputTokens': TOKENS_GEMINI[nivel]}
+    try:
+        if getattr(g, 'mensaje_largo', False):
+            cfg['maxOutputTokens'] = max(cfg['maxOutputTokens'], 8192)
+    except RuntimeError:
+        pass
     if '2.5' in GEMINI_MODEL:
         cfg['thinkingConfig'] = {'thinkingBudget': BUDGET_GEMINI[nivel]}
     else:
@@ -1653,6 +1660,7 @@ def _chat_interno():
             turno_actual['partes_gemini'] = partes_gemini
         turnos.append(turno_actual)
 
+        g.mensaje_largo = len(mensaje_usuario or '') > 1500
         nivel_usuario = nivel
         nivel = _nivel_automatico(nivel, mensaje_usuario, adj)
         if nivel != nivel_usuario:
