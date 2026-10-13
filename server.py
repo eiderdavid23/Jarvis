@@ -1117,9 +1117,14 @@ def _post_gemini(modelo, cuerpo, gen_config, api_key, espera=None):
 
 
 def llamar_gemini(cuerpo, gen_config, api_key):
+    import time as _t
     hay_respaldo = bool(GEMINI_MODEL_RESPALDO and GEMINI_MODEL_RESPALDO != GEMINI_MODEL)
     try:
         resp = _post_gemini(GEMINI_MODEL, cuerpo, gen_config, api_key)
+        if resp.status_code in (500, 502, 503, 504):
+            print(f'[GEMINI] {GEMINI_MODEL} respondio {resp.status_code}; reintento en 2 s.')
+            _t.sleep(2)
+            resp = _post_gemini(GEMINI_MODEL, cuerpo, gen_config, api_key)
     except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
         if not hay_respaldo:
             raise
@@ -1128,13 +1133,16 @@ def llamar_gemini(cuerpo, gen_config, api_key):
         resp = _post_gemini(GEMINI_MODEL_RESPALDO, cuerpo, gen_config, api_key, TIMEOUT_RESPALDO)
         contar_uso('gemini', resp)
         return resp
-    if (resp.status_code in (404, 429, 500, 502, 503, 504)
-            and GEMINI_MODEL_RESPALDO and GEMINI_MODEL_RESPALDO != GEMINI_MODEL):
+    if resp.status_code in (404, 429, 500, 502, 503, 504) and hay_respaldo:
         print(f'[GEMINI] {GEMINI_MODEL} respondio {resp.status_code}; uso el respaldo {GEMINI_MODEL_RESPALDO}.')
-        resp = _post_gemini(GEMINI_MODEL_RESPALDO, cuerpo, gen_config, api_key)
+        _pensar_poco(gen_config)
+        resp = _post_gemini(GEMINI_MODEL_RESPALDO, cuerpo, gen_config, api_key, TIMEOUT_RESPALDO)
+        if resp.status_code in (500, 502, 503, 504):
+            print(f'[GEMINI] El respaldo respondio {resp.status_code}; reintento en 2 s.')
+            _t.sleep(2)
+            resp = _post_gemini(GEMINI_MODEL_RESPALDO, cuerpo, gen_config, api_key, TIMEOUT_RESPALDO)
     contar_uso('gemini', resp)
     return resp
-
 
 def llamar_groq(cuerpo, cfg_groq, api_key):
     cab = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
