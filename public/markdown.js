@@ -3,6 +3,31 @@
   function esc(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+  var KW = /^(def|class|return|import|from|as|if|elif|else|for|while|in|not|and|or|is|try|except|finally|with|lambda|pass|break|continue|None|True|False|function|const|let|var|new|await|async|export|default|typeof|null|true|false|undefined|then|fi|do|done|esac|case|echo|cd|git|python3?|pip3?|npm|node|cat|rm|cp|mv|ls|wc|mkdir|chmod|curl|sudo|apt|pkg|unzip|grep|sed|touch|print|open)$/;
+  var RE_TK = /("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|(#[^\n]*)|(\/\/[^\n]*)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_]\w*)/g;
+  /* Colorea el codigo (comentarios, textos, numeros y palabras clave). Sin lenguaje, no colorea. */
+  function resaltar(src, lang) {
+    lang = (lang || '').toLowerCase();
+    if (!lang || /^(text|txt|plain|output|salida|log)$/.test(lang)) return esc(src);
+    var hash = /^(bash|sh|shell|zsh|termux|console|python|py|yaml|yml|toml|ruby|rb|env|ini|dockerfile|makefile)$/.test(lang);
+    var barra = /^(js|javascript|ts|typescript|jsx|tsx|java|c|cpp|cs|go|rust|rs|kotlin|swift|php|dart)$/.test(lang);
+    var out = '', last = 0, m, re = new RegExp(RE_TK.source, 'g');
+    while ((m = re.exec(src))) {
+      var cls = '', t = m[0];
+      if (m[1]) cls = 'tk-s';
+      else if (m[2]) {
+        if (hash && (m.index === 0 || /\s/.test(src.charAt(m.index - 1)))) cls = 'tk-c';
+        else { t = '#'; re.lastIndex = m.index + 1; }
+      } else if (m[3]) {
+        if (barra) cls = 'tk-c';
+        else { t = '/'; re.lastIndex = m.index + 1; }
+      } else if (m[4]) cls = 'tk-n';
+      else if (m[5] && KW.test(t)) cls = 'tk-k';
+      out += esc(src.slice(last, m.index)) + (cls ? '<span class="' + cls + '">' + esc(t) + '</span>' : esc(t));
+      last = m.index + t.length;
+    }
+    return out + esc(src.slice(last));
+  }
   function inline(t) {
     var cod = [];
     t = t.replace(/`([^`\n]+)`/g, function (_, c) { cod.push(c); return '\u0001' + (cod.length - 1) + '\u0002'; });
@@ -50,7 +75,7 @@
         var cod = []; i++;
         while (i < n && !/^\s*```/.test(lineas[i])) cod.push(lineas[i++]);
         i++;
-        out += '<pre' + (lang ? ' data-lang="' + esc(lang) + '"' : '') + '><code>' + esc(cod.join('\n')) + '</code></pre>';
+        out += '<pre' + (lang ? ' data-lang="' + esc(lang) + '"' : '') + '><code>' + resaltar(cod.join('\n'), lang) + '</code></pre>';
         continue;
       }
       var h = l.match(/^(#{1,6})\s+(.*)$/);

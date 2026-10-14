@@ -1,31 +1,71 @@
-/* Texto grande y sin caja en las respuestas de Jarvis (estilo app de Claude).
-   Se carga después de diseno_pro.css. Quitar su <link> en index.html lo revierte. */
+/* Respuestas de Jarvis al estilo de la app de Claude: letra grande, sin caja,
+   colores neutros, azul para codigo y enlaces. Se carga despues de diseno_pro.css.
+   Quitar su <link> en index.html lo revierte. */
+:root:root {
+  --ch-texto: #ebe9e4; --ch-azul: #86bbff; --ch-azul-bg: rgba(134,187,255,.12);
+  --ch-gris: rgba(127,127,127,.12); --ch-gris2: rgba(127,127,127,.18); --ch-borde: rgba(127,127,127,.26);
+  --tk-k: #f2a65a; --tk-s: #8fd694; --tk-n: #86bbff; --tk-c: #8d918c;
+}
+:root:root[data-tema="claro"] {
+  --ch-texto: #1f1e1d; --ch-azul: #1d5fbf; --ch-azul-bg: rgba(29,95,191,.09);
+  --tk-k: #c2410c; --tk-s: #15803d; --tk-n: #1d4ed8; --tk-c: #7a7d76;
+}
+
 :root:root #chat { padding: 14px 12px 20px; }
 :root:root #chatInner { gap: 22px; }
 :root:root .fila { gap: 9px; }
 
-/* Respuestas de Jarvis: sin caja, ancho completo, letra serif grande */
+/* Jarvis: sin caja, ancho completo, serif grande */
 :root:root .fila.jarvis .burbuja {
   max-width: calc(100% - 33px); padding: 0; background: none; border: 0;
-  box-shadow: none; border-radius: 0; color: var(--texto);
+  box-shadow: none; border-radius: 0; color: var(--ch-texto);
   font-family: var(--serif); font-size: 18.5px; line-height: 1.6; font-weight: 400;
   letter-spacing: .1px;
 }
 :root:root .avatar { flex: 0 0 24px; width: 24px; height: 24px; margin-top: 3px; }
 
-/* Tus mensajes: un poco más grandes, con su burbuja */
-:root:root .fila.user .burbuja { max-width: 86%; font-size: 17px; line-height: 1.5; padding: 10px 16px 11px; }
+/* Tus mensajes: burbuja gris neutra, sin borde de color */
+:root:root .fila.user .burbuja {
+  max-width: 86%; font-size: 17px; line-height: 1.5; padding: 10px 16px 11px;
+  color: var(--ch-texto); background: var(--ch-gris2); border: 0; box-shadow: none;
+  border-radius: 20px 20px 6px 20px;
+}
 
-/* Formato dentro de las respuestas */
-:root:root .burbuja.md p { margin: 0 0 14px; }
-:root:root .burbuja.md li { margin: 6px 0; }
-:root:root .burbuja.md ul, :root:root .burbuja.md ol { padding-left: 24px; margin: 0 0 14px; }
+/* Formato: nada de negrita pesada ni titulos mas oscuros que el texto */
+:root:root .burbuja.md strong { color: inherit; font-weight: 600; }
+:root:root .burbuja.md h1, :root:root .burbuja.md h2,
+:root:root .burbuja.md h3, :root:root .burbuja.md h4 { color: inherit; font-weight: 600; }
 :root:root .burbuja.md h1 { font-size: 27px; }
 :root:root .burbuja.md h2 { font-size: 24px; }
 :root:root .burbuja.md h3 { font-size: 21px; }
 :root:root .burbuja.md h4 { font-size: 18.5px; }
-:root:root .burbuja.md code { font-size: .86em; }
-:root:root .burbuja.md pre code { font-size: 14px; line-height: 1.5; }
+:root:root .burbuja.md p { margin: 0 0 14px; }
+:root:root .burbuja.md li { margin: 6px 0; }
+:root:root .burbuja.md ul, :root:root .burbuja.md ol { padding-left: 24px; margin: 0 0 14px; }
+:root:root .burbuja.md li::marker { color: var(--suave); }
+
+/* Azul: enlaces y codigo en linea */
+:root:root .burbuja.md a { color: var(--ch-azul); }
+:root:root .burbuja.md code {
+  font-size: .84em; color: var(--ch-azul); background: var(--ch-azul-bg);
+  padding: 2px 6px; border-radius: 6px;
+}
+:root:root .burbuja.md blockquote {
+  background: none; border-left: 3px solid var(--ch-borde); color: inherit;
+  border-radius: 0; padding: 2px 0 2px 14px;
+}
+
+/* Bloques de codigo: gris neutro y colores de sintaxis */
+:root:root .codBloque { background: var(--ch-gris); border: 1px solid var(--ch-borde); border-radius: 14px; }
+:root:root .codCab { background: var(--ch-gris); color: var(--suave); font-size: 13.5px; }
+:root:root .burbuja.md pre { font-size: 14px; line-height: 1.55; }
+:root:root .burbuja.md pre code {
+  font-size: 14px; line-height: 1.55; color: var(--ch-texto); background: none; padding: 0;
+}
+:root:root .tk-k { color: var(--tk-k); }
+:root:root .tk-s { color: var(--tk-s); }
+:root:root .tk-n { color: var(--tk-n); }
+:root:root .tk-c { color: var(--tk-c); font-style: italic; }
 :root:root .burbuja.md table { font-size: 15.5px; }
-:root:root .codCab { font-size: 13.5px; }
+:root:root .burbuja.md th { background: var(--ch-gris); }
 :root:root .accMsg { margin-top: 6px; }
