@@ -19,7 +19,7 @@
   --cian: #3cd9f2; --cian-claro: #6ae6f8; --cian-oscuro: #17b3d1;
   --cian-suave: rgba(60,217,242,.12); --cian-borde: rgba(60,217,242,.32);
   --sobre-cian: #04222a; --glow-cian: rgba(60,217,242,.5);
-  --brass: #dcbe86; --brass-suave: rgba(220,190,134,.14); --brass-borde: rgba(220,190,134,.55);
+  --brass: #d3dee6; --brass-suave: rgba(211,222,230,.12); --brass-borde: rgba(211,222,230,.45);
   --texto: #e9f0f4; --suave: #8c9faa; --verde: #3ddc84; --rojo: #ff6b6b;
   --vidrio: rgba(255,255,255,.05); --vidrio2: rgba(255,255,255,.09);
   --sombra-card: 0 10px 30px -14px rgba(0,0,0,.7);
@@ -40,7 +40,7 @@
   --cian: #0a7d98; --cian-claro: #17a3c3; --cian-oscuro: #08708a;
   --cian-suave: rgba(10,125,152,.09); --cian-borde: rgba(10,125,152,.32);
   --sobre-cian: #ffffff; --glow-cian: rgba(10,125,152,.4);
-  --brass: #8f6f2e; --brass-suave: rgba(143,111,46,.12); --brass-borde: rgba(143,111,46,.5);
+  --brass: #4a5d69; --brass-suave: rgba(74,93,105,.10); --brass-borde: rgba(74,93,105,.40);
   --texto: #13242d; --suave: #5d727d; --verde: #188a4c; --rojo: #cf3a3a;
   --vidrio: rgba(16,42,58,.05); --vidrio2: rgba(16,42,58,.09);
   --sombra-card: 0 1px 2px rgba(16,42,58,.06), 0 10px 26px -14px rgba(16,42,58,.22);
@@ -323,11 +323,16 @@
   background: var(--panel2); border: 1px solid var(--linea); border-radius: 18px;
 }
 :root:root .syAv {
-  width: 38px; height: 38px; flex: 0 0 38px; font-weight: 700; font-size: 16px; color: #1a1408;
-  background: linear-gradient(145deg, #efdcae, #bb9755);
-  box-shadow: 0 0 0 2px var(--panel2), 0 0 0 3.5px var(--brass-borde);
+  width: 38px; height: 38px; flex: 0 0 38px; font-weight: 700; font-size: 16px; color: var(--texto);
+  /* AVATAR PLATA */
+  background: radial-gradient(circle at 30% 22%, rgba(255,255,255,.34), rgba(255,255,255,0) 58%), var(--elev);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 0 14px -3px rgba(255,255,255,.28);
 }
-:root:root[data-tema="claro"] .syAv { color: #fff; background: linear-gradient(145deg, #b8913f, #7d5f22); }
+:root:root[data-tema="claro"] .syAv {
+  color: var(--texto);
+  background: radial-gradient(circle at 30% 22%, #fff, rgba(255,255,255,0) 60%), #dfe6ea;
+  box-shadow: inset 0 0 0 1px rgba(16,42,58,.2), 0 4px 10px -4px rgba(16,42,58,.3);
+}
 :root:root .syDatos b { font-size: 14.5px; font-weight: 600; }
 :root:root .syDatos small { font-size: 12px; }
 :root:root .syBtn { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; background: var(--vidrio); border-color: transparent; }
@@ -393,10 +398,15 @@
 }
 :root:root .ajAv {
   width: 52px; height: 52px; flex: 0 0 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 700; color: #1a1408; background: linear-gradient(145deg, #efdcae, #bb9755);
-  box-shadow: 0 0 0 3px var(--panel), 0 0 0 4.5px var(--brass-borde);
+  font-size: 22px; font-weight: 700; color: var(--texto);
+  background: radial-gradient(circle at 30% 22%, rgba(255,255,255,.34), rgba(255,255,255,0) 58%), var(--elev);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 0 18px -3px rgba(255,255,255,.28);
 }
-:root:root[data-tema="claro"] .ajAv { color: #fff; background: linear-gradient(145deg, #b8913f, #7d5f22); }
+:root:root[data-tema="claro"] .ajAv {
+  color: var(--texto);
+  background: radial-gradient(circle at 30% 22%, #fff, rgba(255,255,255,0) 60%), #dfe6ea;
+  box-shadow: inset 0 0 0 1px rgba(16,42,58,.2), 0 4px 10px -4px rgba(16,42,58,.3);
+}
 :root:root .ajDatos { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 :root:root .ajDatos b { font-family: var(--serif); font-size: 22px; font-weight: 500; line-height: 1.15; color: var(--texto); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 :root:root .ajDatos small { font-size: 13px; color: var(--suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
