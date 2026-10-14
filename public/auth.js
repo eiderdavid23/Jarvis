@@ -351,7 +351,8 @@
       filas.forEach((f) => {
         let t = f.texto;
         try { t = procesarAcciones(t).textoLimpio; } catch (e) {}
-        agregarMensaje(t, f.rol === 'user' ? 'user' : 'jarvis');
+        const fm = agregarMensaje(t, f.rol === 'user' ? 'user' : 'jarvis');
+        if (f.creado && fm) fm.dataset.creado = f.creado;
       });
       cambiarModo('chat');
       cerrarSidebar();

@@ -1,0 +1,33 @@
+/* Menu al mantener presionado un mensaje (copiar / seleccionar texto).
+   En pantallas tactiles el chat no se selecciona a mano: se usa el menu. */
+@media (pointer: coarse) {
+  #chat .burbuja { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  #chat .burbuja.msgPulsado { opacity: .72; }
+}
+#msgMenuFondo { position: fixed; inset: 0; z-index: 9000; background: transparent; }
+#msgMenu {
+  position: fixed; z-index: 9001; width: 252px; padding: 6px; border-radius: 18px;
+  background: var(--panel); color: var(--texto); border: 1px solid var(--linea2);
+  box-shadow: var(--sombra-pop); animation: msgMenuIn .14s ease-out both;
+}
+@keyframes msgMenuIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+#msgMenu .mmHora { padding: 10px 14px 10px; font-size: 14px; color: var(--suave); border-bottom: 1px solid var(--linea); margin-bottom: 4px; }
+#msgMenu button {
+  width: 100%; display: flex; align-items: center; gap: 14px; padding: 13px 14px; border: 0;
+  background: none; color: inherit; font: inherit; font-size: 16px; text-align: left; border-radius: 12px;
+}
+#msgMenu button:active { background: var(--vidrio2); }
+#msgMenu svg { width: 21px; height: 21px; flex: 0 0 21px; color: var(--suave); }
+
+#selTexto { position: fixed; inset: 0; z-index: 9002; display: flex; flex-direction: column; background: var(--fondo); color: var(--texto); }
+#selTexto .stCab {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px; border-bottom: 1px solid var(--linea);
+}
+#selTexto .stCab b { font-size: 16px; font-weight: 600; }
+#selTexto .stCab button { border: 0; background: var(--vidrio2); color: inherit; font: inherit; font-size: 14.5px; padding: 8px 14px; border-radius: 12px; }
+#selTexto .stCuerpo {
+  flex: 1; overflow-y: auto; padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  font-size: 18px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
+  -webkit-user-select: text; user-select: text; -webkit-touch-callout: default;
+}
