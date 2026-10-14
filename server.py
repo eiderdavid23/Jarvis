@@ -1143,6 +1143,10 @@ def llamar_gemini(cuerpo, gen_config, api_key):
             print(f'[GEMINI] El respaldo respondio {resp.status_code}; reintento en 2 s.')
             _t.sleep(2)
             resp = _post_gemini(GEMINI_MODEL_RESPALDO, cuerpo, gen_config, api_key, TIMEOUT_RESPALDO)
+            if resp.status_code in (500, 502, 503, 504):
+                print('[GEMINI] El respaldo sigue saturado; ultimo intento en 5 s.')
+                _t.sleep(5)
+                resp = _post_gemini(GEMINI_MODEL_RESPALDO, cuerpo, gen_config, api_key, TIMEOUT_RESPALDO)
     contar_uso('gemini', resp)
     return resp
 
@@ -1804,6 +1808,8 @@ def _chat_interno():
         if e.response is not None and e.response.status_code in (400, 401, 403):
             return jsonify({'respuesta': 'La llave configurada parece invalida o sin permisos, señor. Revisela en Ajustes.'}), 401
         codigo = e.response.status_code if e.response is not None else '?'
+        if codigo in (500, 502, 503, 504):
+            return jsonify({'respuesta': 'Los servidores de la IA estan saturados en este momento, señor. Intentelo de nuevo en unos segundos.'}), 503
         return jsonify({'respuesta': f'El proveedor de IA respondio con un error ({codigo}), señor.'}), 502
 
     except requests.exceptions.ConnectionError as e:
