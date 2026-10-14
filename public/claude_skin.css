@@ -1,0 +1,106 @@
+/* Piel "Claude": mismos colores, letra y formas que la app de Claude.
+   Se carga al final de todo. Quitar su <link> en index.html devuelve el diseño anterior. */
+
+/* ---------- Colores: claro (papel calido) ---------- */
+:root:root[data-tema="claro"] {
+  --fondo: #f9f9f7; --panel: #fefefe; --panel2: #f0efeb; --elev: #ffffff;
+  --texto: #141413; --suave: #73726c;
+  --linea: rgba(20,20,19,.10); --linea2: rgba(20,20,19,.16);
+  --vidrio: rgba(20,20,19,.04); --vidrio2: rgba(20,20,19,.08);
+  --sombra-card: 0 1px 2px rgba(20,20,19,.05), 0 8px 24px -12px rgba(20,20,19,.14);
+  --sombra-pop: 0 12px 40px -12px rgba(20,20,19,.28);
+  --ch-texto: #141413; --ch-user: #f0efeb; --ch-gris: #f0efeb; --ch-gris2: #f0efeb; --ch-borde: rgba(20,20,19,.10);
+  --ch-azul: #2f5fa7; --ch-azul-bg: #ededeb; --md-codigo: #f0efeb; --md-borde: rgba(20,20,19,.10);
+  --md-enlace: #2f5fa7; --md-fuerte: #141413;
+  --ia-negro: #141413; --ia-sobre: #ffffff; --ia-envio: #c6613f;
+  --tk-k: #c2570c; --tk-s: #2f7d32; --tk-n: #2f5fa7; --tk-c: #8a8984;
+}
+/* ---------- Colores: oscuro (carbon calido) ---------- */
+:root:root:not([data-tema="claro"]) {
+  --fondo: #262624; --panel: #30302e; --panel2: #3a3a37; --elev: #3a3a37;
+  --texto: #f2f1ec; --suave: #a8a69e;
+  --linea: rgba(255,255,255,.10); --linea2: rgba(255,255,255,.17);
+  --vidrio: rgba(255,255,255,.05); --vidrio2: rgba(255,255,255,.10);
+  --sombra-card: 0 8px 24px -12px rgba(0,0,0,.5);
+  --sombra-pop: 0 16px 48px -12px rgba(0,0,0,.6);
+  --ch-texto: #f2f1ec; --ch-user: #1b1b1a; --ch-gris: #1f1f1d; --ch-gris2: #1b1b1a; --ch-borde: rgba(255,255,255,.12);
+  --ch-azul: #8db8f5; --ch-azul-bg: rgba(255,255,255,.08); --md-codigo: #1f1f1d; --md-borde: rgba(255,255,255,.12);
+  --md-enlace: #8db8f5; --md-fuerte: #f2f1ec;
+  --ia-negro: #f2f1ec; --ia-sobre: #141413; --ia-envio: #d97757;
+  --tk-k: #f2a65a; --tk-s: #8fd694; --tk-n: #8db8f5; --tk-c: #8d918c;
+}
+:root:root {
+  --sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --serif: 'Source Serif 4', 'Newsreader', 'Iowan Old Style', Georgia, serif;
+}
+
+/* Fondo liso, sin brillo azul */
+:root:root, :root:root body,
+:root:root[data-tema="claro"], :root:root[data-tema="claro"] body { background: var(--fondo); color: var(--texto); }
+:root:root body, :root:root button, :root:root input, :root:root textarea, :root:root select { font-family: var(--sans); }
+:root:root #chat { padding: 14px 18px 20px; }
+:root:root #chatInner { gap: 26px; }
+
+/* ---------- Tus mensajes ---------- */
+:root:root .fila.user .burbuja {
+  max-width: 84%; padding: 12px 18px; font-family: var(--sans); font-size: 16.5px; line-height: 1.42;
+  color: var(--ch-texto); background: var(--ch-user); border: 0; box-shadow: none; border-radius: 24px;
+}
+
+/* ---------- Respuestas de Jarvis: sin avatar, ancho completo ---------- */
+:root:root .fila.jarvis .avatar { display: none; }
+:root:root .fila.jarvis .burbuja {
+  max-width: 100%; font-family: var(--serif); font-size: 18px; line-height: 1.5; letter-spacing: 0;
+  font-weight: 400; color: var(--ch-texto); font-variation-settings: normal;
+}
+:root:root .pasosBox, :root:root .tarjetaBusq, :root:root .tarjetaImg { margin-left: 0; max-width: 100%; }
+:root:root .burbuja.md p { margin: 0 0 12px; }
+:root:root .burbuja.md strong { font-weight: 650; color: inherit; }
+:root:root .burbuja.md h1, :root:root .burbuja.md h2, :root:root .burbuja.md h3, :root:root .burbuja.md h4 {
+  font-family: var(--serif); font-weight: 650; letter-spacing: 0; color: inherit; margin: 20px 0 8px; line-height: 1.25;
+}
+:root:root .burbuja.md h1 { font-size: 24px; }
+:root:root .burbuja.md h2 { font-size: 21px; }
+:root:root .burbuja.md h3 { font-size: 19px; }
+:root:root .burbuja.md h4 { font-size: 18px; }
+:root:root .burbuja.md ul, :root:root .burbuja.md ol { padding-left: 26px; margin: 0 0 12px; }
+:root:root .burbuja.md li { margin: 5px 0; padding-left: 4px; }
+:root:root .burbuja.md li::marker { color: var(--ch-texto); }
+:root:root .burbuja.md code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: .82em;
+  color: var(--ch-azul); background: var(--ch-azul-bg); border: 1px solid var(--ch-borde);
+  padding: 1px 6px; border-radius: 7px;
+}
+:root:root .burbuja.md pre code { border: 0; padding: 0; background: none; color: var(--ch-texto); font-size: 13.5px; }
+:root:root .burbuja.md pre { font-size: 13.5px; line-height: 1.6; padding: 4px 16px 14px; }
+:root:root .codBloque { background: var(--ch-gris); border: 0; border-radius: 14px; }
+:root:root .codCab { background: transparent; color: var(--suave); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; padding-top: 4px; }
+:root:root .burbuja.md blockquote { border-left: 3px solid var(--linea2); color: inherit; }
+:root:root .burbuja.md a { color: var(--ch-azul); text-decoration-thickness: 1px; }
+:root:root .burbuja.md .tablaMd { border: 1px solid var(--ch-borde); border-radius: 12px; }
+:root:root .accMsg { margin: 2px 0 0 -9px; }
+:root:root .accBtn { width: 40px; height: 40px; color: var(--ch-texto); opacity: .62; }
+:root:root .accBtn svg { width: 21px; height: 21px; }
+:root:root .accBtn.activo, :root:root .accBtn.marcado { color: var(--ch-texto); opacity: 1; }
+
+/* ---------- Cabecera: iconos planos, "nuevo chat" en circulo oscuro ---------- */
+:root:root .btnIcono { background: transparent; border: 0; color: var(--texto); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root:root .btnIcono:active { background: var(--vidrio2); }
+:root:root #btnNuevoTop { background: var(--ia-negro); color: var(--ia-sobre); }
+:root:root #btnNuevoTop:active { opacity: .8; background: var(--ia-negro); }
+
+/* ---------- Caja de entrada ---------- */
+:root:root #inputArea {
+  background: var(--panel); border: 1px solid var(--linea); border-radius: 28px; padding: 8px 8px 8px;
+  box-shadow: 0 4px 24px -6px rgba(20,20,19,.10);
+}
+:root:root[data-tema="claro"] #inputArea { box-shadow: 0 4px 24px -6px rgba(20,20,19,.10); }
+:root:root #inputArea:focus-within { border-color: var(--linea2); box-shadow: 0 4px 24px -6px rgba(20,20,19,.14); }
+:root:root #texto { font-size: 18px; line-height: 24px; color: var(--texto); padding: 12px 12px 10px 14px; }
+:root:root #texto::placeholder { color: var(--suave); opacity: 1; }
+:root:root #btnMas { background: var(--panel2); color: var(--texto); }
+:root:root #pildora { background: var(--panel2); color: var(--texto); font-size: 16px; }
+:root:root #pildora b { color: inherit; font-weight: 400; }
+:root:root #btnVoz { color: var(--suave); }
+:root:root #btnAccion { background: var(--ia-negro); color: var(--ia-sobre); box-shadow: none; }
+:root:root #btnAccion.conTexto { background: var(--ia-envio); color: #fff; }
