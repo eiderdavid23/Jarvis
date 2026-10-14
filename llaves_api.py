@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, request, g
 import supa
 
 bp = Blueprint('llaves', __name__)
-PROVEEDORES = ('gemini', 'groq')
+PROVEEDORES = ('gemini', 'groq', 'mistral')
 
 
 def _fernet():

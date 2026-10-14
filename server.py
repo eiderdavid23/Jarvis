@@ -1638,14 +1638,17 @@ def probar_llave():
     data = request.get_json(silent=True) or {}
     proveedor = (data.get('proveedor') or 'gemini').strip().lower()
     llave = (data.get('llave') or '').strip()
-    if proveedor not in ('gemini', 'groq') or len(llave) < 20 or len(llave) > 200 or any(c.isspace() for c in llave):
+    if proveedor not in ('gemini', 'groq', 'mistral') or len(llave) < 20 or len(llave) > 200 or any(c.isspace() for c in llave):
         return jsonify({'ok': False, 'motivo': 'formato'})
     try:
         if proveedor == 'gemini':
             r = requests.get('https://generativelanguage.googleapis.com/v1beta/models',
                              headers={'x-goog-api-key': llave}, params={'pageSize': 1}, timeout=15)
-        else:
+        elif proveedor == 'groq':
             r = requests.get('https://api.groq.com/openai/v1/models',
+                             headers={'Authorization': 'Bearer ' + llave}, timeout=15)
+        else:
+            r = requests.get('https://api.mistral.ai/v1/models',
                              headers={'Authorization': 'Bearer ' + llave}, timeout=15)
     except requests.exceptions.RequestException as e:
         print('[LLAVE] No pude probar la llave:', e.__class__.__name__)

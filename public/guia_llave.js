@@ -4,7 +4,9 @@
     gemini: { nombre: 'Google', url: 'https://aistudio.google.com/apikey', clave: 'jarvisGeminiKey',
               sitio: 'Google AI Studio', boton: 'Create API key' },
     groq: { nombre: 'Groq', url: 'https://console.groq.com/keys', clave: 'jarvisGroqKey',
-            sitio: 'Groq Console', boton: 'Create API Key' }
+            sitio: 'Groq Console', boton: 'Create API Key' },
+    mistral: { nombre: 'Mistral', url: 'https://console.mistral.ai/api-keys', clave: 'jarvisMistralKey',
+               sitio: 'Mistral Console', boton: 'Create new key' }
   };
   const MOTIVOS = {
     formato: 'Esa llave no parece completa. Copia todo el texto, sin espacios.',

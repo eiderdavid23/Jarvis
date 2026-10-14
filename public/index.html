@@ -672,6 +672,25 @@
           </div>
         </div>
 
+        <div class="card">
+          <div class="cardHead">
+            <strong>Mistral</strong>
+            <span class="badge" id="badgeLlaveMistral">Sin conectar</span>
+          </div>
+          <input type="text" id="campoLlaveMistral" class="campoTexto campoClave" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega tu llave de Mistral">
+          <p style="font-size:11px; opacity:0.7; margin:0 0 10px;">¿No tienes una?</p>
+          <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noopener" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55; text-decoration:none; display:inline-block; margin-bottom:12px;">Obtener llave en Mistral Console &rarr;</a>
+          <div class="filaBtns">
+            <button id="btnGuardarLlaveMistral" class="btnPanel">Guardar</button>
+            <button id="btnVerLlaveMistral" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55;">Ver</button>
+            <button id="btnBorrarLlaveMistral" class="btnPanel secundario">Borrar</button>
+          </div>
+          <div class="filaBtns" style="margin-top:10px;">
+            <button id="btnUsarMistral" class="btnPanel secundario" style="color:#35e07a; border-color:#35e07a55;">Usar esta</button>
+            <span class="badge" id="badgeProveedorMistral">Inactiva</span>
+          </div>
+        </div>
+
         <p style="font-size:11px; opacity:0.7;">Tus llaves se guardan cifradas en tu cuenta y se copian a este dispositivo. Cada cuenta usa solo su propia llave.</p>
       </div>
 
@@ -1511,6 +1530,7 @@ async function enviarMensaje(desdeVoz) {
   const proveedor = localStorage.getItem('jarvisProveedor') || 'gemini';
   const llaveGemini = localStorage.getItem('jarvisGeminiKey') || '';
   const llaveGroq = localStorage.getItem('jarvisGroqKey') || '';
+  const llaveMistral = localStorage.getItem('jarvisMistralKey') || '';
   let textoFinal = '';
   let hablarAhora = false;
   let panel = null;
@@ -1524,6 +1544,7 @@ async function enviarMensaje(desdeVoz) {
         'X-Proveedor': proveedor,
         'X-Gemini-Key': llaveGemini,
         'X-Groq-Key': llaveGroq,
+        'X-Mistral-Key': llaveMistral,
         'X-Pensamiento': nivelPensamiento(),
         'X-Herramientas-Off': (window.herramientasOff ? window.herramientasOff() : '')
       },
@@ -1821,6 +1842,13 @@ const btnUsarGemini = document.getElementById('btnUsarGemini');
 const btnUsarGroq = document.getElementById('btnUsarGroq');
 const badgeProveedorGemini = document.getElementById('badgeProveedorGemini');
 const badgeProveedorGroq = document.getElementById('badgeProveedorGroq');
+const campoLlaveMistral = document.getElementById('campoLlaveMistral');
+const badgeLlaveMistral = document.getElementById('badgeLlaveMistral');
+const btnGuardarLlaveMistral = document.getElementById('btnGuardarLlaveMistral');
+const btnVerLlaveMistral = document.getElementById('btnVerLlaveMistral');
+const btnBorrarLlaveMistral = document.getElementById('btnBorrarLlaveMistral');
+const btnUsarMistral = document.getElementById('btnUsarMistral');
+const badgeProveedorMistral = document.getElementById('badgeProveedorMistral');
 
 function actualizarBadgeLlave(campo, badge, storageKey) {
   const llave = localStorage.getItem(storageKey);
@@ -1837,18 +1865,19 @@ function actualizarBadgeLlave(campo, badge, storageKey) {
 function actualizarBadgesLlaves() {
   actualizarBadgeLlave(campoLlaveGemini, badgeLlaveGemini, 'jarvisGeminiKey');
   actualizarBadgeLlave(campoLlaveGroq, badgeLlaveGroq, 'jarvisGroqKey');
+  actualizarBadgeLlave(campoLlaveMistral, badgeLlaveMistral, 'jarvisMistralKey');
 }
 actualizarBadgesLlaves();
 
 function actualizarProveedorUI() {
   const activo = localStorage.getItem('jarvisProveedor') || 'gemini';
-  const esGemini = activo === 'gemini';
-  badgeProveedorGemini.textContent = esGemini ? 'En uso' : 'Inactiva';
-  badgeProveedorGemini.classList.toggle('on', esGemini);
-  badgeProveedorGroq.textContent = !esGemini ? 'En uso' : 'Inactiva';
-  badgeProveedorGroq.classList.toggle('on', !esGemini);
+  const esGroq = activo === 'groq', esMistral = activo === 'mistral', esGemini = !esGroq && !esMistral;
+  [[badgeProveedorGemini, esGemini], [badgeProveedorGroq, esGroq], [badgeProveedorMistral, esMistral]].forEach(function (p) {
+    p[0].textContent = p[1] ? 'En uso' : 'Inactiva';
+    p[0].classList.toggle('on', p[1]);
+  });
   const sb = document.getElementById('sbProveedor');
-  if (sb) sb.textContent = esGemini ? 'Gemini' : 'Groq';
+  if (sb) sb.textContent = esMistral ? 'Mistral' : (esGroq ? 'Groq' : 'Gemini');
 }
 actualizarProveedorUI();
 
@@ -1882,6 +1911,26 @@ btnBorrarLlaveGroq.addEventListener('click', () => {
 });
 btnVerLlaveGroq.addEventListener('click', () => {
   campoLlaveGroq.classList.toggle('campoClave');
+});
+
+btnGuardarLlaveMistral.addEventListener('click', () => {
+  const valor = campoLlaveMistral.value.trim();
+  if (!valor) return;
+  localStorage.setItem('jarvisMistralKey', valor);
+  actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.guardar('mistral', valor);
+});
+btnBorrarLlaveMistral.addEventListener('click', () => {
+  localStorage.removeItem('jarvisMistralKey');
+  actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.borrar('mistral');
+});
+btnVerLlaveMistral.addEventListener('click', () => {
+  campoLlaveMistral.classList.toggle('campoClave');
+});
+btnUsarMistral.addEventListener('click', () => {
+  localStorage.setItem('jarvisProveedor', 'mistral');
+  actualizarProveedorUI();
 });
 
 btnUsarGemini.addEventListener('click', () => {

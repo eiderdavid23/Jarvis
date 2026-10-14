@@ -1,7 +1,7 @@
 -- Llaves de IA por cuenta (cifradas por el servidor con LLAVES_SECRET).
 create table if not exists public.llaves_ia (
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  proveedor text not null check (proveedor in ('gemini', 'groq')),
+  proveedor text not null check (proveedor in ('gemini', 'groq', 'mistral')),
   llave_cifrada text not null,
   actualizado timestamptz not null default now(),
   primary key (user_id, proveedor)
