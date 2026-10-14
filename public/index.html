@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>J.A.R.V.I.S.</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#05070d">
+<meta name="theme-color" content="#080c13">
 <script>
 (function () {
   var mq = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
@@ -19,7 +19,7 @@
     var t = p === 'sistema' ? (mq && mq.matches ? 'claro' : 'oscuro') : p;
     document.documentElement.setAttribute('data-tema', t);
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', t === 'claro' ? '#ffffff' : '#05070d');
+    if (m) m.setAttribute('content', t === 'claro' ? '#f3f5f7' : '#080c13');
   };
   window.fijarTema = function (p) {
     try { if (p === 'sistema') localStorage.removeItem('jarvisTema'); else localStorage.setItem('jarvisTema', p); } catch (e) {}
@@ -476,6 +476,9 @@
   [data-tema="claro"] #hojaVelo { background: rgba(0,0,0,.32); }
   [data-tema="claro"] #toastAdj { box-shadow: 0 8px 30px rgba(20,60,80,.2); }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/respuestas.css">
 <link rel="stylesheet" href="/tema_claro.css">
 <link rel="stylesheet" href="/splash.css">
@@ -488,6 +491,7 @@
 <link rel="stylesheet" href="/pasos.css">
 <link rel="stylesheet" href="/guia_llave.css">
 <link rel="stylesheet" href="/ajustes_nuevo.css">
+<link rel="stylesheet" href="/diseno_pro.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 </head>
 <body class="cargando m-inicio est-reposo">
@@ -1834,9 +1838,9 @@ actualizarBadgesLlaves();
 function actualizarProveedorUI() {
   const activo = localStorage.getItem('jarvisProveedor') || 'gemini';
   const esGemini = activo === 'gemini';
-  badgeProveedorGemini.textContent = esGemini ? 'EN USO' : 'Inactiva';
+  badgeProveedorGemini.textContent = esGemini ? 'En uso' : 'Inactiva';
   badgeProveedorGemini.classList.toggle('on', esGemini);
-  badgeProveedorGroq.textContent = !esGemini ? 'EN USO' : 'Inactiva';
+  badgeProveedorGroq.textContent = !esGemini ? 'En uso' : 'Inactiva';
   badgeProveedorGroq.classList.toggle('on', !esGemini);
   const sb = document.getElementById('sbProveedor');
   if (sb) sb.textContent = esGemini ? 'Gemini' : 'Groq';

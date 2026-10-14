@@ -1,0 +1,555 @@
+/* Generado: cada selector lleva el prefijo :root:root para ganarle a los estilos que otros scripts inyectan despues. */
+/* =====================================================================
+   J.A.R.V.I.S. — capa de diseño
+   Se carga al final de todo (después de ajustes_nuevo.css). Es un solo
+   archivo: quitar su <link> en index.html devuelve el diseño anterior.
+
+   Idea: instrumento de precisión de un mayordomo de Stark.
+   - Superficies azul tinta en capas, líneas finas y silenciosas.
+   - El cian se reserva para lo que "está vivo": orbe, enviar, activo, foco.
+   - Latón (dorado) solo como firma: logo, avatares, anillo de Jarvis.
+   - Voz de mayordomo en serif (saludo y títulos de las respuestas);
+     el resto, la tipografía del sistema (rápida y nativa en Android).
+   ===================================================================== */
+
+/* ---------- Tokens: oscuro (por defecto) ---------- */
+:root:root {
+  --fondo: #080c13; --panel: #0e1520; --panel2: #131c29; --elev: #1a2536;
+  --linea: rgba(150,190,212,.13); --linea2: rgba(150,190,212,.24);
+  --cian: #3cd9f2; --cian-claro: #6ae6f8; --cian-oscuro: #17b3d1;
+  --cian-suave: rgba(60,217,242,.12); --cian-borde: rgba(60,217,242,.32);
+  --sobre-cian: #04222a; --glow-cian: rgba(60,217,242,.5);
+  --brass: #dcbe86; --brass-suave: rgba(220,190,134,.14); --brass-borde: rgba(220,190,134,.55);
+  --texto: #e9f0f4; --suave: #8c9faa; --verde: #3ddc84; --rojo: #ff6b6b;
+  --vidrio: rgba(255,255,255,.05); --vidrio2: rgba(255,255,255,.09);
+  --sombra-card: 0 10px 30px -14px rgba(0,0,0,.7);
+  --sombra-pop: 0 24px 60px -16px rgba(0,0,0,.75);
+  --bub-user-bg: linear-gradient(160deg, rgba(60,217,242,.22), rgba(60,217,242,.09));
+  --bub-user-bd: rgba(60,217,242,.30);
+  --bub-ia-bg: var(--panel); --bub-ia-bd: var(--linea);
+  --md-enlace: #6fdcf2; --md-fuerte: #ffffff; --md-codigo: rgba(255,255,255,.07);
+  --md-borde: rgba(150,190,212,.18); --md-cita: rgba(60,217,242,.55);
+  --serif: 'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --acento: var(--cian);
+}
+
+/* ---------- Tokens: claro (papel frío) ---------- */
+:root:root[data-tema="claro"] {
+  --fondo: #f3f5f7; --panel: #ffffff; --panel2: #f7f9fa; --elev: #ffffff;
+  --linea: rgba(16,42,58,.11); --linea2: rgba(16,42,58,.20);
+  --cian: #0a7d98; --cian-claro: #17a3c3; --cian-oscuro: #08708a;
+  --cian-suave: rgba(10,125,152,.09); --cian-borde: rgba(10,125,152,.32);
+  --sobre-cian: #ffffff; --glow-cian: rgba(10,125,152,.4);
+  --brass: #8f6f2e; --brass-suave: rgba(143,111,46,.12); --brass-borde: rgba(143,111,46,.5);
+  --texto: #13242d; --suave: #5d727d; --verde: #188a4c; --rojo: #cf3a3a;
+  --vidrio: rgba(16,42,58,.05); --vidrio2: rgba(16,42,58,.09);
+  --sombra-card: 0 1px 2px rgba(16,42,58,.06), 0 10px 26px -14px rgba(16,42,58,.22);
+  --sombra-pop: 0 24px 60px -18px rgba(16,42,58,.35);
+  --bub-user-bg: linear-gradient(160deg, rgba(10,125,152,.15), rgba(10,125,152,.07));
+  --bub-user-bd: rgba(10,125,152,.26);
+  --md-enlace: #0a6f8c; --md-fuerte: #0a161c; --md-codigo: rgba(16,42,58,.06);
+  --md-borde: rgba(16,42,58,.14); --md-cita: rgba(10,125,152,.5);
+}
+
+/* ---------- Base ---------- */
+:root:root,
+:root:root body {
+  background: radial-gradient(90% 55% at 50% -6%, rgba(60,217,242,.11) 0%, transparent 62%), var(--fondo);
+  color: var(--texto);
+}
+:root:root[data-tema="claro"],
+:root:root[data-tema="claro"] body {
+  background: radial-gradient(90% 55% at 50% -6%, rgba(10,125,152,.09) 0%, transparent 62%), var(--fondo);
+}
+:root:root button:focus-visible,
+:root:root a:focus-visible,
+:root:root input:focus-visible,
+:root:root textarea:focus-visible,
+:root:root select:focus-visible {
+  outline: 2px solid var(--cian); outline-offset: 2px;
+}
+:root:root #texto:focus-visible { outline: none; }
+
+/* ---------- Cabecera ---------- */
+:root:root .btnIcono {
+  width: 40px; height: 40px; background: var(--vidrio); border: 1px solid var(--linea); color: var(--texto);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  transition: background .2s, transform .15s, border-color .2s;
+}
+:root:root .btnIcono:active { background: var(--vidrio2); border-color: var(--linea2); }
+:root:root #btnSilencio.silenciado { background: rgba(255,107,107,.14); color: var(--rojo); border-color: rgba(255,107,107,.4); }
+:root:root #btnFlotar.on { background: var(--cian-suave); border-color: var(--cian-borde); color: var(--cian); box-shadow: 0 0 16px -2px var(--glow-cian); }
+
+/* ---------- Inicio ---------- */
+:root:root #estado { text-transform: none; letter-spacing: .5px; font-size: 13px; color: var(--suave); }
+:root:root body.m-voz #estado { font-size: 15px; color: var(--cian); }
+:root:root body.m-chat #estado { font-size: 11px; }
+:root:root #bienvenida h1 {
+  font-family: var(--serif); font-weight: 500; font-size: clamp(30px, 8.6vw, 38px);
+  line-height: 1.1; letter-spacing: -.012em; margin: 0 0 8px; color: var(--texto);
+}
+:root:root #bienvenida p { font-size: 16px; color: var(--suave); margin: 0 0 22px; }
+:root:root .chip {
+  background: var(--vidrio); border: 1px solid var(--linea); color: var(--texto);
+  border-radius: 14px; padding: 9px 14px; font-size: 13.5px;
+}
+:root:root .chip:active { background: var(--cian-suave); border-color: var(--cian-borde); }
+
+/* ---------- Chat ---------- */
+:root:root #chat {
+  padding: 16px 14px 20px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+}
+:root:root #chatInner { gap: 18px; }
+:root:root .fila { gap: 10px; }
+:root:root .fila.user + .fila.user,
+:root:root .fila.jarvis + .fila.jarvis { margin-top: -8px; }
+
+:root:root .burbuja { font-size: 15.5px; line-height: 1.58; }
+:root:root .fila.user .burbuja {
+  max-width: 82%; padding: 10px 15px 11px; color: var(--texto);
+  background: var(--bub-user-bg); border: 1px solid var(--bub-user-bd);
+  border-radius: 20px 20px 6px 20px; box-shadow: 0 10px 24px -16px rgba(0,0,0,.55);
+}
+:root:root .fila.jarvis .burbuja {
+  max-width: calc(100% - 38px); padding: 12px 15px 8px; color: var(--texto);
+  background: var(--bub-ia-bg); border: 1px solid var(--bub-ia-bd);
+  border-radius: 6px 20px 20px 20px; box-shadow: var(--sombra-card);
+}
+:root:root #vozJarvis { color: var(--texto); }
+
+/* Avatar de Jarvis: núcleo cian dentro de un anillo de latón */
+:root:root .avatar {
+  flex: 0 0 26px; width: 26px; height: 26px; margin-top: 1px; border-radius: 50%;
+  background:
+    radial-gradient(circle, #fff 0 15%, var(--cian) 16% 34%, transparent 38%),
+    radial-gradient(circle, transparent 0 52%, var(--cian-suave) 54% 100%);
+  border: 1.5px solid var(--brass-borde); box-shadow: 0 0 14px -3px var(--glow-cian);
+}
+:root:root .puntos { padding: 6px 0 8px; }
+:root:root .puntos span { width: 6px; height: 6px; background: var(--cian); }
+
+/* Texto con formato */
+:root:root .burbuja.md p { margin: 0 0 10px; }
+:root:root .burbuja.md h1,
+:root:root .burbuja.md h2,
+:root:root .burbuja.md h3 {
+  font-family: var(--serif); font-weight: 500; letter-spacing: -.005em; margin: 16px 0 6px;
+}
+:root:root .burbuja.md h1 { font-size: 24px; }
+:root:root .burbuja.md h2 { font-size: 21px; }
+:root:root .burbuja.md h3 { font-size: 18px; }
+:root:root .burbuja.md h4 { font-size: 15.5px; font-weight: 650; }
+:root:root .burbuja.md blockquote {
+  margin: 0 0 10px; padding: 8px 14px; border-left: 3px solid var(--md-cita);
+  background: var(--cian-suave); border-radius: 0 12px 12px 0; color: var(--texto);
+}
+:root:root .burbuja.md pre,
+:root:root .codBloque { border-radius: 14px; }
+:root:root .burbuja.md .tablaMd { border-radius: 14px; }
+:root:root .burbuja.md th { background: var(--vidrio); }
+:root:root .codCab { background: var(--vidrio); font-size: 12.5px; color: var(--suave); }
+
+/* Botones bajo cada respuesta */
+:root:root .accMsg { margin-top: 4px; margin-left: -8px; gap: 0; }
+:root:root .accBtn { width: 32px; height: 32px; color: var(--suave); opacity: .6; }
+:root:root .accBtn svg { width: 17px; height: 17px; }
+:root:root .accBtn:active,
+:root:root .accBtn.activo,
+:root:root .accBtn.marcado { opacity: 1; background: var(--vidrio2); color: var(--texto); }
+:root:root .accBtn.activo,
+:root:root .accBtn.marcado { color: var(--cian); }
+
+/* Pasos en vivo y tarjetas dentro del chat */
+:root:root .pasosBox { margin-left: 36px; font-size: 14px; }
+:root:root .tarjetaBusq,
+:root:root .tarjetaImg {
+  margin-left: 36px; max-width: calc(100% - 36px); background: var(--panel);
+  border: 1px solid var(--linea); border-radius: 18px; box-shadow: var(--sombra-card);
+}
+:root:root .tarjetaBusq h4 { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 650; }
+
+/* ---------- Caja de entrada ---------- */
+:root:root #inputArea {
+  background: var(--panel2); border: 1px solid var(--linea2); border-radius: 26px;
+  box-shadow: 0 16px 40px -18px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.04);
+}
+:root:root #inputArea.multi { border-radius: 24px; }
+:root:root #inputArea:focus-within { border-color: var(--cian-borde); box-shadow: 0 0 0 4px var(--cian-suave), 0 16px 40px -18px rgba(0,0,0,.8); }
+:root:root[data-tema="claro"] #inputArea { box-shadow: 0 1px 2px rgba(16,42,58,.06), 0 14px 34px -16px rgba(16,42,58,.28); }
+:root:root[data-tema="claro"] #inputArea:focus-within { box-shadow: 0 0 0 4px var(--cian-suave), 0 14px 34px -16px rgba(16,42,58,.28); border-color: var(--cian-borde); }
+:root:root #texto::placeholder { color: var(--suave); opacity: .85; }
+:root:root #btnMas { background: var(--vidrio); border: 0; color: var(--texto); }
+:root:root #pildora { height: 38px; background: var(--vidrio); border: 0; color: var(--suave); }
+:root:root #pildora b { color: var(--cian); }
+:root:root #btnVoz { color: var(--suave); }
+:root:root #btnVoz.activo { background: rgba(255,107,107,.16); color: var(--rojo); }
+:root:root #btnAccion {
+  background: linear-gradient(145deg, var(--cian-claro), var(--cian-oscuro)); color: var(--sobre-cian);
+  box-shadow: 0 8px 20px -8px var(--glow-cian);
+}
+:root:root #pieVoz small { color: var(--suave); }
+:root:root #btnColgar { box-shadow: 0 10px 30px -8px rgba(255,107,107,.5); }
+
+/* ---------- Hojas desde abajo y avisos ---------- */
+:root:root #hojaVelo { background: rgba(2,6,12,.55); }
+:root:root .hoja {
+  background: var(--panel); border: 1px solid var(--linea2); border-bottom: none;
+  border-radius: 28px 28px 0 0; box-shadow: 0 -24px 60px -24px rgba(0,0,0,.75);
+}
+:root:root .hojaAgarre { width: 36px; background: var(--suave); opacity: .4; }
+:root:root .hojaTit { font-size: 17px; font-weight: 600; }
+:root:root .opHoja { padding: 18px 6px 14px; border-radius: 18px; background: var(--panel2); border-color: var(--linea); }
+:root:root .opHoja:active { background: var(--cian-suave); border-color: var(--cian-borde); }
+:root:root .filaNivel { border-radius: 16px; }
+:root:root .filaNivel .nivOk { border-color: var(--linea2); }
+:root:root .filaNivel .nivOk::after { background: var(--sobre-cian); }
+:root:root .filaNivel.on { border-color: var(--cian-borde); background: var(--cian-suave); }
+:root:root .filaNivel.on .nivOk { background: var(--cian); border-color: var(--cian); }
+:root:root #toastAdj,
+:root:root .proyAviso,
+:root:root .recAviso {
+  background: var(--panel); border: 1px solid var(--linea2); border-radius: 16px; box-shadow: var(--sombra-pop);
+}
+:root:root .proyAviso { border-color: var(--cian-borde); }
+:root:root .recAviso { border-color: var(--cian-borde); }
+:root:root .recAviso strong { text-transform: none; letter-spacing: .3px; font-size: 13px; }
+
+/* ---------- Sidebar ---------- */
+:root:root #velo { background: rgba(2,6,12,.6); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+:root:root[data-tema="claro"] #velo { background: rgba(16,42,58,.35); }
+:root:root #sidebar {
+  width: min(86vw, 336px);
+  background: linear-gradient(180deg, var(--panel) 0%, var(--fondo) 100%);
+  border-right: 1px solid var(--linea);
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 14px calc(env(safe-area-inset-bottom, 0px) + 14px);
+}
+/* La sombra solo existe con el menú abierto (cerrado, se asomaba por el borde izquierdo) */
+:root:root body.sb-abierto #sidebar { box-shadow: 28px 0 70px -24px rgba(0,0,0,.8); }
+:root:root[data-tema="claro"] body.sb-abierto #sidebar { box-shadow: 28px 0 70px -28px rgba(16,42,58,.4); }
+
+:root:root #sidebar .sbTop { padding: 2px 2px 14px; }
+:root:root .sbLogo {
+  display: flex; align-items: center; gap: 11px; font-size: 13.5px; font-weight: 650;
+  letter-spacing: 3.2px; color: var(--brass);
+}
+:root:root .sbLogo::before {
+  content: ''; width: 24px; height: 24px; flex: none; border-radius: 50%;
+  background:
+    radial-gradient(circle, #fff 0 11%, var(--cian) 12% 25%, transparent 27%),
+    radial-gradient(circle, transparent 0 50%, var(--cian-suave) 52% 100%);
+  border: 1.5px solid var(--brass-borde); box-shadow: 0 0 16px -3px var(--glow-cian);
+}
+:root:root #btnCerrarSidebar { width: 36px; height: 36px; }
+
+:root:root .sbItem {
+  gap: 12px; padding: 10px 12px; border-radius: 14px; font-size: 15px; color: var(--texto);
+  transition: background .18s;
+}
+:root:root .sbItem:active { background: var(--vidrio2); }
+@media (hover: hover) { :root:root .sbItem:hover { background: var(--vidrio); } }
+:root:root .sbItem > svg {
+  box-sizing: content-box; width: 18px; height: 18px; padding: 7px; border-radius: 11px;
+  background: var(--cian-suave); color: var(--cian);
+}
+/* Nuevo chat: la acción principal */
+:root:root #sbNuevo {
+  margin-bottom: 8px; padding: 11px 14px; font-weight: 600;
+  background: var(--cian-suave); border: 1px solid var(--cian-borde);
+}
+:root:root #sbNuevo:active { background: var(--cian-borde); }
+@media (hover: hover) { :root:root #sbNuevo:hover { background: var(--cian-borde); } }
+:root:root #sbNuevo > svg { padding: 0; width: 20px; height: 20px; background: none; border-radius: 0; }
+
+:root:root .sbSeccion {
+  font-size: 12.5px; font-weight: 600; letter-spacing: .2px; text-transform: none; color: var(--suave);
+  padding: 18px 10px 6px;
+}
+:root:root .sbSeccion[data-plegable] { padding: 16px 10px 6px; }
+:root:root .sbSeccion[data-plegable]:active { color: var(--texto); }
+:root:root .sbFlecha { width: 11px; height: 11px; opacity: .8; }
+:root:root .proyNuevo {
+  width: 26px; height: 26px; border: 1px solid var(--linea); border-radius: 50%; color: var(--suave);
+}
+:root:root .proyNuevo:active { background: var(--vidrio2); color: var(--cian); }
+:root:root .sbVacio { padding: 8px 12px; font-size: 13px; color: var(--suave); }
+/* Chats y proyectos */
+:root:root #listaChats,
+:root:root #listaProyectos { padding: 0 0 2px; }
+:root:root .chatItem {
+  position: relative; padding: 10px 6px 10px 12px; font-size: 14.5px; color: var(--texto);
+}
+:root:root .chatItem.activo { background: var(--cian-suave); color: var(--texto); }
+:root:root .chatItem.activo::before {
+  content: ''; position: absolute; left: 0; top: 22%; bottom: 22%; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--cian);
+}
+:root:root .chatMas { width: 30px; height: 30px; margin: -4px 0 -4px 0; color: var(--suave); opacity: .7; }
+:root:root .chatMas:active { background: var(--vidrio2); opacity: 1; }
+:root:root .chatPin { color: var(--brass); }
+:root:root .chatEdit { background: var(--vidrio); border-color: var(--cian-borde); border-radius: 10px; }
+:root:root .proyItem { padding: 8px 6px 8px 8px; }
+:root:root .proyItem > svg { padding: 6px; background: var(--brass-suave); color: var(--brass); }
+:root:root .proyNom { font-weight: 600; }
+:root:root .proyCuenta {
+  font-size: 11.5px; font-weight: 600; min-width: 20px; padding: 1px 7px; border-radius: 10px;
+  text-align: center; background: var(--vidrio); color: var(--suave);
+}
+:root:root .proyHijos { margin-left: 24px; padding-left: 4px; border-left: 1px solid var(--linea); }
+
+/* Herramientas (interruptores) */
+:root:root .hrCont { padding: 0 0 6px; }
+:root:root .hrFila { padding: 9px 10px; border-radius: 12px; }
+:root:root .hrFila:active { background: var(--vidrio); }
+:root:root .hrTxt b { font-size: 14.5px; font-weight: 550; }
+:root:root .hrTxt small { font-size: 12px; color: var(--suave); }
+:root:root .hrSw { width: 42px; height: 24px; border-radius: 12px; background: var(--vidrio2); box-shadow: inset 0 0 0 1px var(--linea); }
+:root:root .hrSw::after { top: 3px; left: 3px; width: 18px; height: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+:root:root .hrFila input:checked + .hrSw { background: var(--cian); box-shadow: none; }
+:root:root .hrFila input:checked + .hrSw::after { transform: translateX(18px); }
+
+/* Próximamente */
+:root:root .sbItem.pronto { opacity: .55; }
+:root:root .chipPronto {
+  text-transform: none; letter-spacing: 0; font-size: 11.5px; padding: 2px 10px; border: 0;
+  background: var(--vidrio); color: var(--suave);
+}
+
+/* Ajustes + tarjeta de usuario, al final */
+:root:root #sbAjustes { margin-top: auto; }
+:root:root #sidebar .sbPie {
+  margin-top: 8px; padding: 12px; gap: 12px; justify-content: flex-start;
+  background: var(--panel2); border: 1px solid var(--linea); border-radius: 18px;
+}
+:root:root .syAv {
+  width: 38px; height: 38px; flex: 0 0 38px; font-weight: 700; font-size: 16px; color: #1a1408;
+  background: linear-gradient(145deg, #efdcae, #bb9755);
+  box-shadow: 0 0 0 2px var(--panel2), 0 0 0 3.5px var(--brass-borde);
+}
+:root:root[data-tema="claro"] .syAv { color: #fff; background: linear-gradient(145deg, #b8913f, #7d5f22); }
+:root:root .syDatos b { font-size: 14.5px; font-weight: 600; }
+:root:root .syDatos small { font-size: 12px; }
+:root:root .syBtn { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; background: var(--vidrio); border-color: transparent; }
+:root:root .syBtn:active { color: var(--rojo); background: rgba(255,107,107,.14); }
+
+/* ---------- Diálogos y menús ---------- */
+:root:root .chatMenu,
+:root:root .proyCard,
+:root:root .syCard {
+  background: var(--panel); border: 1px solid var(--linea2); border-radius: 22px; box-shadow: var(--sombra-pop);
+}
+:root:root .chatMenu { border-radius: 18px; padding: 6px; }
+:root:root .chatMenu button { border-radius: 12px; }
+:root:root .chatMenu button:active { background: var(--vidrio2); }
+:root:root .proyCard h3,
+:root:root .syCard h3 { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: -.005em; }
+:root:root .proyInp { background: var(--vidrio); border-radius: 14px; }
+:root:root .proyInp:focus { border-color: var(--cian-borde); box-shadow: 0 0 0 4px var(--cian-suave); outline: none; }
+:root:root .proyBtns button,
+:root:root .syBtns button { height: 46px; border-radius: 14px; font-weight: 600; }
+:root:root .proyOk,
+:root:root .syNo { background: linear-gradient(145deg, var(--cian-claro), var(--cian-oscuro)); color: var(--sobre-cian); }
+:root:root .proyNo { border-color: var(--linea2); }
+:root:root .syOk { border-color: rgba(255,107,107,.5); background: transparent; color: var(--rojo); }
+:root:root .proyOv,
+:root:root #syOverlay { background: rgba(2,6,12,.62); }
+:root:root[data-tema="claro"] .proyOv,
+:root:root[data-tema="claro"] #syOverlay { background: rgba(16,42,58,.4); }
+
+/* Recordatorios */
+:root:root .recCab { border-bottom-color: var(--linea); }
+:root:root .recCab span { font-size: 18px; font-weight: 600; letter-spacing: 0; color: var(--texto); }
+:root:root .recX { width: 40px; height: 40px; border-radius: 50%; background: var(--vidrio); }
+:root:root .recCard,
+:root:root .recFila { background: var(--panel); border-color: var(--linea); border-radius: 18px; }
+:root:root .recCard input { background: var(--vidrio); border-radius: 12px; }
+:root:root .recChip { border-color: var(--linea2); }
+:root:root .recChip:active { background: var(--cian-suave); border-color: var(--cian-borde); }
+:root:root .recAdd,
+:root:root .recPerm { border-radius: 14px; background: var(--cian-suave); border-color: var(--cian-borde); }
+:root:root .recSec { text-transform: none; letter-spacing: .2px; font-size: 12.5px; font-weight: 600; }
+
+/* Pantalla de inicio de la app y login: mismos colores que el resto */
+:root:root #splash { --sp: 60,217,242; background: radial-gradient(120% 70% at 50% 0%, #0d1623 0%, #080c13 62%); }
+:root:root[data-tema="claro"] #splash { --sp: 10,125,152; background: #f3f5f7; }
+:root:root .auTit { color: var(--brass); }
+
+/* ---------- Ajustes ---------- */
+:root:root #overlayAjustes {
+  --aj-fondo: var(--fondo); --aj-card: var(--panel); --aj-fila: var(--panel); --aj-borde: var(--linea);
+  --aj-texto: var(--texto); --aj-suave: var(--suave); --aj-sel: var(--cian-suave); --aj-acento: var(--cian);
+}
+:root:root #overlayAjustes #panelHeader { border-bottom-color: var(--linea); }
+:root:root #overlayAjustes #panelHeader > span { font-size: 19px; font-weight: 650; letter-spacing: -.1px; }
+:root:root #overlayAjustes #btnCerrarPanel,
+:root:root #ajBack { background: var(--vidrio); border-color: var(--linea); }
+
+/* Perfil arriba del menú */
+:root:root .ajPerfil {
+  display: flex; align-items: center; gap: 14px; padding: 16px; margin-bottom: 4px;
+  background: linear-gradient(135deg, var(--panel) 0%, var(--panel2) 100%);
+  border: 1px solid var(--linea); border-radius: 20px; box-shadow: var(--sombra-card);
+}
+:root:root .ajAv {
+  width: 52px; height: 52px; flex: 0 0 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: #1a1408; background: linear-gradient(145deg, #efdcae, #bb9755);
+  box-shadow: 0 0 0 3px var(--panel), 0 0 0 4.5px var(--brass-borde);
+}
+:root:root[data-tema="claro"] .ajAv { color: #fff; background: linear-gradient(145deg, #b8913f, #7d5f22); }
+:root:root .ajDatos { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+:root:root .ajDatos b { font-family: var(--serif); font-size: 22px; font-weight: 500; line-height: 1.15; color: var(--texto); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root:root .ajDatos small { font-size: 13px; color: var(--suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Filas del menú: tarjetas con icono, título y descripción */
+:root:root #overlayAjustes #tabsAjustes { gap: 10px; padding: 16px; }
+:root:root #overlayAjustes .tabAjuste,
+:root:root #overlayAjustes .tabAjuste:first-child,
+:root:root #overlayAjustes .tabAjuste:last-child {
+  min-height: 70px; padding: 13px 14px; gap: 14px; border: 1px solid var(--linea); border-radius: 18px;
+  background: var(--panel); box-shadow: var(--sombra-card);
+}
+:root:root #overlayAjustes .tabAjuste:active { background: var(--cian-suave); border-color: var(--cian-borde); }
+:root:root #overlayAjustes .tabAjuste.activo { background: var(--panel); }
+:root:root .tabIco {
+  box-sizing: content-box; width: 22px; height: 22px; padding: 9px; border-radius: 13px;
+  background: var(--cian-suave); color: var(--cian);
+}
+:root:root .tabAjuste[data-tab="llave"] .tabIco { background: var(--brass-suave); color: var(--brass); }
+:root:root .tabTxt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+:root:root .tabTxt b { font-size: 16.5px; font-weight: 600; color: var(--texto); }
+:root:root .tabTxt small { font-size: 13px; font-weight: 400; color: var(--suave); line-height: 1.3; }
+:root:root .tabFlecha { color: var(--suave); opacity: .7; }
+/* Contenido */
+:root:root #overlayAjustes #contenidoAjustes { padding: 18px 16px calc(env(safe-area-inset-bottom, 0px) + 32px); }
+:root:root #overlayAjustes .vistaAjuste h3 {
+  font-family: var(--serif); font-size: 26px; font-weight: 500; letter-spacing: -.01em; text-transform: none;
+  color: var(--texto); margin: 2px 4px 10px;
+}
+:root:root #overlayAjustes .vistaAjuste p { color: var(--suave); }
+:root:root #overlayAjustes .card {
+  background: var(--panel); border: 1px solid var(--linea); border-radius: 20px; padding: 18px; box-shadow: var(--sombra-card);
+}
+:root:root #overlayAjustes .cardHead { margin-bottom: 12px; }
+:root:root #overlayAjustes .cardHead strong,
+:root:root #overlayAjustes .card strong { font-size: 16px; font-weight: 600; }
+
+/* Etiquetas de estado */
+:root:root #overlayAjustes .badge {
+  text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 500; padding: 5px 12px;
+  background: var(--vidrio); border: 1px solid var(--linea); color: var(--suave);
+}
+:root:root #overlayAjustes .badge.on {
+  background: rgba(61,220,132,.14); border-color: rgba(61,220,132,.5); color: var(--verde); font-weight: 600;
+}
+
+/* Campos */
+:root:root #overlayAjustes .campoTexto,
+:root:root #overlayAjustes .campoMeta {
+  background: var(--fondo); border: 1px solid var(--linea2); color: var(--texto); border-radius: 14px;
+}
+:root:root #overlayAjustes .campoTexto { min-height: 48px; padding: 12px 14px; margin-bottom: 12px; }
+:root:root #overlayAjustes .campoTexto:focus,
+:root:root #overlayAjustes .campoMeta:focus {
+  outline: none; border-color: var(--cian-borde); box-shadow: 0 0 0 4px var(--cian-suave);
+}
+:root:root #overlayAjustes select.campoTexto { appearance: none; -webkit-appearance: none; padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238c9faa' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 18px; }
+
+/* Botones */
+:root:root #overlayAjustes .btnPanel {
+  min-height: 44px; padding: 10px 18px; border-radius: 14px; font-size: 14.5px; font-weight: 600;
+  letter-spacing: 0; text-transform: none; color: var(--sobre-cian);
+  background: linear-gradient(145deg, var(--cian-claro), var(--cian-oscuro)); border: 0;
+  box-shadow: 0 8px 18px -10px var(--glow-cian);
+}
+:root:root #overlayAjustes .btnPanel.secundario {
+  background: var(--vidrio); border: 1px solid var(--linea2); color: var(--texto); box-shadow: none;
+}
+:root:root #overlayAjustes .btnPanel.secundario:active { background: var(--vidrio2); }
+:root:root #overlayAjustes .btnPanel.secundario[style*="color:#00e5ff"] {
+  color: var(--cian) !important; background: var(--cian-suave); border-color: var(--cian-borde) !important;
+}
+:root:root #overlayAjustes .btnPanel.secundario[style*="rgb(0, 229, 255)"] {
+  color: var(--cian) !important; background: var(--cian-suave); border-color: var(--cian-borde) !important;
+}
+:root:root #overlayAjustes .btnPanel.secundario[style*="rgb(53, 224, 122)"] {
+  color: var(--verde) !important; background: rgba(61,220,132,.12); border-color: rgba(61,220,132,.45) !important;
+}
+:root:root #overlayAjustes .filaSwitch > span { line-height: 1.35; }
+:root:root #overlayAjustes select {
+  appearance: none; -webkit-appearance: none; min-height: 42px; padding: 8px 36px 8px 14px; border-radius: 12px;
+  background-color: var(--fondo); color: var(--texto); border: 1px solid var(--linea2); font: inherit; font-size: 14.5px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238c9faa' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 18px;
+}
+:root:root #overlayAjustes .btnPanel.secundario[style*="color:#35e07a"] {
+  color: var(--verde) !important; background: rgba(61,220,132,.12); border-color: rgba(61,220,132,.45) !important;
+}
+:root:root #overlayAjustes #btnBorrarLlaveGemini,
+:root:root #overlayAjustes #btnBorrarLlaveGroq {
+  color: var(--rojo); background: rgba(255,107,107,.1); border-color: rgba(255,107,107,.4);
+}
+:root:root #overlayAjustes .filaBtns { gap: 10px; align-items: center; }
+
+/* Interruptores (cualquier "filaSwitch" con casilla) */
+:root:root #overlayAjustes .filaSwitch { gap: 16px; font-size: 15.5px; margin-bottom: 12px; }
+:root:root #overlayAjustes .filaSwitch input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 50px; height: 30px;
+  margin: 0; border-radius: 15px; background: var(--vidrio2); box-shadow: inset 0 0 0 1px var(--linea2);
+  transition: background .2s; cursor: pointer;
+}
+:root:root #overlayAjustes .filaSwitch input[type="checkbox"]::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); transition: transform .2s var(--ease);
+}
+:root:root #overlayAjustes .filaSwitch input[type="checkbox"]:checked { background: var(--cian); box-shadow: none; }
+:root:root #overlayAjustes .filaSwitch input[type="checkbox"]:checked::after { transform: translateX(20px); }
+
+/* Deslizadores */
+:root:root #overlayAjustes input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; margin: 4px 0;
+}
+:root:root #overlayAjustes input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--vidrio2); }
+:root:root #overlayAjustes input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--vidrio2); }
+:root:root #overlayAjustes input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 24px; height: 24px; margin-top: -9px; border-radius: 50%;
+  background: var(--cian); border: 3px solid var(--panel); box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+:root:root #overlayAjustes input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--cian); border: 3px solid var(--panel);
+}
+
+/* Tema: control segmentado */
+:root:root #overlayAjustes .opcionesTema { background: var(--vidrio); border: 1px solid var(--linea); border-radius: 16px; padding: 4px; }
+:root:root #overlayAjustes .opTema { padding: 12px 6px; border-radius: 12px; font-size: 14.5px; font-weight: 500; color: var(--suave); }
+:root:root #overlayAjustes .opTema.on {
+  background: var(--elev); color: var(--cian); font-weight: 650;
+  box-shadow: 0 0 0 1px var(--cian-borde), 0 4px 12px -6px rgba(0,0,0,.5);
+}
+:root:root[data-tema="claro"] #overlayAjustes .opTema.on { background: #fff; color: var(--cian); }
+
+/* Uso */
+:root:root #overlayAjustes .usoBarraFondo { height: 10px; border-radius: 5px; background: var(--vidrio2); border: 0; }
+:root:root #overlayAjustes .usoBarraRelleno { border-radius: 5px; background: linear-gradient(90deg, var(--cian-oscuro), var(--cian-claro)); }
+
+/* Escritorio: ventana con menú a la izquierda */
+@media (min-width: 820px) {
+  :root:root #overlayAjustes #panelAjustes { grid-template-columns: 280px 1fr; border-color: var(--linea2); box-shadow: var(--sombra-pop); }
+  :root:root #overlayAjustes #tabsAjustes { padding: 14px; gap: 6px; border-right-color: var(--linea); }
+  :root:root .ajPerfil { padding: 12px; margin-bottom: 8px; box-shadow: none; }
+  :root:root .ajAv { width: 42px; height: 42px; flex-basis: 42px; font-size: 18px; }
+  :root:root .ajDatos b { font-size: 18px; }
+  :root:root #overlayAjustes .tabAjuste,
+:root:root #overlayAjustes .tabAjuste:first-child,
+:root:root #overlayAjustes .tabAjuste:last-child {
+    min-height: 54px; padding: 8px 10px; border: 0; border-radius: 14px; background: transparent; box-shadow: none;
+  }
+  :root:root #overlayAjustes .tabAjuste:hover { background: var(--vidrio); }
+  :root:root #overlayAjustes .tabAjuste.activo { background: var(--cian-suave); }
+  :root:root .tabIco { padding: 7px; width: 20px; height: 20px; border-radius: 11px; }
+  :root:root .tabTxt b { font-size: 15px; }
+  :root:root .tabTxt small { display: none; }
+  :root:root #overlayAjustes #contenidoAjustes { padding: 26px 30px; }
+}

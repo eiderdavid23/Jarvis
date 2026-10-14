@@ -13,6 +13,13 @@
     uso: '<path d="M18 20V10M12 20V4M6 20v-6"/>',
     acerca: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>'
   };
+  var SUBS = {
+    llave: 'Conecta Gemini o Groq',
+    voz: 'Tono, velocidad y voz premium',
+    tema: 'Claro, oscuro o automático',
+    uso: 'Solicitudes de hoy',
+    acerca: 'Qué es Jarvis y con qué funciona'
+  };
   function svg(inner, clase) {
     return '<svg class="' + clase + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
   }
@@ -20,8 +27,26 @@
   tabs.forEach(function (b) {
     var txt = b.textContent.trim();
     b.dataset.titulo = txt;
-    b.innerHTML = svg(ICONOS[b.dataset.tab] || ICONOS.acerca, 'tabIco') + '<span class="tabTxt">' + txt + '</span>' + svg('<path d="M9 6l6 6-6 6"/>', 'tabFlecha');
+    b.innerHTML = svg(ICONOS[b.dataset.tab] || ICONOS.acerca, 'tabIco')
+      + '<span class="tabTxt"><b>' + txt + '</b><small>' + (SUBS[b.dataset.tab] || '') + '</small></span>'
+      + svg('<path d="M9 6l6 6-6 6"/>', 'tabFlecha');
   });
+
+  var menu = document.getElementById('tabsAjustes');
+  var perfil = document.createElement('div');
+  perfil.className = 'ajPerfil';
+  perfil.innerHTML = '<div class="ajAv"></div><div class="ajDatos"><b></b><small></small></div>';
+  menu.insertBefore(perfil, menu.firstChild);
+  function pintarPerfil() {
+    var mail = '', nom = '';
+    try { mail = localStorage.getItem('jarvisCorreo') || ''; nom = localStorage.getItem('jarvisNombre') || ''; } catch (e) {}
+    if (!nom) nom = mail ? mail.split('@')[0] : 'Invitado';
+    nom = nom.charAt(0).toUpperCase() + nom.slice(1);
+    perfil.querySelector('.ajAv').textContent = nom.charAt(0);
+    perfil.querySelector('b').textContent = nom;
+    perfil.querySelector('small').textContent = mail;
+  }
+  pintarPerfil();
 
   var titulo = header.querySelector('span');
   var cerrar = document.getElementById('btnCerrarPanel');
@@ -52,7 +77,7 @@
 
   /* Al abrir Ajustes en celular se empieza en el menu; en pantalla grande el titulo no cambia */
   new MutationObserver(function () {
-    if (overlay.classList.contains('abierto')) { if (movil.matches) irMenu(); }
+    if (overlay.classList.contains('abierto')) { pintarPerfil(); if (movil.matches) irMenu(); }
   }).observe(overlay, { attributes: true, attributeFilter: ['class'] });
   movil.addEventListener && movil.addEventListener('change', function () {
     if (!movil.matches) titulo.textContent = 'Ajustes'; else irMenu();
