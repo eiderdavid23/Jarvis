@@ -4,7 +4,7 @@
   var KL = 'jarvisVozPremiumLimite';
   function limite() {   // letras maximas por respuesta; 0 = sin limite
     var v = parseInt(localStorage.getItem(KL), 10);
-    return (v === 0 || v > 0) ? v : 1500;
+    return (v === 0 || v > 0) ? v : 0;
   }
   var base = window.jarvisVoz = window.jarvisVoz || {};
 
@@ -34,9 +34,9 @@
   }
   var card = h('div', 'card');
   var cab = h('div', 'cardHead');
-  cab.appendChild(h('strong', '', 'Voz premium'));
+  cab.appendChild(h('strong', '', 'Voz principal'));
   card.appendChild(cab);
-  var info = h('p', '', 'Voz más natural de Jarvis. Si una respuesta pasa del largo máximo, habla con la voz de siempre. Cada letra gasta créditos de ElevenLabs.');
+  var info = h('p', '', 'Voz natural de Jarvis, generada por el servidor. Si falla, está apagada o la respuesta pasa del largo máximo, habla con la voz de respaldo.');
   info.style.cssText = 'font-size:11px;opacity:.7;margin:0 0 10px';
   card.appendChild(info);
   var fila = h('label', 'filaSwitch');

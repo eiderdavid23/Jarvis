@@ -141,9 +141,9 @@
 
   var card = h('div', 'card');
   var cab = h('div', 'cardHead');
-  cab.appendChild(h('strong', '', 'Voz de Jarvis'));
+  cab.appendChild(h('strong', '', 'Voz de respaldo'));
   card.appendChild(cab);
-  var info = h('p', '', 'Peso aproximado: 60 MB. Recomendado: descargarla con WiFi.');
+  var info = h('p', '', 'Se descarga al teléfono (unos 60 MB, mejor con WiFi) y funciona sin internet. Solo se usa si la voz principal no está disponible o está apagada.');
   info.style.cssText = 'font-size:11px;opacity:.7;margin:0 0 10px';
   card.appendChild(info);
   var estado = h('p', '', '');

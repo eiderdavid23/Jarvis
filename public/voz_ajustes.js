@@ -40,9 +40,9 @@
   }
   var card = h('div', 'card');
   var cab = h('div', 'cardHead');
-  cab.appendChild(h('strong', '', 'Tono y estilo'));
+  cab.appendChild(h('strong', '', 'Tono de la voz de respaldo'));
   card.appendChild(cab);
-  var ayuda = h('p', '', 'Ajusta cómo suena Jarvis. Toca "Probar voz" después de cada cambio.');
+  var ayuda = h('p', '', 'Solo cambia la voz de respaldo y la del navegador; la voz principal trae su propio tono y ritmo. Toca "Probar voz" después de cada cambio.');
   ayuda.style.cssText = 'font-size:11px;opacity:.7;margin:0 0 10px';
   card.appendChild(ayuda);
 
