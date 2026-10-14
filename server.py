@@ -23,12 +23,14 @@ import minecraft
 import recs_api
 import proyectos_api
 import llaves_api
+import memoria_api
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
 app.register_blueprint(recs_api.bp)
 app.register_blueprint(proyectos_api.bp)
 app.register_blueprint(llaves_api.bp)
+app.register_blueprint(memoria_api.bp)
 
 # --- Modelo local (llama-server corriendo en el mismo Termux) ---
 MODELO_LOCAL_URL = os.environ.get('MODELO_LOCAL_URL', 'http://localhost:8081/v1/chat/completions')

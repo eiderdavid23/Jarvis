@@ -1,0 +1,54 @@
+/* Menu de cuenta (al tocar el avatar o el nombre) y pantalla "Mi memoria" */
+#sbAjustes { display: none !important; }
+#sidebar .sbPie { margin-top: auto !important; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#sidebar .sbPie .syBtn { display: none !important; }
+.mcChev { flex: 0 0 auto; width: 18px; height: 18px; color: var(--suave); transition: transform .2s; }
+body.mc-abierto .mcChev { transform: rotate(180deg); }
+
+#mcVelo { position: fixed; inset: 0; z-index: 70; display: none; }
+body.mc-abierto #mcVelo { display: block; }
+#menuCuenta {
+  position: fixed; z-index: 71; left: 14px; width: min(calc(86vw - 28px), 308px);
+  padding: 6px; border-radius: 20px; background: var(--panel); border: 1px solid var(--linea2, var(--linea));
+  box-shadow: 0 24px 60px -16px rgba(0,0,0,.75);
+  opacity: 0; transform: translateY(8px) scale(.97); transform-origin: bottom left; pointer-events: none;
+  transition: opacity .16s ease, transform .2s ease;
+}
+body.mc-abierto #menuCuenta { opacity: 1; transform: none; pointer-events: auto; }
+#menuCuenta .mcMail { padding: 10px 12px 8px; font-size: 12.5px; color: var(--suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#menuCuenta .mcSep { height: 1px; margin: 6px 8px; background: var(--linea); }
+#menuCuenta .mcItem {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border: 0; border-radius: 14px;
+  background: transparent; color: var(--texto); font: inherit; font-size: 15px; text-align: left; cursor: pointer;
+}
+#menuCuenta .mcItem:active { background: var(--vidrio2, rgba(255,255,255,.09)); }
+#menuCuenta .mcItem svg { width: 19px; height: 19px; flex: none; color: var(--suave); }
+#menuCuenta .mcItem.pronto { opacity: .55; }
+#menuCuenta .mcItem .chipPronto { margin-left: auto; }
+#menuCuenta .mcItem.salir, #menuCuenta .mcItem.salir svg { color: var(--rojo); }
+
+#mmOverlay {
+  position: fixed; inset: 0; z-index: 75; display: flex; align-items: center; justify-content: center; padding: 18px;
+  background: rgba(2,6,12,.62); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+}
+#mmOverlay.abierto { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+#mmPanel {
+  width: min(100%, 440px); max-height: min(82vh, 640px); display: flex; flex-direction: column;
+  border-radius: 24px; background: var(--panel); border: 1px solid var(--linea2, var(--linea));
+  box-shadow: 0 24px 70px -16px rgba(0,0,0,.75);
+}
+#mmPanel .mmCab { display: flex; align-items: center; gap: 10px; padding: 18px 18px 6px; }
+#mmPanel .mmCab h3 { flex: 1; margin: 0; font-size: 20px; font-weight: 600; color: var(--texto); }
+#mmPanel .mmX { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--linea); background: var(--vidrio, transparent); color: var(--texto); cursor: pointer; font-size: 18px; line-height: 1; }
+#mmPanel .mmSub { padding: 0 18px 10px; font-size: 13px; line-height: 1.4; color: var(--suave); }
+#mmLista { flex: 1; overflow-y: auto; padding: 4px 14px 8px; }
+.mmFila { display: flex; align-items: flex-start; gap: 10px; padding: 12px; margin-bottom: 8px; border-radius: 16px; background: var(--panel2, transparent); border: 1px solid var(--linea); }
+.mmTxt { flex: 1; min-width: 0; }
+.mmTxt b { display: block; margin-bottom: 2px; font-size: 12px; font-weight: 600; letter-spacing: .3px; text-transform: capitalize; color: var(--cian); }
+.mmTxt span { display: block; font-size: 14.5px; line-height: 1.4; color: var(--texto); overflow-wrap: anywhere; }
+.mmDel { flex: none; width: 32px; height: 32px; border-radius: 10px; border: 0; background: transparent; color: var(--suave); cursor: pointer; font-size: 18px; }
+.mmDel:active { background: rgba(255,107,107,.14); color: var(--rojo); }
+.mmVacio { padding: 26px 12px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--suave); }
+#mmPanel .mmPie { padding: 10px 14px 16px; }
+#mmTodo { width: 100%; height: 44px; border-radius: 14px; border: 1px solid rgba(255,107,107,.45); background: transparent; color: var(--rojo); font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; }
+#mmTodo[hidden] { display: none; }
