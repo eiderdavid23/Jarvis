@@ -32,10 +32,6 @@ def proyecto_del_chat(chat_id):
     return filas[0]['proyecto_id'], (proy.get('instrucciones') or '').strip()
 
 
-def instrucciones_del_chat(chat_id):
-    return proyecto_del_chat(chat_id)[1]
-
-
 @bp.route('/proyectos', methods=['GET'])
 @supa.requiere_login
 def listar():

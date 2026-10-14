@@ -32,8 +32,6 @@ app.register_blueprint(proyectos_api.bp)
 app.register_blueprint(llaves_api.bp)
 app.register_blueprint(memoria_api.bp)
 
-# --- Modelo local (llama-server corriendo en el mismo Termux) ---
-MODELO_LOCAL_URL = os.environ.get('MODELO_LOCAL_URL', 'http://localhost:8081/v1/chat/completions')
 
 # --- Gemini (API en la nube) ---
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
@@ -1345,23 +1343,6 @@ def resumir_conversacion(resumen_previo, mensajes, proveedor, api_key):
         partes = resp.json()['candidates'][0]['content'].get('parts', [])
         texto = ''.join(p.get('text', '') for p in partes)
     return texto.strip()[:MAX_RESUMEN]
-
-
-# --- Modelo local (llama-server): sin herramientas por ahora, modo simple ---
-def generar_local(system_prompt, turnos):
-    mensajes = [{'role': 'system', 'content': system_prompt}]
-    for h in turnos:
-        rol = 'user' if h['role'] == 'user' else 'assistant'
-        mensajes.append({'role': rol, 'content': h['texto']})
-
-    resp = requests.post(
-        MODELO_LOCAL_URL,
-        json={'messages': mensajes, 'temperature': 0.7, 'max_tokens': 500},
-        timeout=120
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    return data['choices'][0]['message']['content'].strip(), {'urls_abrir': []}
 
 
 SYSTEM_PROMPT_BASE = (

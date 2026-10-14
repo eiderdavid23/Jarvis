@@ -93,9 +93,10 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: localStorage.getItem(K.ref) })
     })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => (r.ok ? r.json() : (r.status === 503 ? { _temporal: true } : null)))
       .then((d) => {
         if (d && d.access_token) { guardarSesion(d); return true; }
+        if (d && d._temporal) return false;
         limpiarSesion();
         return false;
       })

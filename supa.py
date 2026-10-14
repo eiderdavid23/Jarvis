@@ -49,6 +49,9 @@ def _auth(ruta, cuerpo, params=None):
                           params=params, json=cuerpo, timeout=15)
     except requests.exceptions.RequestException:
         return jsonify({'error': 'No logro conectar con Supabase'}), 503
+    if r.status_code >= 500 or r.status_code == 429:
+        print('[auth]', ruta, 'Supabase respondio', r.status_code, r.text[:200])
+        return jsonify({'error': 'Supabase ocupado, intente de nuevo'}), 503
     if r.status_code >= 400:
         return jsonify({'error': _msg_error(r)}), 400
     d = r.json()
@@ -107,8 +110,11 @@ def requiere_login(f):
             r = requests.get(_url() + '/auth/v1/user', headers=_headers(token), timeout=15)
         except requests.exceptions.RequestException:
             return jsonify({'error': 'No logro conectar con Supabase'}), 503
-        if r.status_code != 200:
+        if r.status_code in (401, 403):
             return jsonify({'error': 'sesion invalida', 'respuesta': 'Su sesion expiro, señor.'}), 401
+        if r.status_code != 200:
+            print('[auth] Supabase /user respondio', r.status_code, r.text[:200])
+            return jsonify({'error': 'supabase ocupado', 'respuesta': 'No logro verificar su sesion ahora mismo, señor. Intente de nuevo en un momento.'}), 503
         u = r.json()
         meta = u.get('user_metadata') or {}
         g.token = token
@@ -165,13 +171,6 @@ def renombrar_chat(chat_id, titulo):
 
 def borrar_chat(chat_id):
     _rest('DELETE', 'chats', {'id': 'eq.' + str(chat_id)})
-
-
-def mensajes_de(chat_id, limite=20):
-    filas = _rest('GET', 'mensajes', {'chat_id': 'eq.' + str(chat_id), 'select': 'rol,texto',
-                                      'order': 'creado.desc', 'limit': str(limite)})
-    return [{'role': 'user' if f['rol'] == 'user' else 'assistant', 'texto': f['texto']}
-            for f in reversed(filas)]
 
 
 def datos_chat(chat_id):
