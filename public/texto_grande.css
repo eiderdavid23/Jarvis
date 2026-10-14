@@ -1,0 +1,31 @@
+/* Texto grande y sin caja en las respuestas de Jarvis (estilo app de Claude).
+   Se carga después de diseno_pro.css. Quitar su <link> en index.html lo revierte. */
+:root:root #chat { padding: 14px 12px 20px; }
+:root:root #chatInner { gap: 22px; }
+:root:root .fila { gap: 9px; }
+
+/* Respuestas de Jarvis: sin caja, ancho completo, letra serif grande */
+:root:root .fila.jarvis .burbuja {
+  max-width: calc(100% - 33px); padding: 0; background: none; border: 0;
+  box-shadow: none; border-radius: 0; color: var(--texto);
+  font-family: var(--serif); font-size: 18.5px; line-height: 1.6; font-weight: 400;
+  letter-spacing: .1px;
+}
+:root:root .avatar { flex: 0 0 24px; width: 24px; height: 24px; margin-top: 3px; }
+
+/* Tus mensajes: un poco más grandes, con su burbuja */
+:root:root .fila.user .burbuja { max-width: 86%; font-size: 17px; line-height: 1.5; padding: 10px 16px 11px; }
+
+/* Formato dentro de las respuestas */
+:root:root .burbuja.md p { margin: 0 0 14px; }
+:root:root .burbuja.md li { margin: 6px 0; }
+:root:root .burbuja.md ul, :root:root .burbuja.md ol { padding-left: 24px; margin: 0 0 14px; }
+:root:root .burbuja.md h1 { font-size: 27px; }
+:root:root .burbuja.md h2 { font-size: 24px; }
+:root:root .burbuja.md h3 { font-size: 21px; }
+:root:root .burbuja.md h4 { font-size: 18.5px; }
+:root:root .burbuja.md code { font-size: .86em; }
+:root:root .burbuja.md pre code { font-size: 14px; line-height: 1.5; }
+:root:root .burbuja.md table { font-size: 15.5px; }
+:root:root .codCab { font-size: 13.5px; }
+:root:root .accMsg { margin-top: 6px; }
