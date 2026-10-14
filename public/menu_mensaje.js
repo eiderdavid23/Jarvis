@@ -51,7 +51,23 @@
   }
 
   var menu = null, fondo = null, pulsada = null;
+  /* Al abrir el menu el dedo sigue apretado: el clic y el 'contextmenu' del soltar caen sobre el
+     fondo y lo cerraban al instante. Se ignoran hasta que se suelta el dedo. */
+  var protegido = false, finProt = null;
+  function protegir() {
+    protegido = true;
+    clearTimeout(finProt);
+    finProt = setTimeout(function () { protegido = false; }, 5000);
+  }
+  function soltado() {
+    if (!protegido) return;
+    clearTimeout(finProt);
+    finProt = setTimeout(function () { protegido = false; }, 450);
+  }
+  document.addEventListener('touchend', soltado, true);
+  document.addEventListener('touchcancel', soltado, true);
   function cerrarMenu() {
+    protegido = false; clearTimeout(finProt);
     if (menu) { menu.remove(); menu = null; }
     if (fondo) { fondo.remove(); fondo = null; }
     if (pulsada) { pulsada.classList.remove('msgPulsado'); pulsada = null; }
@@ -77,8 +93,8 @@
     if (b) { b.classList.add('msgPulsado'); pulsada = b; }
     var txt = textoDe(fila);
     fondo = document.createElement('div'); fondo.id = 'msgMenuFondo';
-    fondo.addEventListener('click', cerrarMenu);
-    fondo.addEventListener('contextmenu', function (e) { e.preventDefault(); cerrarMenu(); });
+    fondo.addEventListener('click', function (e) { if (protegido) { e.preventDefault(); return; } cerrarMenu(); });
+    fondo.addEventListener('contextmenu', function (e) { e.preventDefault(); if (!protegido) cerrarMenu(); });
     menu = document.createElement('div'); menu.id = 'msgMenu';
     var h = hora(fila.dataset.creado);
     if (h) { var eh = document.createElement('div'); eh.className = 'mmHora'; eh.textContent = h; menu.appendChild(eh); }
@@ -90,6 +106,7 @@
     b2.addEventListener('click', function () { cerrarMenu(); seleccionar(txt); });
     menu.appendChild(b1); menu.appendChild(b2);
     document.body.appendChild(fondo); document.body.appendChild(menu);
+    protegir();
     var w = menu.offsetWidth, hh = menu.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
     var left = Math.max(12, Math.min(x - w / 2, vw - w - 12));
     var top = y + 14;
