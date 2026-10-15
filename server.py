@@ -1150,6 +1150,118 @@ def llamar_gemini(cuerpo, gen_config, api_key):
     contar_uso('gemini', resp)
     return resp
 
+def _segundos(txt):
+    """'2m59.56s', '7.66s', '1h2m', '250ms' o '54' -> segundos (float), o None."""
+    import re
+    txt = (txt or '').strip()
+    if not txt:
+        return None
+    try:
+        return float(txt)
+    except ValueError:
+        pass
+    partes = re.findall(r'([0-9.]+)(ms|h|m|s)', txt)
+    if not partes:
+        return None
+    mult = {'h': 3600.0, 'm': 60.0, 's': 1.0, 'ms': 0.001}
+    try:
+        return sum(float(n) * mult[u] for n, u in partes)
+    except ValueError:
+        return None
+
+
+def _hms(seg):
+    seg = int(round(max(0, seg or 0)))
+    if seg >= 3600:
+        return f'{seg // 3600} h {(seg % 3600) // 60} min'
+    if seg >= 60:
+        return f'{seg // 60} min {seg % 60} s'
+    return f'{seg} s'
+
+
+def _n(x):
+    return f'{int(x):,}'.replace(',', '.')
+
+
+def _guardar_limites_groq(resp):
+    """Groq manda en cada respuesta cuanto le queda: tokens por MINUTO y peticiones por DIA."""
+    h = resp.headers
+
+    def ent(k):
+        try:
+            return int(h.get(k))
+        except (TypeError, ValueError):
+            return None
+    datos = {
+        'tokens_limite': ent('x-ratelimit-limit-tokens'),
+        'tokens_quedan': ent('x-ratelimit-remaining-tokens'),
+        'tokens_reinicio_s': _segundos(h.get('x-ratelimit-reset-tokens')),
+        'peticiones_limite': ent('x-ratelimit-limit-requests'),
+        'peticiones_quedan': ent('x-ratelimit-remaining-requests'),
+        'peticiones_reinicio_s': _segundos(h.get('x-ratelimit-reset-requests')),
+    }
+    if any(v is not None for v in datos.values()):
+        g.limites_groq = datos
+
+
+def _explicar_429(resp):
+    """Devuelve (mensaje, datos_extra) para un 429 de Groq o de Gemini."""
+    import re
+    try:
+        texto = resp.text or ''
+    except Exception:
+        texto = ''
+    url = str(getattr(getattr(resp, 'request', None), 'url', '') or '')
+    if 'groq.com' in url:
+        try:
+            _guardar_limites_groq(resp)
+        except Exception:
+            pass
+        espera = _segundos(resp.headers.get('retry-after'))
+        if espera is None:
+            m = re.search(r'try again in ([0-9hms.]+)', texto)
+            espera = _segundos(m.group(1)) if m else None
+        cuando = ' Vuelva a intentarlo en unos ' + _hms(espera) + '.' if espera is not None else ' Vuelva a intentarlo en un minuto.'
+        m = re.search(r'Limit (\d+), Used (\d+), Requested (\d+)', texto)
+        lim, usado, pedido = (int(x) for x in m.groups()) if m else (None, None, None)
+        if 'tokens per minute' in texto and lim:
+            msg = ('Señor, Groq llegó a su límite gratis por minuto (' + _n(lim) + ' tokens; usados ' + _n(usado)
+                   + ', esta petición pedía ' + _n(pedido) + ').')
+            if pedido > lim:
+                msg += ' Esta petición sola ya supera ese límite.'
+        elif 'requests per day' in texto:
+            msg = 'Señor, Groq llegó a su límite gratis de peticiones por día.'
+        elif 'tokens per day' in texto:
+            msg = 'Señor, Groq llegó a su límite gratis de tokens por día.'
+        else:
+            msg = 'Señor, Groq dice que hay demasiadas peticiones.'
+        extra = {'limites_groq': g.get('limites_groq')} if g.get('limites_groq') else {}
+        return msg + cuando, extra
+    if 'googleapis.com' in url or 'generativelanguage' in texto:
+        lim = re.search(r'limit:\s*(\d+)', texto)
+        mod = re.search(r'model:\s*([A-Za-z0-9.\-]+)', texto)
+        met = re.search(r'metric:\s*(\S+?),', texto)
+        esp = re.search(r'retry in ([0-9hms.]+)', texto, re.I) or re.search(r'"retryDelay":\s*"([0-9.]+s)"', texto)
+        espera = _segundos(esp.group(1)) if esp else None
+        if 'PerDay' in texto or (espera or 0) > 120:
+            tipo = 'dia'
+        elif 'PerMinute' in texto or espera is not None:
+            tipo = 'minuto'
+        else:
+            tipo = ''
+        unidad = 'tokens' if met and 'token' in met.group(1).lower() else 'peticiones'
+        msg = 'Señor, Gemini llegó a su límite gratis' + {'dia': ' por día', 'minuto': ' por minuto', '': ''}[tipo]
+        if lim:
+            msg += ' (' + lim.group(1) + ' ' + unidad + (' para ' + mod.group(1) if mod else '') + ')'
+        msg += '.' + (' Se libera en unos ' + _hms(espera) + '.' if espera is not None else ' Intente más tarde.')
+        extra = {}
+        if lim:
+            extra['limite_gemini'] = {'limite': int(lim.group(1)), 'unidad': unidad, 'tipo': tipo,
+                                      'modelo': mod.group(1) if mod else '', 'reinicio_s': espera}
+        return msg, extra
+    return 'Señor, el proveedor de IA dice que hay demasiadas peticiones. Intente de nuevo en un minuto.', {}
+
+
 def llamar_groq(cuerpo, cfg_groq, api_key):
     cab = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
     resp = requests.post(GROQ_URL, headers=cab, json=cuerpo, timeout=TIMEOUT_IA)
@@ -1158,6 +1270,10 @@ def llamar_groq(cuerpo, cfg_groq, api_key):
         cfg_groq.pop('reasoning_effort', None)
         cuerpo.pop('reasoning_effort', None)
         resp = requests.post(GROQ_URL, headers=cab, json=cuerpo, timeout=TIMEOUT_IA)
+    try:
+        _guardar_limites_groq(resp)
+    except Exception as e:
+        print('[LIMITES] No pude leer las cabeceras de Groq:', e)
     contar_uso('groq', resp)
     return resp
 
@@ -1796,7 +1912,8 @@ def _chat_interno():
                         'busqueda': acciones.get('busqueda'),
                         'imagenes': acciones.get('imagenes', []),
                         'recordatorios_cambio': bool(acciones.get('recordatorios')),
-                        'mapa_mc': acciones.get('mapa_mc')})
+                        'mapa_mc': acciones.get('mapa_mc'),
+                        'limites_groq': g.get('limites_groq')})
 
     except requests.exceptions.Timeout as e:
         print('[ERROR] Timeout esperando respuesta del proveedor de IA:', e)
@@ -1811,6 +1928,12 @@ def _chat_interno():
         if e.response is not None and e.response.status_code in (400, 401, 403):
             return jsonify({'respuesta': 'La llave configurada parece invalida o sin permisos, señor. Revisela en Ajustes.'}), 401
         codigo = e.response.status_code if e.response is not None else '?'
+        if codigo == 429:
+            try:
+                msg429, extra429 = _explicar_429(e.response)
+            except Exception:
+                msg429, extra429 = 'Señor, el proveedor de IA dice que hay demasiadas peticiones. Intente de nuevo en un minuto.', {}
+            return jsonify(dict({'respuesta': msg429}, **extra429)), 429
         if codigo in (500, 502, 503, 504):
             return jsonify({'respuesta': 'Los servidores de la IA estan saturados en este momento, señor. Intentelo de nuevo en unos segundos.'}), 503
         return jsonify({'respuesta': f'El proveedor de IA respondio con un error ({codigo}), señor.'}), 502

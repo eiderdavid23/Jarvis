@@ -723,6 +723,7 @@
           </p>
           <div class="usoBarraFondo"><div class="usoBarraRelleno" id="usoBarraGemini"></div></div>
           <p id="usoDetGemini" style="font-size:11px; opacity:0.8; margin:6px 0 0;">Cargando…</p>
+          <p id="usoLimGemini" style="font-size:11px; margin:6px 0 0;"></p>
           <p style="font-size:10px; opacity:0.6; margin:6px 0 0;">500/día confirmado para gemini-3.5-flash-lite (15 RPM). Verifica en aistudio.google.com/rate-limit si cambia.</p>
         </div>
         <div class="card">
@@ -732,6 +733,7 @@
           </p>
           <div class="usoBarraFondo"><div class="usoBarraRelleno" id="usoBarraGroq"></div></div>
           <p id="usoDetGroq" style="font-size:11px; opacity:0.8; margin:6px 0 0;">Cargando…</p>
+          <p id="usoLimGroq" style="font-size:11px; margin:6px 0 0;"></p>
           <p style="font-size:10px; opacity:0.6; margin:6px 0 0;">1000/día confirmado para openai/gpt-oss-120b (verifica en console.groq.com/settings/limits si cambia).</p>
         </div>
         <p id="usoEstado" style="font-size:11px; opacity:0.7;">Cargando el uso real…</p>
@@ -1558,6 +1560,7 @@ async function enviarMensaje(desdeVoz) {
       setEstado('pensando', t);
     });
     const data = leido.data;
+    if (window.jarvisLimites) window.jarvisLimites.recibir(data);
     escribiendo.remove();
     if (panel) panel.terminar();
     if (!leido.ok) {
@@ -1777,6 +1780,70 @@ function textoReinicio(iso) {
   const h = Math.floor(min / 60);
   return h > 0 ? h + ' h ' + (min % 60) + ' min' : min + ' min';
 }
+/* Limites reales: Groq los manda en cada respuesta; Gemini solo avisa cuando se pasa (error 429). */
+const LIM = { groq: null, gemini: null };
+try {
+  LIM.groq = JSON.parse(localStorage.getItem('jarvisLimGroq') || 'null');
+  LIM.gemini = JSON.parse(localStorage.getItem('jarvisLimGemini') || 'null');
+} catch (e) {}
+function nfLim(n) { return Number(n).toLocaleString('es'); }
+function durLim(s) {
+  s = Math.max(0, Math.round(s));
+  if (s >= 3600) return Math.floor(s / 3600) + ' h ' + Math.floor((s % 3600) / 60) + ' min';
+  if (s >= 60) return Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
+  return s + ' s';
+}
+function lineaLim(nombre, limite, quedan, reinicio, t) {
+  if (limite == null || quedan == null) return '';
+  const renovado = reinicio != null && t >= reinicio;
+  const q = renovado ? limite : quedan;
+  return nombre + ': quedan ' + nfLim(q) + ' de ' + nfLim(limite)
+    + (renovado || reinicio == null ? '' : ' (se renueva en ' + durLim(reinicio - t) + ')');
+}
+function pintarLimites() {
+  const eg = document.getElementById('usoLimGroq');
+  if (eg) {
+    const d = LIM.groq;
+    if (!d) {
+      eg.textContent = 'Límites reales de Groq: aparecerán después de su próximo mensaje con Groq.';
+    } else {
+      const t = (Date.now() - d.recibido) / 1000;
+      const partes = [
+        lineaLim('Tokens por minuto', d.tokens_limite, d.tokens_quedan, d.tokens_reinicio_s, t),
+        lineaLim('Peticiones por día', d.peticiones_limite, d.peticiones_quedan, d.peticiones_reinicio_s, t)
+      ].filter(Boolean);
+      eg.textContent = partes.length
+        ? 'Límites reales de Groq (dato de hace ' + durLim(t) + '): ' + partes.join(' · ')
+        : 'Groq no devolvió datos de límite en la última respuesta.';
+    }
+  }
+  const em = document.getElementById('usoLimGemini');
+  if (em) {
+    const d = LIM.gemini;
+    if (!d) {
+      em.textContent = 'Google no informa sus límites por la API: la meta de arriba la fija usted. Si Google corta, aquí queda el límite real que indique.';
+    } else {
+      const cuando = d.fecha ? new Date(d.fecha).toLocaleDateString('es', { day: 'numeric', month: 'short' }) : '';
+      em.textContent = 'Último límite real que avisó Google: ' + nfLim(d.limite) + ' ' + d.unidad
+        + (d.tipo === 'dia' ? ' por día' : d.tipo === 'minuto' ? ' por minuto' : '')
+        + (d.modelo ? ' (' + d.modelo + ')' : '') + (cuando ? ', ' + cuando : '') + '.';
+    }
+  }
+}
+window.jarvisLimites = {
+  recibir(data) {
+    if (!data) return;
+    if (data.limites_groq) {
+      LIM.groq = Object.assign({}, data.limites_groq, { recibido: Date.now() });
+      try { localStorage.setItem('jarvisLimGroq', JSON.stringify(LIM.groq)); } catch (e) {}
+    }
+    if (data.limite_gemini) {
+      LIM.gemini = Object.assign({}, data.limite_gemini, { fecha: new Date().toISOString() });
+      try { localStorage.setItem('jarvisLimGemini', JSON.stringify(LIM.gemini)); } catch (e) {}
+    }
+    pintarLimites();
+  }
+};
 function pintarUso(p) {
   const N = p.charAt(0).toUpperCase() + p.slice(1);
   const elHoy = document.getElementById('usoHoy' + N);
@@ -1805,6 +1872,7 @@ function pintarUso(p) {
 function actualizarUsoUI() {
   pintarUso('gemini');
   pintarUso('groq');
+  pintarLimites();
   const est = document.getElementById('usoEstado');
   if (!est) return;
   est.textContent = usoServidor && usoServidor.disponible
