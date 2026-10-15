@@ -724,6 +724,9 @@
           <div class="usoBarraFondo"><div class="usoBarraRelleno" id="usoBarraGemini"></div></div>
           <p id="usoDetGemini" style="font-size:11px; opacity:0.8; margin:6px 0 0;">Cargando…</p>
           <p id="usoLimGemini" style="font-size:11px; margin:6px 0 0;"></p>
+          <p style="font-size:11px; margin:6px 0 0;">Llamadas en el último minuto (cuenta de Jarvis): <span id="usoMinGemini">0</span> de
+            <input type="number" id="usoRpmGemini" class="campoMeta" min="1" value="15"> por minuto</p>
+          <a href="https://aistudio.google.com/rate-limit" target="_blank" rel="noopener" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55; text-decoration:none; display:inline-block; margin:8px 0 2px;">Ver límites oficiales en Google AI Studio &rarr;</a>
           <p style="font-size:10px; opacity:0.6; margin:6px 0 0;">500/día confirmado para gemini-3.5-flash-lite (15 RPM). Verifica en aistudio.google.com/rate-limit si cambia.</p>
         </div>
         <div class="card">
@@ -734,6 +737,8 @@
           <div class="usoBarraFondo"><div class="usoBarraRelleno" id="usoBarraGroq"></div></div>
           <p id="usoDetGroq" style="font-size:11px; opacity:0.8; margin:6px 0 0;">Cargando…</p>
           <p id="usoLimGroq" style="font-size:11px; margin:6px 0 0;"></p>
+          <p style="font-size:11px; margin:6px 0 0;">Llamadas en el último minuto (cuenta de Jarvis): <span id="usoMinGroq">0</span></p>
+          <a href="https://console.groq.com/settings/limits" target="_blank" rel="noopener" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55; text-decoration:none; display:inline-block; margin:8px 0 2px;">Ver límites oficiales en Groq &rarr;</a>
           <p style="font-size:10px; opacity:0.6; margin:6px 0 0;">1000/día confirmado para openai/gpt-oss-120b (verifica en console.groq.com/settings/limits si cambia).</p>
         </div>
         <p id="usoEstado" style="font-size:11px; opacity:0.7;">Cargando el uso real…</p>
@@ -1833,6 +1838,7 @@ function pintarLimites() {
 window.jarvisLimites = {
   recibir(data) {
     if (!data) return;
+    anotarMarcas(data.marcas_llamadas);
     if (data.limites_groq) {
       LIM.groq = Object.assign({}, data.limites_groq, { recibido: Date.now() });
       try { localStorage.setItem('jarvisLimGroq', JSON.stringify(LIM.groq)); } catch (e) {}
@@ -1844,6 +1850,46 @@ window.jarvisLimites = {
     pintarLimites();
   }
 };
+/* Llamadas por minuto: cuenta de Jarvis (cada llamada real a la IA, con la hora a la que se hizo). */
+const MARCAS = { gemini: [], groq: [] };
+try {
+  const mm = JSON.parse(localStorage.getItem('jarvisMarcas') || 'null');
+  if (mm) { MARCAS.gemini = mm.gemini || []; MARCAS.groq = mm.groq || []; }
+} catch (e) {}
+function anotarMarcas(m) {
+  if (!m) return;
+  const ahora = Date.now();
+  ['gemini', 'groq'].forEach(function (p) {
+    (m[p] || []).forEach(function (hace) { MARCAS[p].push(ahora - hace * 1000); });
+    MARCAS[p] = MARCAS[p].filter(function (t) { return ahora - t < 300000; });
+  });
+  try { localStorage.setItem('jarvisMarcas', JSON.stringify(MARCAS)); } catch (e) {}
+}
+function pintarMinuto() {
+  const ahora = Date.now();
+  ['Gemini', 'Groq'].forEach(function (N) {
+    const el = document.getElementById('usoMin' + N);
+    if (!el) return;
+    const n = MARCAS[N.toLowerCase()].filter(function (t) { return ahora - t < 60000; }).length;
+    el.textContent = n;
+    if (N === 'Gemini') {
+      const rpm = document.getElementById('usoRpmGemini');
+      if (rpm && document.activeElement !== rpm) rpm.value = localStorage.getItem('jarvisRpmGemini') || 15;
+      el.style.color = rpm && n >= parseInt(rpm.value, 10) ? '#ff6b6b' : '';
+    }
+  });
+}
+const rpmGemini = document.getElementById('usoRpmGemini');
+if (rpmGemini) rpmGemini.addEventListener('change', function () {
+  const v = parseInt(rpmGemini.value, 10);
+  if (v > 0) localStorage.setItem('jarvisRpmGemini', v);
+  pintarMinuto();
+});
+setInterval(function () {
+  if (document.hidden) return;
+  const tab = document.getElementById('tabUso');
+  if (tab && tab.classList.contains('activo')) pintarMinuto();
+}, 2000);
 function pintarUso(p) {
   const N = p.charAt(0).toUpperCase() + p.slice(1);
   const elHoy = document.getElementById('usoHoy' + N);
@@ -1873,6 +1919,7 @@ function actualizarUsoUI() {
   pintarUso('gemini');
   pintarUso('groq');
   pintarLimites();
+  pintarMinuto();
   const est = document.getElementById('usoEstado');
   if (!est) return;
   est.textContent = usoServidor && usoServidor.disponible

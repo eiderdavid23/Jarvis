@@ -1070,6 +1070,8 @@ def contar_uso(proveedor, resp):
     if resp.status_code >= 400:
         return
     try:
+        import time as _t
+        g.setdefault('marcas_llamadas', {}).setdefault(proveedor, []).append(_t.time())
         acc = g.setdefault('uso_pendiente', {}).setdefault(proveedor, [0, 0, 0])
         acc[0] += 1
         d = resp.json()
@@ -1260,6 +1262,14 @@ def _explicar_429(resp):
                                       'modelo': mod.group(1) if mod else '', 'reinicio_s': espera}
         return msg, extra
     return 'Señor, el proveedor de IA dice que hay demasiadas peticiones. Intente de nuevo en un minuto.', {}
+
+
+def _marcas_llamadas():
+    """Hace cuantos segundos se hizo cada llamada de este mensaje (para el contador por minuto)."""
+    import time as _t
+    ahora = _t.time()
+    m = g.get('marcas_llamadas') or {}
+    return {p: [round(ahora - x, 1) for x in lst] for p, lst in m.items()} or None
 
 
 def llamar_groq(cuerpo, cfg_groq, api_key):
@@ -1913,7 +1923,8 @@ def _chat_interno():
                         'imagenes': acciones.get('imagenes', []),
                         'recordatorios_cambio': bool(acciones.get('recordatorios')),
                         'mapa_mc': acciones.get('mapa_mc'),
-                        'limites_groq': g.get('limites_groq')})
+                        'limites_groq': g.get('limites_groq'),
+                        'marcas_llamadas': _marcas_llamadas()})
 
     except requests.exceptions.Timeout as e:
         print('[ERROR] Timeout esperando respuesta del proveedor de IA:', e)
@@ -1933,6 +1944,7 @@ def _chat_interno():
                 msg429, extra429 = _explicar_429(e.response)
             except Exception:
                 msg429, extra429 = 'Señor, el proveedor de IA dice que hay demasiadas peticiones. Intente de nuevo en un minuto.', {}
+            extra429 = dict(extra429, marcas_llamadas=_marcas_llamadas())
             return jsonify(dict({'respuesta': msg429}, **extra429)), 429
         if codigo in (500, 502, 503, 504):
             return jsonify({'respuesta': 'Los servidores de la IA estan saturados en este momento, señor. Intentelo de nuevo en unos segundos.'}), 503
