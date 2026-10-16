@@ -4,6 +4,8 @@ permisos = [
     'android.permission.SCHEDULE_EXACT_ALARM',
     'android.permission.USE_EXACT_ALARM',
     'android.permission.POST_NOTIFICATIONS',
+    'android.permission.RECORD_AUDIO',
+    'android.permission.MODIFY_AUDIO_SETTINGS',
 ]
 extra = ''
 for x in permisos:
