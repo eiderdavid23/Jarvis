@@ -127,7 +127,7 @@
   }
   function cargar() {
     return Promise.all([api('/nexus/plataformas'), esAdmin() ? api('/nexus/usuarios') : Promise.resolve([])])
-      .then(function (r) { plats = r[0]; usus = r[1]; pintarInicio(); pintarCuenta(); if (esAdmin()) pintarAdmin(); })
+      .then(function (r) { plats = r[0]; usus = r[1]; pintarInicio(); pintarResumen(); pintarCuenta(); if (esAdmin()) pintarAdmin(); })
       .catch(fallo);
   }
   function accion(promesa, ok) {
@@ -193,6 +193,40 @@
           el('button', { class: 'btn sec mini', text: 'Editar', onclick: function () { editar(p); } }),
           el('button', { class: 'btn mal mini', text: 'Eliminar', onclick: function () { borrar(p); } })) : null));
       estadoUrl(p.url, punto, txt);
+    });
+  }
+  /* ---------- Inicio: resumen del día y línea de tiempo ---------- */
+  var resumenHecho = false;
+  function cuandoTxt(iso) {
+    var d = new Date(iso), h = new Date(), m = new Date(h.getTime() + 864e5);
+    var hora = d.toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' });
+    if (d.toDateString() === h.toDateString()) return 'Hoy ' + hora;
+    if (d.toDateString() === m.toDateString()) return 'Mañana ' + hora;
+    return d.toLocaleDateString('es', { day: 'numeric', month: 'short' }) + ' ' + hora;
+  }
+  function cifra(n, txt) { return el('div', { class: 'cifra' }, el('b', { text: String(n) }), el('span', { text: txt })); }
+  function filaT(t, txt) { return el('div', { class: 'fila-t' }, el('span', { class: 'cuando', text: cuandoTxt(t) }), el('span', { text: txt })); }
+  function pintarResumen() {
+    if (resumenHecho) return;
+    resumenHecho = true;
+    api('/recordatorios').catch(function () { return {}; }).then(function (r) {
+      var recs = (r && r.recordatorios) || [];
+      var hoy = new Date().toDateString(), semana = Date.now() - 7 * 864e5;
+      var pend = recs.filter(function (x) { return !x.avisado; })
+        .sort(function (a, b) { return new Date(a.cuando) - new Date(b.cuando); });
+      var nPlats = plats.filter(function (p) { return p.dueno_id === null || p.dueno_id === yo.user_id; }).length;
+      var recHoy = pend.filter(function (x) { return new Date(x.cuando).toDateString() === hoy; }).length;
+      var hechos = recs.filter(function (x) { return x.avisado && new Date(x.cuando).getTime() > semana; })
+        .sort(function (a, b) { return new Date(b.cuando) - new Date(a.cuando); });
+      var caja = $('resumen'); vaciar(caja);
+      caja.appendChild(el('p', { class: 'etq', text: 'Resumen de hoy' }));
+      caja.appendChild(el('div', { class: 'cifras' }, cifra(nPlats, 'Plataformas'), cifra(recHoy, 'Recordatorios hoy'), cifra(pend.length, 'Pendientes')));
+      caja.appendChild(el('p', { class: 'etq', text: 'Próximos recordatorios' }));
+      if (!pend.length) caja.appendChild(el('p', { class: 'vacio', text: 'Sin recordatorios pendientes.' }));
+      pend.slice(0, 5).forEach(function (x) { caja.appendChild(filaT(x.cuando, x.texto)); });
+      caja.appendChild(el('p', { class: 'etq sep', text: 'Línea de tiempo (7 días)' }));
+      if (!hechos.length) caja.appendChild(el('p', { class: 'vacio', text: 'Sin recordatorios avisados esta semana.' }));
+      hechos.slice(0, 8).forEach(function (x) { caja.appendChild(filaT(x.cuando, 'Recordatorio · ' + x.texto)); });
     });
   }
   $('btnNueva').addEventListener('click', function () { nueva(false); });

@@ -16,6 +16,7 @@
 })();
 </script>
 <link rel="stylesheet" href="/nexus.css">
+<link rel="stylesheet" href="/nexus_panel.css">
 </head>
 <body>
 <div id="pantalla" class="centro"><p class="msg">Cargando…</p></div>
@@ -25,7 +26,7 @@
     <button id="btnMenu" class="icono" aria-label="Abrir menú">☰</button>
     <h1><span class="b1">NEXUS</span><span class="b2">23</span></h1>
     <span id="saludo" class="saludo"></span>
-    <a class="ir" href="/">Jarvis</a>
+    <button id="btnJarvis" class="ir" type="button" aria-expanded="false">Jarvis</button>
   </header>
   <div class="cuerpo">
     <nav id="menu" class="menu">
@@ -64,6 +65,11 @@
   </div>
 </div>
 
+<aside id="panelJarvis" class="panelj" hidden>
+  <div class="pj-barra"><span>Jarvis</span><a class="pj-full" href="/">Abrir completo</a><button id="pjCerrar" class="pj-x" type="button" aria-label="Cerrar panel">✕</button></div>
+  <iframe id="pjFrame" title="Jarvis" allow="microphone; autoplay; clipboard-write"></iframe>
+</aside>
+
 <div id="modal" class="modal" hidden>
   <form id="mForm" class="mcard">
     <h3 id="mTit"></h3>
@@ -79,5 +85,6 @@
 <div id="toast" class="toast" hidden></div>
 
 <script src="/nexus.js"></script>
+<script src="/nexus_panel.js"></script>
 </body>
 </html>

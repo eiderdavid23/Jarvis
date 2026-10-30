@@ -65,3 +65,11 @@ select, input[type=text], input[type=url] { width: 100%; background: var(--panel
   .ir { margin-left: auto; }
 }
 @media (min-width: 801px) { .icono { display: none; } }
+.resumen { margin-bottom: 30px; }
+.cifras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.cifra { background: var(--panel); border: 1px solid var(--linea); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+.cifra b { font: 500 26px 'Newsreader', Georgia, serif; color: var(--cian); }
+.cifra span { color: var(--suave); font-size: 12px; }
+.fila-t { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--linea); font-size: 14px; }
+.fila-t .cuando { flex: 0 0 96px; color: var(--suave); font-size: 13px; }
+.fila-t span:last-child { min-width: 0; overflow-wrap: anywhere; }
