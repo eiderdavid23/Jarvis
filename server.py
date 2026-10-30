@@ -24,6 +24,7 @@ import recs_api
 import proyectos_api
 import llaves_api
 import memoria_api
+import nexus_api
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
@@ -31,6 +32,7 @@ app.register_blueprint(recs_api.bp)
 app.register_blueprint(proyectos_api.bp)
 app.register_blueprint(llaves_api.bp)
 app.register_blueprint(memoria_api.bp)
+app.register_blueprint(nexus_api.bp)
 
 
 # --- Gemini (API en la nube) ---
@@ -1666,6 +1668,11 @@ def api_borrar_archivo_proyecto(proyecto_id):
 @app.route('/')
 def index():
     return send_from_directory('public', 'index.html')
+
+
+@app.route('/nexus')
+def nexus_pagina():
+    return send_from_directory('public', 'nexus.html')
 
 
 @app.route('/voz', methods=['POST'])
