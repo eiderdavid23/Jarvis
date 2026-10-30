@@ -49,3 +49,5 @@ extra = '\n        <item name="android:statusBarColor">#050505</item>\n        <
 st = st[:mm.end()] + extra + st[mm.end():]
 open(sp, 'w', encoding='utf-8').write(st)
 print('Barra de estado oscura')
+
+exec(open('manos_nativo.py', encoding='utf-8').read())
