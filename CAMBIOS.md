@@ -16,3 +16,4 @@
 - Sidebar ordenado: las secciones se pliegan y abren tocando su título, y Ajustes queda al final.
 - Llaves de IA por cuenta (cifradas en Supabase), arreglo del error "Tu sesión expiró" al pegar la llave y Ajustes con el diseño de Claude.
 - Diseño profesional: nueva paleta azul tinta con cian y dorado, títulos en serif, perfil en Ajustes y tema claro y oscuro afinados.
+- Módulos: sección nueva en el sidebar donde cada función es un módulo que se abre dentro de Jarvis; NEXUS (plataformas) es el primero, y hay una plantilla para crear los siguientes con un comando.
