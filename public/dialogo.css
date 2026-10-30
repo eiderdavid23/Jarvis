@@ -1,0 +1,150 @@
+/* Ventanitas y Ajustes estilo app de Claude. Se carga al final de todo.
+   Quitar su <link> en index.html devuelve el diseno anterior. */
+
+:root:root:not([data-tema="claro"]) {
+  --dl-fondo: #171717; --dl-texto: #f2f2f2; --dl-suave: #9b9b9b; --dl-azul: #6ba6f7;
+  --dl-velo: rgba(0,0,0,.62); --dl-sw-off: #3a3a3a; --dl-sw-on: #1d6fe0; --dl-hover: rgba(255,255,255,.07);
+}
+:root:root[data-tema="claro"] {
+  --dl-fondo: #ffffff; --dl-texto: #141413; --dl-suave: #73726c; --dl-azul: #2f5fa7;
+  --dl-velo: rgba(20,20,19,.38); --dl-sw-off: #cfcec9; --dl-sw-on: #1d6fe0; --dl-hover: rgba(20,20,19,.06);
+}
+
+/* ---------- Ventanita de opciones ---------- */
+#dlOverlay {
+  position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: var(--dl-velo);
+  opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility 0s linear .2s;
+}
+#dlOverlay.abierto { opacity: 1; visibility: visible; transition: opacity .2s ease; }
+.dlCard {
+  width: min(100%, 420px); padding: 26px 14px 14px; border-radius: 28px;
+  background: var(--dl-fondo); color: var(--dl-texto);
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  transform: translateY(10px) scale(.97); transition: transform .25s ease;
+}
+#dlOverlay.abierto .dlCard { transform: none; }
+.dlCard h3 { margin: 0 0 8px; padding: 0 12px; font-family: var(--sans); font-size: 21px; font-weight: 600; color: var(--dl-texto); }
+.dlOp {
+  display: flex; align-items: center; gap: 18px; width: 100%; min-height: 64px; padding: 0 12px;
+  border: 0; border-radius: 16px; background: transparent; color: var(--dl-texto);
+  font-family: var(--sans); font-size: 19px; text-align: left;
+}
+.dlOp:active { background: var(--dl-hover); }
+.dlOp span { flex: 1; }
+.dlOp .dlIco { width: 28px; height: 28px; flex: 0 0 auto; }
+.dlOp .dlCheck { width: 26px; height: 26px; flex: 0 0 auto; }
+.dlOp.on { color: var(--dl-azul); }
+#dlCerrar { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; border: 0; padding: 0; }
+
+/* ---------- Confirmaciones (borrar, cerrar sesion): mismo estilo ---------- */
+:root:root #cjOverlay, :root:root #syOverlay { background: var(--dl-velo); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root:root #cjOverlay .syCard, :root:root #syOverlay .syCard {
+  width: min(100%, 420px); text-align: left; padding: 26px 24px 20px; border: 0; border-radius: 28px;
+  background: var(--dl-fondo); color: var(--dl-texto); box-shadow: 0 20px 60px rgba(0,0,0,.45);
+}
+:root:root #cjOverlay .syCard::before, :root:root #syOverlay .syCard::before { display: none; }
+:root:root #cjOverlay .syOrb, :root:root #syOverlay .syOrb { display: none; }
+:root:root #syOverlay .syCard.despide { text-align: center; }
+:root:root #syOverlay .syCard.despide .syOrb { display: block; }
+:root:root #cjOverlay .syCard h3, :root:root #syOverlay .syCard h3 {
+  font-family: var(--sans); font-size: 21px; font-weight: 600; letter-spacing: 0; color: var(--dl-texto); margin: 0 0 10px;
+}
+:root:root #cjOverlay .syCard p, :root:root #syOverlay .syCard p { color: var(--dl-suave); font-size: 15.5px; line-height: 1.5; }
+:root:root #cjOverlay .syCard .cjNombre { color: var(--dl-texto); }
+:root:root #cjOverlay .syBtns, :root:root #syOverlay .syBtns { justify-content: flex-end; gap: 10px; margin-top: 22px; }
+:root:root #cjOverlay .syBtns button, :root:root #syOverlay .syBtns button {
+  flex: 0 0 auto; height: 44px; padding: 0 22px; border-radius: 999px; font-size: 15.5px; font-weight: 600;
+}
+:root:root #cjOverlay .syNo, :root:root #syOverlay .syNo {
+  background: transparent; border: 1px solid var(--linea2); color: var(--dl-texto);
+}
+:root:root #cjOverlay .syOk { background: #d94a4a; border: 0; color: #fff; }
+:root:root #syOverlay .syOk { background: var(--dl-texto); border: 0; color: var(--dl-fondo); }
+
+/* Dialogos de proyectos (nombre e instrucciones) */
+:root:root .proyOv { background: var(--dl-velo); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root:root .proyCard { background: var(--dl-fondo); color: var(--dl-texto); border: 0; border-radius: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+:root:root .proyCard h3 { font-family: var(--sans); font-size: 21px; font-weight: 600; letter-spacing: 0; }
+:root:root .proyBtns button { border-radius: 999px; height: 44px; padding: 0 22px; }
+:root:root .proyOk { background: var(--dl-texto); color: var(--dl-fondo); border: 0; }
+:root:root .proyNo { background: transparent; color: var(--dl-texto); border: 1px solid var(--linea2); }
+
+/* Menu de cada chat (...) */
+:root:root .chatMenu { background: var(--dl-fondo); border: 0; border-radius: 20px; padding: 8px; box-shadow: 0 12px 40px rgba(0,0,0,.4); }
+:root:root .chatMenu button { min-height: 50px; border-radius: 14px; font-size: 16px; }
+
+/* ---------- Ajustes: tarjetas y filas como en Configuracion de Claude ---------- */
+:root:root #overlayAjustes {
+  --aj-fondo: var(--panel); --aj-card: var(--panel2); --aj-fila: var(--panel2); --aj-borde: transparent;
+  --aj-texto: var(--texto); --aj-suave: var(--suave); --aj-sel: var(--vidrio2); --aj-acento: var(--texto);
+}
+:root:root[data-tema="claro"] #overlayAjustes { --aj-fondo: var(--fondo); --aj-card: var(--panel); --aj-fila: var(--panel); --aj-borde: var(--linea); }
+:root:root #overlayAjustes #panelHeader { border-bottom: 0; justify-content: space-between; }
+:root:root #overlayAjustes #panelHeader > span {
+  text-align: center; font-family: var(--serif); font-size: 24px; font-weight: 500; letter-spacing: 0;
+}
+:root:root #overlayAjustes #btnCerrarPanel, :root:root #ajBack { border: 0; }
+@media (max-width: 819px) {
+  :root:root #ajBack { display: flex; visibility: hidden; }
+  :root:root #panelAjustes[data-vista="detalle"] #ajBack { visibility: visible; }
+}
+/* Iconos sin recuadro de color y textos como en Claude (celular y escritorio) */
+:root:root .tabIco, :root:root .tabAjuste[data-tab="llave"] .tabIco { background: transparent; color: var(--aj-texto); }
+:root:root .tabTxt b { font-size: 17.5px; font-weight: 400; }
+:root:root .tabTxt small { font-size: 14.5px; color: var(--aj-suave); }
+:root:root #overlayAjustes #btnCerrarPanel, :root:root #ajBack { background: transparent; }
+:root:root .ajPerfil { background: var(--aj-card); border: 0; box-shadow: none; border-radius: 20px; }
+
+/* Celular: todas las secciones juntas en una tarjeta, con rayita de separacion */
+@media (max-width: 819px) {
+  :root:root #overlayAjustes #tabsAjustes { gap: 0; padding: 14px 16px; }
+  :root:root .ajPerfil { margin-bottom: 14px; }
+  :root:root #overlayAjustes .tabAjuste,
+  :root:root #overlayAjustes .tabAjuste:first-child,
+  :root:root #overlayAjustes .tabAjuste:last-child {
+    min-height: 68px; padding: 12px 18px; border: 0; border-bottom: 2px solid var(--aj-fondo);
+    border-radius: 0; background: var(--aj-fila); box-shadow: none;
+  }
+  :root:root #overlayAjustes .tabAjuste.activo { background: var(--aj-fila); }
+  :root:root #overlayAjustes .ajPerfil + .tabAjuste { border-radius: 20px 20px 0 0; }
+  :root:root #overlayAjustes .tabAjuste:last-child { border-bottom: 0; border-radius: 0 0 20px 20px; }
+  :root:root #overlayAjustes .tabAjuste:active { background: var(--aj-sel); border-color: transparent; border-bottom-color: var(--aj-fondo); }
+  :root:root #overlayAjustes .tabAjuste:last-child:active { border-bottom-color: transparent; }
+  :root:root .tabIco { padding: 0; width: 26px; height: 26px; border-radius: 0; }
+}
+:root:root #overlayAjustes .card { border: 1px solid var(--aj-borde); border-radius: 20px; }
+:root:root #overlayAjustes .vistaAjuste h3 { text-transform: none; letter-spacing: 0; font-size: 14px; }
+
+/* Fila con valor (Modo de color / Oscuro) */
+.conFilaSel { padding: 6px; }
+.ajFilaSel {
+  display: flex; align-items: center; gap: 16px; width: 100%; min-height: 64px; padding: 8px 12px;
+  border: 0; border-radius: 14px; background: transparent; color: var(--aj-texto, var(--texto)); text-align: left;
+}
+.ajFilaSel:active { background: var(--aj-sel, var(--vidrio2)); }
+.ajFilaIco { display: inline-flex; width: 28px; height: 28px; flex: 0 0 auto; }
+.ajFilaIco svg { width: 28px; height: 28px; }
+.ajFilaTxt { flex: 1; min-width: 0; }
+.ajFilaTxt b { display: block; font-size: 17.5px; font-weight: 400; }
+.ajFilaTxt small { display: block; margin-top: 2px; font-size: 14.5px; color: var(--aj-suave, var(--suave)); }
+.conFilaSel .opcionesTema, .conFilaSel > p { display: none; }
+
+/* Interruptores tipo Claude (todas las filas .filaSwitch) */
+:root:root .filaSwitch { gap: 16px; font-size: 16.5px; }
+:root:root .filaSwitch input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; position: relative; flex: 0 0 auto;
+  width: 52px; height: 32px; margin: 0; border: 0; border-radius: 999px; outline: 0;
+  background: var(--dl-sw-off); transition: background .2s ease;
+}
+:root:root .filaSwitch input[type="checkbox"]::after {
+  content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; transition: transform .2s ease;
+}
+:root:root .filaSwitch input[type="checkbox"]:checked { background: var(--dl-sw-on); }
+:root:root .filaSwitch input[type="checkbox"]:checked::after { transform: translateX(20px); }
+@media (prefers-reduced-motion: reduce) { .dlCard, #dlOverlay, .filaSwitch input::after { transition-duration: .01ms !important; } }
+
+/* Interruptores en azul (le ganan al cian de diseno_pro.css) */
+:root:root #overlayAjustes .filaSwitch input[type="checkbox"]:checked { background: var(--dl-sw-on); box-shadow: none; }
+:root:root .hrFila input:checked + .hrSw { background: var(--dl-sw-on); }

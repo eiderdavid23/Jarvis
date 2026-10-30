@@ -15,7 +15,7 @@
   function atras() {
     var o = document.getElementById('actOverlay');
     if (o) { pospuesta = true; o.remove(); return true; }
-    if (cerrarSiAbierto('cjNo') || cerrarSiAbierto('syNo')) return true;
+    if (cerrarSiAbierto('dlCerrar') || cerrarSiAbierto('cjNo') || cerrarSiAbierto('syNo')) return true;
     var rec = document.querySelector('.recPanel .recX');
     if (rec) { rec.click(); return true; }
     var aj = document.getElementById('overlayAjustes');
