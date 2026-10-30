@@ -1,0 +1,6 @@
+/* Jarvis dentro de NEXUS23 (iframe /?panel=1): sin sidebar ni pantalla de inicio */
+html.modo-panel #sidebar,
+html.modo-panel #velo,
+html.modo-panel #btnMenu,
+html.modo-panel #btnFlotar,
+html.modo-panel #splash { display: none !important; }

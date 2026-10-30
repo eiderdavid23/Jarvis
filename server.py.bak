@@ -1670,6 +1670,11 @@ def index():
     return send_from_directory('public', 'index.html')
 
 
+@app.route('/nexus')
+def nexus_pagina():
+    return send_from_directory('public', 'nexus.html')
+
+
 @app.route('/voz', methods=['POST'])
 def voz():
     data = request.get_json()

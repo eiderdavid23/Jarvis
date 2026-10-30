@@ -119,6 +119,27 @@ HERRAMIENTAS = [
         }
     },
     {
+        'name': 'listar_plataformas',
+        'description': (
+            'Lista las plataformas del usuario en NEXUS23 (su centro de mando: nombre y descripcion). '
+            'Usar cuando pregunte que plataformas tiene o cuando necesites saber cuales existen.'
+        ),
+        'parameters': {'type': 'object', 'properties': {}}
+    },
+    {
+        'name': 'abrir_plataforma',
+        'description': (
+            'Abre una plataforma del usuario guardada en NEXUS23 buscandola por su nombre '
+            '(por ejemplo Deli Mani). Usar cuando diga abre, entra o ve a una de sus plataformas, '
+            'sin pedirle la URL. Para sitios externos que no son sus plataformas usa abrir_url.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {'nombre': {'type': 'string', 'description': 'Nombre de la plataforma, como lo dijo el usuario'}},
+            'required': ['nombre']
+        }
+    },
+    {
         'name': 'buscar_persona',
         'description': (
             'Busca informacion publica sobre una PERSONA en la web y en redes sociales '
@@ -431,6 +452,8 @@ PASOS_HERRAMIENTAS = {
     'generar_imagen': 'Generando la imagen',
     'leer_archivo': 'Leyendo el archivo',
     'abrir_url': 'Preparando el enlace',
+    'listar_plataformas': 'Revisando tus plataformas',
+    'abrir_plataforma': 'Buscando la plataforma',
 }
 
 
@@ -480,6 +503,12 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
             return {'ok': False, 'error': 'no se dio una url'}
         acciones_frontend['urls_abrir'].append(url)
         return {'ok': True, 'mensaje': f'Se abrira {url} en una pestana nueva del navegador del usuario.'}
+
+    if nombre in ('listar_plataformas', 'abrir_plataforma'):
+        res = nexus_api.herramienta(nombre, argumentos)
+        if nombre == 'abrir_plataforma' and res.get('ok'):
+            acciones_frontend['urls_abrir'].append(res.pop('url'))
+        return res
 
     if nombre == 'buscar_persona':
         consulta = (argumentos.get('consulta') or '').strip()
@@ -604,6 +633,7 @@ GRUPOS_HERRAMIENTAS = {
     'imagenes': ('Imagenes', ['generar_imagen']),
     'personas': ('Buscar personas', ['buscar_persona']),
     'enlaces': ('Abrir enlaces', ['abrir_url']),
+    'nexus': ('Plataformas NEXUS', ['listar_plataformas', 'abrir_plataforma']),
     'archivos': ('Archivos', ['leer_archivo']),
     'telefono': ('Telefono', ['encender_linterna', 'apagar_linterna', 'vibrar', 'consultar_bateria']),
 }
@@ -1498,6 +1528,9 @@ SYSTEM_PROMPT_BASE = (
     'inventes un dato (como el porcentaje de bateria) sin haber llamado antes '
     'a la herramienta correspondiente. Para buscar PERSONAS usa buscar_persona: '
     'solo informacion publica, sin inventar datos que no aparezcan en los resultados. '
+    'Si el usuario pide abrir o entrar a una de sus plataformas (Deli Mani, etc.) usa '
+    'abrir_plataforma con el nombre, sin pedirle la URL ni confirmacion; con listar_plataformas '
+    'ves cuales tiene. '
     'Si el usuario pide buscar un producto o algo en un sitio concreto (Mercado Libre, '
     'Amazon, YouTube, Google Maps...), NO uses buscar_persona: primero pregunta si '
     'confirma que abras ese sitio con esa busqueda (por ejemplo: Señor, ¿abro Mercado Libre '

@@ -8,6 +8,7 @@
     { id: 'imagenes', nombre: 'Imágenes', desc: 'Generar imágenes con IA' },
     { id: 'personas', nombre: 'Buscar personas', desc: 'Información pública en la web y redes' },
     { id: 'enlaces', nombre: 'Abrir enlaces', desc: 'Abrir sitios en el navegador' },
+    { id: 'nexus', nombre: 'Plataformas NEXUS', desc: 'Listar y abrir tus plataformas por nombre' },
     { id: 'archivos', nombre: 'Archivos', desc: 'Leer adjuntos y archivos del proyecto' },
     { id: 'telefono', nombre: 'Teléfono', desc: 'Linterna, vibración y batería (solo Termux)' }
   ];
