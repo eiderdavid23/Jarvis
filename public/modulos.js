@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var MODULOS = [
-    { id: 'nexus', nombre: 'Plataformas', url: '/nexus?modulo=1',
+    { id: 'nexus', nombre: 'Plataformas', url: '/nexus.html?modulo=1',
       icono: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M3 14h7v7H3z', 'M14 14h7v7h-7z'] }
   ];
   var NS = 'http://www.w3.org/2000/svg';
