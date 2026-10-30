@@ -39,3 +39,13 @@ assert t.count('</activity>') == 1 and 'singleTask' in t, 'manifiesto: actividad
 t = t.replace('</activity>', FILTRO + '</activity>')
 open(m, 'w', encoding='utf-8').write(t)
 print('Enlace profundo listo')
+
+import re
+sp = 'android/app/src/main/res/values/styles.xml'
+st = open(sp, encoding='utf-8').read()
+mm = re.search(r'<style name="AppTheme[.]NoActionBar"[^>]*>', st)
+assert mm, 'styles.xml: no encontre AppTheme.NoActionBar'
+extra = '\n        <item name="android:statusBarColor">#050505</item>\n        <item name="android:windowLightStatusBar">false</item>'
+st = st[:mm.end()] + extra + st[mm.end():]
+open(sp, 'w', encoding='utf-8').write(st)
+print('Barra de estado oscura')

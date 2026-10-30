@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>J.A.R.V.I.S.</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#080c13">
+<meta name="theme-color" content="#050505">
 <script>
 (function () {
   var mq = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
@@ -19,7 +19,7 @@
     var t = p === 'sistema' ? (mq && mq.matches ? 'claro' : 'oscuro') : p;
     document.documentElement.setAttribute('data-tema', t);
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', t === 'claro' ? '#f3f5f7' : '#080c13');
+    if (m) m.setAttribute('content', t === 'claro' ? '#f9f9f7' : '#050505');
   };
   window.fijarTema = function (p) {
     try { if (p === 'sistema') localStorage.removeItem('jarvisTema'); else localStorage.setItem('jarvisTema', p); } catch (e) {}

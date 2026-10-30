@@ -12,21 +12,21 @@
   --ch-texto: #141413; --ch-user: #f0efeb; --ch-gris: #f0efeb; --ch-gris2: #f0efeb; --ch-borde: rgba(20,20,19,.10);
   --ch-azul: #2f5fa7; --ch-azul-bg: #ededeb; --md-codigo: #f0efeb; --md-borde: rgba(20,20,19,.10);
   --md-enlace: #2f5fa7; --md-fuerte: #141413;
-  --ia-negro: #141413; --ia-sobre: #ffffff; --ia-envio: #c6613f;
+  --ia-negro: #141413; --ia-sobre: #ffffff; --ia-envio: #0a7d98; --ia-envio-txt: #ffffff;
   --tk-k: #c2570c; --tk-s: #2f7d32; --tk-n: #2f5fa7; --tk-c: #8a8984;
 }
 /* ---------- Colores: oscuro (carbon calido) ---------- */
 :root:root:not([data-tema="claro"]) {
-  --fondo: #262624; --panel: #30302e; --panel2: #3a3a37; --elev: #3a3a37;
-  --texto: #f2f1ec; --suave: #a8a69e;
+  --fondo: #050505; --panel: #141414; --panel2: #1e1e1e; --elev: #1e1e1e;
+  --texto: #f2f2f2; --suave: #9b9b9b;
   --linea: rgba(255,255,255,.10); --linea2: rgba(255,255,255,.17);
   --vidrio: rgba(255,255,255,.05); --vidrio2: rgba(255,255,255,.10);
   --sombra-card: 0 8px 24px -12px rgba(0,0,0,.5);
   --sombra-pop: 0 16px 48px -12px rgba(0,0,0,.6);
-  --ch-texto: #f2f1ec; --ch-user: #1b1b1a; --ch-gris: #1f1f1d; --ch-gris2: #1b1b1a; --ch-borde: rgba(255,255,255,.12);
-  --ch-azul: #8db8f5; --ch-azul-bg: rgba(255,255,255,.08); --md-codigo: #1f1f1d; --md-borde: rgba(255,255,255,.12);
+  --ch-texto: #f2f1ec; --ch-user: #1c1c1c; --ch-gris: #101010; --ch-gris2: #101010; --ch-borde: rgba(255,255,255,.12);
+  --ch-azul: #8db8f5; --ch-azul-bg: rgba(255,255,255,.08); --md-codigo: #101010; --md-borde: rgba(255,255,255,.12);
   --md-enlace: #8db8f5; --md-fuerte: #f2f1ec;
-  --ia-negro: #f2f1ec; --ia-sobre: #141413; --ia-envio: #d97757;
+  --ia-negro: #f2f1ec; --ia-sobre: #141413; --ia-envio: #3cd9f2; --ia-envio-txt: #04141a;
   --tk-k: #f2a65a; --tk-s: #8fd694; --tk-n: #8db8f5; --tk-c: #8d918c;
 }
 :root:root {
@@ -103,4 +103,4 @@
 :root:root #pildora b { color: inherit; font-weight: 400; }
 :root:root #btnVoz { color: var(--suave); }
 :root:root #btnAccion { background: var(--ia-negro); color: var(--ia-sobre); box-shadow: none; }
-:root:root #btnAccion.conTexto { background: var(--ia-envio); color: #fff; }
+:root:root #btnAccion.conTexto { background: var(--ia-envio); color: var(--ia-envio-txt, #fff); }
