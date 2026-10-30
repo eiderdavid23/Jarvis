@@ -14,3 +14,5 @@ button.ir[aria-expanded="true"] { background: var(--cian-suave); }
 @media (max-width: 899px) {
   body.con-panel { overflow: hidden; }
 }
+/* Dentro de Jarvis (?modulo=1) no hace falta el panel de Jarvis */
+html.modo-modulo #btnJarvis, html.modo-modulo #panelJarvis { display: none !important; }

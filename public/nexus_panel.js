@@ -5,6 +5,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var btn = $('btnJarvis'), panel = $('panelJarvis'), marco = $('pjFrame');
   if (!btn || !panel || !marco) return;
+  if (document.documentElement.classList.contains('modo-modulo')) return;
   var K = 'nexusPanelAbierto';
   function ancho() { return window.matchMedia('(min-width: 900px)').matches; }
   function sesion() { try { return !!localStorage.getItem('jarvisAcceso'); } catch (e) { return false; } }

@@ -50,7 +50,7 @@
     }
     return refrescando;
   }
-  function login() { location.href = '/'; return new Promise(function () {}); }
+  function login() { (window.top || window).location.href = '/'; return new Promise(function () {}); }
   function api(url, metodo, cuerpo, reintento) {
     if (!localStorage.getItem(K.acc)) return login();
     var pre = (reintento !== false && caduca(60)) ? renovar() : Promise.resolve(true);
