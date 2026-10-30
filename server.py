@@ -25,6 +25,7 @@ import proyectos_api
 import llaves_api
 import memoria_api
 import nexus_api
+import rotacion_ia
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
@@ -33,6 +34,7 @@ app.register_blueprint(proyectos_api.bp)
 app.register_blueprint(llaves_api.bp)
 app.register_blueprint(memoria_api.bp)
 app.register_blueprint(nexus_api.bp)
+app.register_blueprint(rotacion_ia.bp)
 
 
 # --- Gemini (API en la nube) ---
@@ -1070,6 +1072,14 @@ def mapa_archivos(chat_id):
             'su contenido. Lista: ' + '; '.join(lineas) + mas + '.')
 
 
+def _modelo_gemini():
+    """Modelo de Gemini en uso: el que fijo la rotacion o el de siempre."""
+    try:
+        return g.get('modelo_gemini') or GEMINI_MODEL
+    except RuntimeError:
+        return GEMINI_MODEL
+
+
 def config_gemini(nivel):
     cfg = {'temperature': 0.7, 'maxOutputTokens': TOKENS_GEMINI[nivel]}
     try:
@@ -1077,7 +1087,7 @@ def config_gemini(nivel):
             cfg['maxOutputTokens'] = max(cfg['maxOutputTokens'], 8192)
     except RuntimeError:
         pass
-    if '2.5' in GEMINI_MODEL:
+    if '2.5' in _modelo_gemini():
         cfg['thinkingConfig'] = {'thinkingBudget': BUDGET_GEMINI[nivel]}
     else:
         cfg['thinkingConfig'] = {'thinkingLevel': NIVEL_EN[nivel]}
@@ -1154,6 +1164,14 @@ def _post_gemini(modelo, cuerpo, gen_config, api_key, espera=None):
 
 def llamar_gemini(cuerpo, gen_config, api_key):
     import time as _t
+    fijo = g.get('modelo_gemini')
+    if fijo:   # con la rotacion no hay respaldo propio: el siguiente modelo lo elige rotacion_ia
+        resp = _post_gemini(fijo, cuerpo, gen_config, api_key)
+        if resp.status_code in (500, 502, 503, 504):
+            _t.sleep(2)
+            resp = _post_gemini(fijo, cuerpo, gen_config, api_key)
+        contar_uso('gemini', resp)
+        return resp
     hay_respaldo = bool(GEMINI_MODEL_RESPALDO and GEMINI_MODEL_RESPALDO != GEMINI_MODEL)
     try:
         resp = _post_gemini(GEMINI_MODEL, cuerpo, gen_config, api_key)
@@ -1400,7 +1418,7 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
     for _ in range(MAX_VUELTAS_HERRAMIENTAS + MAX_CONTINUACIONES):
         print(f'[GROQ] Llamando a {GROQ_URL} con modelo {GROQ_MODEL}...')
         resp = llamar_groq({
-            'model': GROQ_MODEL,
+            'model': g.get('modelo_groq') or GROQ_MODEL,
             'messages': mensajes,
             'temperature': 0.7,
             **({'tools': tools, 'tool_choice': 'auto'} if tools else {}),
@@ -1698,6 +1716,10 @@ def api_borrar_archivo_proyecto(proyecto_id):
     return jsonify({'ok': True})
 
 
+import sys as _sys
+rotacion_ia.srv = _sys.modules[__name__]   # la rotacion usa las funciones de este archivo
+
+
 @app.route('/')
 def index():
     return send_from_directory('public', 'index.html')
@@ -1804,7 +1826,7 @@ def probar_llave():
     data = request.get_json(silent=True) or {}
     proveedor = (data.get('proveedor') or 'gemini').strip().lower()
     llave = (data.get('llave') or '').strip()
-    if proveedor not in ('gemini', 'groq', 'mistral') or len(llave) < 20 or len(llave) > 200 or any(c.isspace() for c in llave):
+    if proveedor not in ('gemini', 'groq', 'mistral', 'openrouter') or len(llave) < 20 or len(llave) > 200 or any(c.isspace() for c in llave):
         return jsonify({'ok': False, 'motivo': 'formato'})
     try:
         if proveedor == 'gemini':
@@ -1813,8 +1835,11 @@ def probar_llave():
         elif proveedor == 'groq':
             r = requests.get('https://api.groq.com/openai/v1/models',
                              headers={'Authorization': 'Bearer ' + llave}, timeout=15)
-        else:
+        elif proveedor == 'mistral':
             r = requests.get('https://api.mistral.ai/v1/models',
+                             headers={'Authorization': 'Bearer ' + llave}, timeout=15)
+        else:
+            r = requests.get('https://openrouter.ai/api/v1/auth/key',
                              headers={'Authorization': 'Bearer ' + llave}, timeout=15)
     except requests.exceptions.RequestException as e:
         print('[LLAVE] No pude probar la llave:', e.__class__.__name__)
@@ -1839,22 +1864,11 @@ def _chat_interno():
         nivel = nivel_pensamiento(request.headers.get('X-Pensamiento', ''))
         g.apagadas = herramientas_apagadas(request.headers.get('X-Herramientas-Off', ''))
 
-        proveedor = (request.headers.get('X-Proveedor', '') or 'gemini').strip().lower()
-        if proveedor not in ('gemini', 'groq'):
-            proveedor = 'gemini'
-
-        llave_gemini_navegador = request.headers.get('X-Gemini-Key', '').strip()
-        llave_groq_navegador = request.headers.get('X-Groq-Key', '').strip()
-
-        usa_servidor = _llave_servidor_permitida()
-        if proveedor == 'groq':
-            api_key = llave_groq_navegador or llaves_api.llave_de('groq') or (GROQ_API_KEY if usa_servidor else '')
-            if not api_key:
-                return jsonify({'respuesta': 'Para hablar conmigo necesita su propia llave gratuita de Groq, señor. Se la explico paso a paso.', 'necesita_llave': 'groq'}), 400
-        else:
-            api_key = llave_gemini_navegador or llaves_api.llave_de('gemini') or (GEMINI_API_KEY if usa_servidor else '')
-            if not api_key:
-                return jsonify({'respuesta': 'Para hablar conmigo necesita su propia llave gratuita de Google, señor. Se la explico paso a paso.', 'necesita_llave': 'gemini'}), 400
+        eleccion = (request.headers.get('X-Modelo', '') or request.headers.get('X-Proveedor', '') or 'auto').strip()
+        cambio_auto = request.headers.get('X-Cambio-Auto', '1') != '0'
+        llaves = rotacion_ia.reunir_llaves(request.headers, _llave_servidor_permitida())
+        if not llaves:
+            return jsonify({'respuesta': 'Para hablar conmigo necesita su propia llave gratuita de Google, señor. Se la explico paso a paso.', 'necesita_llave': 'gemini'}), 400
 
         try:
             adj = preparar_adjuntos(data.get('adjuntos'))
@@ -1910,6 +1924,9 @@ def _chat_interno():
                          + texto_apagadas())
 
         turnos = list(historial[-UMBRAL_RESUMEN:])  # mensajes posteriores al resumen (maximo 30)
+        tiene_media = bool(adj['imagenes'] or adj['pdfs'])
+        solo_gemini = bool(tiene_media and 'gemini' in llaves and cambio_auto)   # solo Gemini ve imagenes y PDF
+        proveedor = rotacion_ia.proveedor_de_texto(llaves, eleccion, cambio_auto, solo_gemini)
         texto_modelo, partes_gemini, aviso = armar_mensaje_con_adjuntos(mensaje_usuario, adj, proveedor)
         turno_actual = {'role': 'user', 'texto': texto_modelo}
         if partes_gemini:
@@ -1923,10 +1940,8 @@ def _chat_interno():
             _paso('Pregunta difícil: cambiando a razonamiento ' + nivel)
             _evento_nivel(nivel)
         try:
-            if proveedor == 'groq':
-                respuesta, acciones = generar_groq(system_prompt, turnos, api_key, nivel)
-            else:
-                respuesta, acciones = generar_gemini(system_prompt, turnos, api_key, nivel)
+            respuesta, acciones, usado = rotacion_ia.generar(
+                system_prompt, turnos, llaves, nivel, eleccion, cambio_auto, solo_gemini)
         finally:
             if nivel != nivel_usuario:
                 _paso('Volviendo a razonamiento ' + nivel_usuario)
@@ -1950,7 +1965,8 @@ def _chat_interno():
         if datos and total_sin_resumir >= UMBRAL_RESUMEN:
             try:
                 viejos = historial[:total_sin_resumir - MENSAJES_VIVOS]
-                nuevo_resumen = resumir_conversacion(resumen_previo, viejos, proveedor, api_key)
+                prov_res = 'gemini' if 'gemini' in llaves else ('groq' if 'groq' in llaves else '')
+                nuevo_resumen = resumir_conversacion(resumen_previo, viejos, prov_res, llaves[prov_res]) if prov_res else ''
                 if nuevo_resumen and viejos:
                     supa.guardar_resumen(chat_id, nuevo_resumen, viejos[-1]['creado'])
                     print(f'[RESUMEN] Chat {chat_id}: {len(viejos)} mensajes resumidos.')
@@ -1963,8 +1979,13 @@ def _chat_interno():
                         'imagenes': acciones.get('imagenes', []),
                         'recordatorios_cambio': bool(acciones.get('recordatorios')),
                         'mapa_mc': acciones.get('mapa_mc'),
+                        'modelo_usado': usado['nombre'],
                         'limites_groq': g.get('limites_groq'),
                         'marcas_llamadas': _marcas_llamadas()})
+
+    except rotacion_ia.TodosAgotados as e:
+        print('[CADENA] Todos agotados:', e)
+        return jsonify({'respuesta': str(e), 'marcas_llamadas': _marcas_llamadas()}), 429
 
     except requests.exceptions.Timeout as e:
         print('[ERROR] Timeout esperando respuesta del proveedor de IA:', e)

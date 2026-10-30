@@ -1,6 +1,6 @@
 /* Llaves de IA ligadas a la cuenta: se guardan en el servidor (cifradas) y se copian a este dispositivo. */
 (function () {
-  var CL = { gemini: 'jarvisGeminiKey', groq: 'jarvisGroqKey', mistral: 'jarvisMistralKey' };
+  var CL = { gemini: 'jarvisGeminiKey', groq: 'jarvisGroqKey', mistral: 'jarvisMistralKey', openrouter: 'jarvisOpenRouterKey' };
   var DUENO = 'jarvisLlavesDe';
   var enCurso = false, hecho = false;
 

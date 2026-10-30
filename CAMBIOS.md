@@ -17,3 +17,4 @@
 - Llaves de IA por cuenta (cifradas en Supabase), arreglo del error "Tu sesión expiró" al pegar la llave y Ajustes con el diseño de Claude.
 - Diseño profesional: nueva paleta azul tinta con cian y dorado, títulos en serif, perfil en Ajustes y tema claro y oscuro afinados.
 - Módulos: sección nueva en el sidebar donde cada función es un módulo que se abre dentro de Jarvis; NEXUS (plataformas) es el primero, y hay una plantilla para crear los siguientes con un comando.
+- Rotación de modelos gratis (Gemini, Groq, Mistral, OpenRouter): cuando uno se agota o falla, Jarvis pasa solo al siguiente, y la píldora de la caja de texto es ahora un selector de modelo al estilo Claude (Automático, modelos, Esfuerzo y Más modelos).

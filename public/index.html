@@ -499,6 +499,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/claude_skin.css">
 <link rel="stylesheet" href="/dialogo.css">
+<link rel="stylesheet" href="/selector_modelo.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 <script>try { if (/[?&]panel=1/.test(location.search)) document.documentElement.classList.add("modo-panel"); } catch (e) {}</script>
 <link rel="stylesheet" href="/modo_panel.css">
@@ -692,6 +693,21 @@
           <div class="filaBtns" style="margin-top:10px;">
             <button id="btnUsarMistral" class="btnPanel secundario" style="color:#35e07a; border-color:#35e07a55;">Usar esta</button>
             <span class="badge" id="badgeProveedorMistral">Inactiva</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cardHead">
+            <strong>OpenRouter</strong>
+            <span class="badge" id="badgeLlaveOpenRouter">Sin conectar</span>
+          </div>
+          <input type="text" id="campoLlaveOpenRouter" class="campoTexto campoClave" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega tu llave de OpenRouter (sk-or-...)">
+          <p style="font-size:11px; opacity:0.7; margin:0 0 10px;">Una sola llave da varios modelos gratis (los que terminan en :free).</p>
+          <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55; text-decoration:none; display:inline-block; margin-bottom:12px;">Obtener llave en OpenRouter &rarr;</a>
+          <div class="filaBtns">
+            <button id="btnGuardarLlaveOpenRouter" class="btnPanel">Guardar</button>
+            <button id="btnVerLlaveOpenRouter" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55;">Ver</button>
+            <button id="btnBorrarLlaveOpenRouter" class="btnPanel secundario">Borrar</button>
           </div>
         </div>
 
@@ -1556,6 +1572,9 @@ async function enviarMensaje(desdeVoz) {
         'X-Gemini-Key': llaveGemini,
         'X-Groq-Key': llaveGroq,
         'X-Mistral-Key': llaveMistral,
+        'X-OpenRouter-Key': localStorage.getItem('jarvisOpenRouterKey') || '',
+        'X-Modelo': localStorage.getItem('jarvisModelo') || '',
+        'X-Cambio-Auto': localStorage.getItem('jarvisCambioAuto') === '0' ? '0' : '1',
         'X-Pensamiento': nivelPensamiento(),
         'X-Herramientas-Off': (window.herramientasOff ? window.herramientasOff() : '')
       },
@@ -1985,6 +2004,7 @@ function actualizarBadgesLlaves() {
   actualizarBadgeLlave(campoLlaveGemini, badgeLlaveGemini, 'jarvisGeminiKey');
   actualizarBadgeLlave(campoLlaveGroq, badgeLlaveGroq, 'jarvisGroqKey');
   actualizarBadgeLlave(campoLlaveMistral, badgeLlaveMistral, 'jarvisMistralKey');
+  if (document.getElementById('campoLlaveOpenRouter')) actualizarBadgeLlave(document.getElementById('campoLlaveOpenRouter'), document.getElementById('badgeLlaveOpenRouter'), 'jarvisOpenRouterKey');
 }
 actualizarBadgesLlaves();
 
@@ -2047,17 +2067,38 @@ btnBorrarLlaveMistral.addEventListener('click', () => {
 btnVerLlaveMistral.addEventListener('click', () => {
   campoLlaveMistral.classList.toggle('campoClave');
 });
+document.getElementById('btnGuardarLlaveOpenRouter').addEventListener('click', () => {
+  const valor = document.getElementById('campoLlaveOpenRouter').value.trim();
+  if (!valor) return;
+  localStorage.setItem('jarvisOpenRouterKey', valor);
+  actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.guardar('openrouter', valor);
+});
+document.getElementById('btnBorrarLlaveOpenRouter').addEventListener('click', () => {
+  localStorage.removeItem('jarvisOpenRouterKey');
+  actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.borrar('openrouter');
+});
+document.getElementById('btnVerLlaveOpenRouter').addEventListener('click', () => {
+  document.getElementById('campoLlaveOpenRouter').classList.toggle('campoClave');
+});
 btnUsarMistral.addEventListener('click', () => {
   localStorage.setItem('jarvisProveedor', 'mistral');
+  localStorage.setItem('jarvisModelo', 'mistral');
+  if (window.selectorModelo) window.selectorModelo.refrescar();
   actualizarProveedorUI();
 });
 
 btnUsarGemini.addEventListener('click', () => {
   localStorage.setItem('jarvisProveedor', 'gemini');
+  localStorage.setItem('jarvisModelo', 'gemini');
+  if (window.selectorModelo) window.selectorModelo.refrescar();
   actualizarProveedorUI();
 });
 btnUsarGroq.addEventListener('click', () => {
   localStorage.setItem('jarvisProveedor', 'groq');
+  localStorage.setItem('jarvisModelo', 'groq');
+  if (window.selectorModelo) window.selectorModelo.refrescar();
   actualizarProveedorUI();
 });
 
@@ -2129,6 +2170,7 @@ pintarTema();
 <script src="/menu_cuenta.js"></script>
 <script src="/menu_mensaje.js"></script>
 <script src="/dialogo.js"></script>
+<script src="/selector_modelo.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

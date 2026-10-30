@@ -6,7 +6,9 @@
     groq: { nombre: 'Groq', url: 'https://console.groq.com/keys', clave: 'jarvisGroqKey',
             sitio: 'Groq Console', boton: 'Create API Key' },
     mistral: { nombre: 'Mistral', url: 'https://console.mistral.ai/api-keys', clave: 'jarvisMistralKey',
-               sitio: 'Mistral Console', boton: 'Create new key' }
+               sitio: 'Mistral Console', boton: 'Create new key' },
+    openrouter: { nombre: 'OpenRouter', url: 'https://openrouter.ai/keys', clave: 'jarvisOpenRouterKey',
+                  sitio: 'OpenRouter', boton: 'Create Key' }
   };
   const MOTIVOS = {
     formato: 'Esa llave no parece completa. Copia todo el texto, sin espacios.',
