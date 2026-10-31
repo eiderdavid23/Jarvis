@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -87,6 +88,11 @@ class BurbujaManos {
     private int fallosPalabra;
     private final Runnable reinicioPalabra = this::sincronizarPalabra;
     private final Runnable cierreAuto = this::cierreAutomatico;
+    private static final int[] CANALES = {AudioManager.STREAM_NOTIFICATION, AudioManager.STREAM_SYSTEM,
+            AudioManager.STREAM_MUSIC};
+    private final boolean[] mudos = new boolean[3];
+    private AudioManager audio;
+    private final Runnable soltarBip = this::restaurarSonido;
 
     private boolean puesta;
     private boolean abierta;
@@ -163,6 +169,7 @@ class BurbujaManos {
 
     private void sacar() {
         detenerPalabra();
+        restaurarSonido();
         detenerVoz();
         try {
             wm.removeView(raiz);
@@ -617,6 +624,57 @@ class BurbujaManos {
             arrancarPalabra();
         } else if (!debe && srp != null) {
             detenerPalabra();
+            restaurarSonido();
+        }
+    }
+
+    /** Silencia unos instantes los canales por donde suena el bip del reconocedor (solo si el telefono esta en modo normal). */
+    private void silenciarBip() {
+        ui.removeCallbacks(soltarBip);
+        if (!prefs.getBoolean("sinBip", true)) {
+            return;
+        }
+        try {
+            if (audio == null) {
+                audio = (AudioManager) srv.getSystemService(Context.AUDIO_SERVICE);
+            }
+            if (audio == null || audio.getRingerMode() != AudioManager.RINGER_MODE_NORMAL) {
+                return;
+            }
+            for (int k = 0; k < CANALES.length; k++) {
+                if (mudos[k] || audio.isStreamMute(CANALES[k])) {
+                    continue;
+                }
+                if (CANALES[k] == AudioManager.STREAM_MUSIC && audio.isMusicActive()) {
+                    continue;
+                }
+                audio.adjustStreamVolume(CANALES[k], AudioManager.ADJUST_MUTE, 0);
+                mudos[k] = true;
+            }
+        } catch (Exception ignorada) {
+        }
+        ui.postDelayed(soltarBip, 1800);
+    }
+
+    private void soltarEn(long ms) {
+        ui.removeCallbacks(soltarBip);
+        ui.postDelayed(soltarBip, ms);
+    }
+
+    /** Devuelve el sonido a lo que silencio la app (nunca toca lo que ya estaba mudo). */
+    private void restaurarSonido() {
+        ui.removeCallbacks(soltarBip);
+        if (audio == null) {
+            return;
+        }
+        for (int k = 0; k < CANALES.length; k++) {
+            if (mudos[k]) {
+                try {
+                    audio.adjustStreamVolume(CANALES[k], AudioManager.ADJUST_UNMUTE, 0);
+                } catch (Exception ignorada) {
+                }
+                mudos[k] = false;
+            }
         }
     }
 
@@ -649,6 +707,7 @@ class BurbujaManos {
 
                 @Override
                 public void onEndOfSpeech() {
+                    ui.post(() -> silenciarBip());
                 }
 
                 @Override
@@ -674,7 +733,9 @@ class BurbujaManos {
             i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
             i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag());
             i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, srv.getPackageName());
+            silenciarBip();
             srp.startListening(i);
+            soltarEn(900);
         } catch (Exception e) {
             detenerPalabra();
             ui.postDelayed(reinicioPalabra, 3000);
@@ -711,6 +772,7 @@ class BurbujaManos {
         fallosPalabra = 0;
         Matcher m = t.isEmpty() ? null : PALABRA.matcher(plano(t));
         if (m == null || !m.find()) {
+            soltarEn(900);
             ui.postDelayed(reinicioPalabra, 300);
             return;
         }
@@ -719,6 +781,7 @@ class BurbujaManos {
         }
         String resto = t.substring(Math.min(m.end(), t.length()))
                 .replaceFirst("^[\\s,.:;!?\\u00bf\\u00a1-]+", "").trim();
+        restaurarSonido();
         viaPalabra = true;
         ui.removeCallbacks(cierreAuto);
         if (!resto.isEmpty()) {
@@ -738,9 +801,12 @@ class BurbujaManos {
         detenerPalabra();
         if (c == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
             prefs.edit().putBoolean("palabra", false).apply();
+            restaurarSonido();
             mostrarTexto("Falta el permiso del micr\u00f3fono para o\u00edr \u00abJarvis\u00bb.");
             return;
         }
+        silenciarBip();
+        soltarEn(900);
         long espera = 350;
         if (c == SpeechRecognizer.ERROR_NO_MATCH || c == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
             fallosPalabra = 0;
@@ -771,6 +837,7 @@ class BurbujaManos {
         }
         ocultarTeclado();
         detenerPalabra();
+        restaurarSonido();
         escuchando = true;
         micBtn.color(ROJO);
         ondasPanel.modo(2);
