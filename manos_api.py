@@ -27,7 +27,7 @@ def _fallo(e):
     t = str(e)
     if 'Supabase 404' in t or '42P01' in t or 'Could not find the table' in t:
         return jsonify({'error': 'Falta ejecutar supabase_manos.sql en Supabase.'}), 502
-    return jsonify({'error': 'No pude usar las manos ahora mismo.'}), 502
+    return jsonify({'error': 'No pude usar las manos ahora mismo. (' + t[:200] + ')'}), 502
 
 
 def validar(tipo, args):
