@@ -35,3 +35,4 @@
 - v1.1 (31 oct 2026): arreglado el aviso de actualización de la APK (ahora compara `versionCode`, no el número de build) y repo de la APK fijado en `eiderdavidgarcia23/Jarvis`; regla de cambio de versión en cada cambio.
 - v1.2 (31 oct 2026): burbuja nueva estilo isla de música: píldora con ondas animadas y el logo de Jarvis; al tocarla se despliega un panel con el mismo estilo (iconos dibujados, sin emojis). Requiere APK nueva.
 - v1.3 (31 oct 2026): la APK ahora se instala con otro ID (`com.david.jarvis2`) para evitar el conflicto de paquete al actualizar; se instala como app aparte y la vieja se desinstala después. Requiere APK nueva.
+- v1.4 (31 oct 2026): arreglada la compilación de la APK (a la burbuja nueva le faltaba la segunda mitad del panel) y repo de la APK confirmado como `eiderdavid23/Jarvis` (el que muestra GitHub). Incluye la burbuja de v1.2 y el ID nuevo de v1.3.

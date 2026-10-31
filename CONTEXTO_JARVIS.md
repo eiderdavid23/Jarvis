@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 31 oct 2026
-Versión actual: 1.3 (ver CAMBIOS.md)
+Versión actual: 1.4 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -66,7 +66,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 - **requirements.txt**: flask, flask-cors, python-dotenv, requests, pypdf, beautifulsoup4, fpdf2, gunicorn, cryptography (`piper-tts` se quita para Vercel).
 - **Rotación de modelos gratis** (`rotacion_ia.py`, `public/selector_modelo.js` y `.css`, `supabase_modelos.sql`, 30 oct 2026): `/chat` ya no usa un solo proveedor: `rotacion_ia.reunir_llaves()` junta las llaves disponibles (navegador, cuenta, servidor) de Gemini, Groq, Mistral y OpenRouter, y `rotacion_ia.generar()` prueba los modelos en orden (Gemini → Groq → Mistral → OpenRouter). Si uno responde 429 (cuota), 404, 5xx, 400/413/422, 401/403, no responde o contesta vacío, se marca agotado (por la cabecera Retry-After o 90 s por defecto; 1 h si dice "por día"; 1 h si no existe; 10 min si rechaza la llave) y se pasa al siguiente. Los mensajes siguientes se saltan los agotados sin reintentarlos (estado en memoria de la instancia, por llave: en Vercel puede reiniciarse). Un paso en vivo dice "X: cuota agotada. Cambiando a Y" y los logs llevan `[CADENA]`. Si todos fallan, `/chat` responde 429 con el mensaje de qué proveedor vuelve y en cuánto. La lista de modelos está en `catalogo()` (el primero de cada proveedor es el "principal"); se puede reemplazar sin tocar código con la variable `MODELOS_IA` (JSON: `[{"prov": "groq", "modelo": "...", "nombre": "...", "nota": "..."}]`). Los IDs gratis cambian seguido: un modelo que ya no existe da 404 y se salta solo. `GET /modelos` devuelve la lista al navegador. Con la rotación, `llamar_gemini` ya no usa su respaldo propio (`GEMINI_MODEL_RESPALDO` es ahora el segundo modelo de la lista) y `generar_gemini`/`generar_groq` reciben el modelo por `g.modelo_gemini` / `g.modelo_groq`; Mistral y OpenRouter usan `_generar_openai()` (mismas herramientas que Groq, sin contar en Uso). **Selector tipo Claude**: la píldora junto al "+" muestra el modelo elegido y el nivel (antes "Jarvis 1.0"); al tocarla abre "Selecciona un modelo" (Automático, un modelo por proveedor, "Más modelos", "Esfuerzo" que abre la hoja Bajo/Medio/Alto y, si el modelo es fijo, el interruptor "Cambiar al siguiente si se agota"). Se guarda en `localStorage` (`jarvisModelo`, `jarvisCambioAuto`) y viaja en los headers `X-Modelo` y `X-Cambio-Auto`; `X-Proveedor` queda solo como valor antiguo. Nueva llave: OpenRouter (`X-OpenRouter-Key`, tarjeta en Ajustes → Llave IA, `OPENROUTER_API_KEY` opcional en el servidor, guía en `guia_llave.js`). Variables nuevas opcionales: `MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `MISTRAL_MODEL`, `MODELOS_IA`, `APP_URL`. **Imágenes y PDF**: solo Gemini los ve; si el mensaje los trae y hay llave de Gemini, la cadena usa solo modelos de Gemini. `parche_mistral.py` queda obsoleto (no ejecutarlo). Falta probar con llaves reales y en el celular.
 
-**Repo**: https://github.com/eiderdavidgarcia23/Jarvis (aquí se publica la APK en el release `apk-latest`; `app_android.js` consulta ese repo y compara el `versionCode` de las notas del release con el de la app instalada)
+**Repo**: https://github.com/eiderdavid23/Jarvis (aquí se publica la APK en el release `apk-latest`; `app_android.js` consulta ese repo y compara el `versionCode` de las notas del release con el de la app instalada)
 **Vercel**: https://jarvis-mu-ebon-12.vercel.app
 **Local**: `~/jarvis` en Termux, con `python server.py` (puerto 3000 o `PORT`).
 
@@ -180,7 +180,7 @@ Asistente personal de IA de David, con personalidad de mayordomo estilo Iron Man
 
 0e. Rotación de modelos: ejecutar `supabase_modelos.sql` en Supabase, subir a git, conectar al menos una llave más (OpenRouter da varios modelos `:free` con una sola) y probar en el celular y en Vercel (Logs: líneas con `[CADENA]`). Si un ID de modelo ya no existe, editar `catalogo()` o poner `MODELOS_IA`.
 0. Poner `LLAVE_SERVIDOR_EMAILS` en Vercel con tu correo para que solo tú uses la llave del servidor.
-0b. Archivos por proyecto: crear `supabase_archivos_proyecto.sql`, hacer la interfaz (el repo de la APK ya está confirmado: `eiderdavidgarcia23/Jarvis`, 31 oct 2026).
+0b. Archivos por proyecto: crear `supabase_archivos_proyecto.sql`, hacer la interfaz (el repo de la APK ya está confirmado: `eiderdavid23/Jarvis`, 31 oct 2026).
 0c. Partir `server.py` (1864 líneas) en módulos.
 0d. NEXUS23 en Jarvis: paso 6b automatizaciones (6a resumen y línea de tiempo ya hecho).
 1. Guardar el SQL de las tablas y políticas en el repo (por ejemplo `supabase_schema.sql`) para poder recrearlas.

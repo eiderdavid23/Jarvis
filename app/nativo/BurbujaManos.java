@@ -276,6 +276,140 @@ class BurbujaManos {
         }
     }
 
+    /** Colores de la pildora: cian normal, verde con respuesta nueva; las ondas corren mas rapido mientras Jarvis piensa. */
+    private void estiloCirculo() {
+        int borde = nuevo ? VERDE : CIAN;
+        GradientDrawable f = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{Color.parseColor("#F2081521"), Color.parseColor("#F2050A12")});
+        f.setCornerRadius(PILDORA_H * d / 2f);
+        f.setStroke((int) (1.2f * d), (borde & 0x00FFFFFF) | 0x99000000);
+        pildora.setBackground(f);
+        ondasMini.color(borde);
+        ondasMini.modo(pensando ? 1 : (nuevo ? 3 : 0));
+        logoMini.borde(nuevo ? VERDE : 0);
+        pildora.setAlpha(pensando ? 0.85f : 1f);
+    }
+
+    // ---- La barra de arriba (escribir, hablar, ver la respuesta) ----------------
+
+    private void crearPanel() {
+        panel = new LinearLayout(cx);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        int p = (int) (14 * d);
+        panel.setPadding(p, p, p, p);
+        GradientDrawable f = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.parseColor("#F5101C2B"), Color.parseColor("#F5060B14")});
+        f.setCornerRadius(28 * d);
+        f.setStroke((int) (1 * d), Color.parseColor("#3300E5FF"));
+        panel.setBackground(f);
+
+        LinearLayout cab = new LinearLayout(cx);
+        cab.setOrientation(LinearLayout.HORIZONTAL);
+        cab.setGravity(Gravity.CENTER_VERTICAL);
+        cab.addView(new BurbujaUI.Logo(cx), cuadro(32, 0));
+        TextView titulo = new TextView(cx);
+        titulo.setText("Jarvis");
+        titulo.setTextColor(TEXTO);
+        titulo.setTextSize(18);
+        titulo.setTypeface(Typeface.SERIF, Typeface.BOLD);
+        LinearLayout.LayoutParams lt = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lt.leftMargin = (int) (10 * d);
+        cab.addView(titulo, lt);
+        ondasPanel = new BurbujaUI.Ondas(cx, 7);
+        LinearLayout.LayoutParams lo = new LinearLayout.LayoutParams((int) (52 * d), (int) (16 * d));
+        lo.leftMargin = (int) (12 * d);
+        cab.addView(ondasPanel, lo);
+        cab.addView(new View(cx), new LinearLayout.LayoutParams(0, 1, 1f));
+        BurbujaUI.Icono abrirApp = icono(BurbujaUI.Icono.ABRIR, SUAVE, 9, 0);
+        abrirApp.setOnClickListener(v -> abrirJarvis());
+        BurbujaUI.Icono plegar = icono(BurbujaUI.Icono.PLEGAR, SUAVE, 8, 0);
+        plegar.setOnClickListener(v -> cerrarPanel());
+        cab.addView(abrirApp, cuadro(34, 0));
+        cab.addView(plegar, cuadro(34, 2));
+        panel.addView(cab);
+
+        estadoTv = new TextView(cx);
+        estadoTv.setTextColor(TEXTO);
+        estadoTv.setTextSize(14.5f);
+        estadoTv.setLineSpacing(0f, 1.15f);
+        estadoTv.setMaxLines(9);
+        estadoTv.setMovementMethod(ScrollingMovementMethod.getInstance());
+        estadoTv.setPadding((int) (2 * d), (int) (10 * d), (int) (2 * d), (int) (2 * d));
+        estadoTv.setVisibility(View.GONE);
+        panel.addView(estadoTv);
+
+        LinearLayout fila = new LinearLayout(cx);
+        fila.setOrientation(LinearLayout.HORIZONTAL);
+        fila.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams lf = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lf.topMargin = (int) (12 * d);
+        campo = new EditText(cx);
+        campo.setHint("Escr\u00edbele a Jarvis\u2026");
+        campo.setHintTextColor(SUAVE);
+        campo.setTextColor(TEXTO);
+        campo.setTextSize(15);
+        campo.setRawInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        campo.setImeOptions(EditorInfo.IME_ACTION_SEND);
+        campo.setMaxLines(3);
+        campo.setHorizontallyScrolling(false);
+        GradientDrawable fc = new GradientDrawable();
+        fc.setColor(Color.parseColor("#14212E"));
+        fc.setCornerRadius(22 * d);
+        fc.setStroke((int) (1 * d), Color.parseColor("#26FFFFFF"));
+        campo.setBackground(fc);
+        campo.setPadding((int) (16 * d), (int) (10 * d), (int) (16 * d), (int) (10 * d));
+        campo.setOnEditorActionListener((v, acc, ev) -> {
+            if (acc == EditorInfo.IME_ACTION_SEND) {
+                enviar();
+                return true;
+            }
+            return false;
+        });
+        micBtn = icono(BurbujaUI.Icono.MIC, TEXTO, 10, Color.parseColor("#1A2B36"));
+        micBtn.setOnClickListener(v -> escuchar());
+        BurbujaUI.Icono enviarBtn = icono(BurbujaUI.Icono.ENVIAR, Color.parseColor("#04121A"), 11, CIAN);
+        enviarBtn.setOnClickListener(v -> enviar());
+        fila.addView(campo, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        fila.addView(micBtn, cuadro(42, 8));
+        fila.addView(enviarBtn, cuadro(42, 8));
+        panel.addView(fila, lf);
+
+        panel.setVisibility(View.GONE);
+        raiz.addView(panel, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+    }
+
+    private void mostrarPlegada() {
+        panel.setVisibility(View.GONE);
+        pildora.setVisibility(View.VISIBLE);
+        estiloCirculo();
+        pildora.setScaleX(0.7f);
+        pildora.setScaleY(0.7f);
+        pildora.animate().scaleX(1f).scaleY(1f).setDuration(170)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+    }
+
+    private void mostrarPanel() {
+        pildora.setVisibility(View.GONE);
+        panel.setVisibility(View.VISIBLE);
+        if (ultimo.isEmpty()) {
+            estadoTv.setVisibility(View.GONE);
+        } else {
+            estadoTv.setText(ultimo);
+            estadoTv.scrollTo(0, 0);
+            estadoTv.setVisibility(View.VISIBLE);
+        }
+        panel.setPivotX(srv.getResources().getDisplayMetrics().widthPixels * 0.47f);
+        panel.setPivotY(0f);
+        panel.setAlpha(0f);
+        panel.setScaleX(0.8f);
+        panel.setScaleY(0.55f);
+        panel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(230)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+    }
+
     private void abrir() {
         if (pensando) {
             return;
