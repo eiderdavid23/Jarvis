@@ -15,6 +15,8 @@
     '.mnBtn:disabled{opacity:.5}';
   document.head.appendChild(css);
 
+  var autoBtn;
+
   function json(r) {
     return r.json().then(function (d) {
       if (!r.ok) throw new Error(d.error || 'No pude completar la acción.');
@@ -24,6 +26,11 @@
 
   function pintar() {
     M.estado().then(function (e) {
+      if (autoBtn) {
+        autoBtn.style.display = (e.vinculado && e.servicio) ? 'block' : 'none';
+        autoBtn.textContent = e.auto ? 'Volver a pedir permiso' : 'Activar modo automático';
+        autoBtn.dataset.auto = e.auto ? '1' : '';
+      }
       if (!e.vinculado) {
         estadoEl.textContent = 'Sin vincular. Vincula este celular para que Jarvis pueda ayudarte con la pantalla.';
         ayudaEl.textContent = '';
@@ -35,7 +42,7 @@
         boton.textContent = 'Abrir ajustes de accesibilidad';
         accion = function () { M.abrirAjustes(); };
       } else {
-        estadoEl.textContent = 'Manos activas. Jarvis te pedirá permiso antes de tocar o escribir.';
+        estadoEl.textContent = (e.auto ? 'Manos activas en MODO AUTOMÁTICO: Jarvis actúa sin pedirte permiso.' : 'Manos activas. Jarvis te pedirá permiso antes de tocar o escribir.');
         ayudaEl.textContent = 'Puedes apagarlas cuando quieras en Ajustes > Accesibilidad.';
         boton.textContent = 'Desvincular este celular';
         accion = desvincular;
@@ -57,6 +64,24 @@
     }).then(pintar).catch(function (e) {
       estadoEl.textContent = e.message;
       boton.disabled = false;
+    });
+  }
+
+  function cambiarAuto() {
+    var quiere = !autoBtn.dataset.auto;
+    if (quiere && !window.confirm('Modo automático: Jarvis tocará, escribirá y hará scroll en tu celular SIN pedirte permiso cada vez. Úsalo solo si confías en lo que le pides. Para pararlo: vuelve a este botón o apaga Jarvis en Ajustes > Accesibilidad. ¿Activarlo?')) return;
+    autoBtn.disabled = true;
+    fetch('/manos/vincular', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: NOMBRE })
+    }).then(json).then(function (d) {
+      return M.configurar({ url: location.origin, token: d.token, auto: quiere });
+    }).then(function () {
+      autoBtn.disabled = false;
+      pintar();
+    }).catch(function (e) {
+      estadoEl.textContent = e.message;
+      autoBtn.disabled = false;
     });
   }
 
@@ -89,6 +114,12 @@
     boton.disabled = true;
     boton.addEventListener('click', function () { if (accion) accion(); });
     [t, estadoEl, ayudaEl, boton].forEach(function (e) { caja.appendChild(e); });
+    autoBtn = document.createElement('button');
+    autoBtn.type = 'button';
+    autoBtn.className = 'mnBtn';
+    autoBtn.style.display = 'none';
+    autoBtn.addEventListener('click', cambiarAuto);
+    caja.appendChild(autoBtn);
     cont.parentNode.insertBefore(caja, cont.nextSibling);
     pintar();
     return true;
