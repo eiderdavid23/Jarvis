@@ -1,7 +1,9 @@
 package com.david.jarvis;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.provider.Settings;
@@ -26,6 +28,9 @@ public class ManosPlugin extends Plugin {
         r.put("servicio", ManosServicio.instancia != null);
         r.put("vinculado", !prefs().getString("token", "").isEmpty());
         r.put("auto", prefs().getBoolean("auto", false));
+        r.put("burbuja", prefs().getBoolean("burbuja", true));
+        r.put("mic", getContext().checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED);
         call.resolve(r);
     }
 
@@ -61,12 +66,68 @@ public class ManosPlugin extends Plugin {
         if (ManosServicio.instancia != null) {
             ManosServicio.instancia.arrancar();
         }
+        refrescarBurbuja();
         call.resolve();
     }
 
     @PluginMethod
     public void desvincular(PluginCall call) {
         prefs().edit().remove("token").apply();
+        refrescarBurbuja();
         call.resolve();
+    }
+
+    private void refrescarBurbuja() {
+        ManosServicio s = ManosServicio.instancia;
+        if (s != null && s.burbuja != null) {
+            s.burbuja.actualizar();
+        }
+    }
+
+    /** La app le pasa la sesion (y el chat actual) para que la burbuja pueda hablar con Jarvis. */
+    @PluginMethod
+    public void sesion(PluginCall call) {
+        String acceso = call.getString("acceso", "");
+        String chat = call.getString("chat_id", "");
+        SharedPreferences.Editor e = prefs().edit();
+        if (acceso == null || acceso.isEmpty()) {
+            e.remove("acceso").remove("chat_id");
+        } else {
+            e.putString("acceso", acceso);
+            if (chat != null && !chat.isEmpty()) {
+                e.putString("chat_id", chat);
+            }
+        }
+        e.apply();
+        refrescarBurbuja();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void burbuja(PluginCall call) {
+        prefs().edit().putBoolean("burbuja", Boolean.TRUE.equals(call.getBoolean("activa", true))).apply();
+        refrescarBurbuja();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void pedirMicrofono(PluginCall call) {
+        if (getContext().checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED && getActivity() != null) {
+            getActivity().requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 7231);
+        }
+        call.resolve();
+    }
+
+    @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        ManosServicio.alCambiarPrimerPlano(true);
+    }
+
+    @Override
+    protected void handleOnPause() {
+        super.handleOnPause();
+        ManosServicio.alCambiarPrimerPlano(false);
     }
 }

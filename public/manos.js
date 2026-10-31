@@ -15,7 +15,7 @@
     '.mnBtn:disabled{opacity:.5}';
   document.head.appendChild(css);
 
-  var autoBtn, paso1Btn;
+  var autoBtn, paso1Btn, burbujaBtn, micBtn;
 
   function json(r) {
     return r.json().then(function (d) {
@@ -37,6 +37,12 @@
         autoBtn.textContent = e.auto ? 'Volver a pedir permiso' : 'Activar modo automático';
         autoBtn.dataset.auto = e.auto ? '1' : '';
       }
+      if (burbujaBtn) {
+        burbujaBtn.style.display = (e.vinculado && e.servicio) ? 'block' : 'none';
+        burbujaBtn.textContent = e.burbuja ? 'Burbuja flotante: activada (tocar para apagar)' : 'Burbuja flotante: apagada (tocar para activar)';
+        burbujaBtn.dataset.on = e.burbuja ? '1' : '';
+      }
+      if (micBtn) micBtn.style.display = (e.vinculado && e.servicio && e.burbuja && !e.mic) ? 'block' : 'none';
       if (!e.vinculado) {
         estadoEl.textContent = 'Sin vincular. Vincula este celular para que Jarvis pueda ayudarte con la pantalla.';
         ayudaEl.textContent = '';
@@ -136,6 +142,26 @@
     autoBtn.style.display = 'none';
     autoBtn.addEventListener('click', cambiarAuto);
     caja.appendChild(autoBtn);
+    burbujaBtn = document.createElement('button');
+    burbujaBtn.type = 'button';
+    burbujaBtn.className = 'mnBtn';
+    burbujaBtn.style.display = 'none';
+    burbujaBtn.addEventListener('click', function () {
+      Promise.resolve(M.burbuja({ activa: !burbujaBtn.dataset.on })).then(pintar).catch(function () {});
+    });
+    caja.appendChild(burbujaBtn);
+    micBtn = document.createElement('button');
+    micBtn.type = 'button';
+    micBtn.className = 'mnBtn';
+    micBtn.style.display = 'none';
+    micBtn.textContent = 'Permitir micrófono para la burbuja';
+    micBtn.addEventListener('click', function () {
+      Promise.resolve(M.pedirMicrofono()).then(function () {
+        setTimeout(pintar, 1500);
+        setTimeout(pintar, 5000);
+      }).catch(function () {});
+    });
+    caja.appendChild(micBtn);
     cont.parentNode.insertBefore(caja, cont.nextSibling);
     pintar();
     return true;

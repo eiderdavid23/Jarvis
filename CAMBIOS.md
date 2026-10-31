@@ -31,3 +31,4 @@
 - Permisos de las Manos más directos: botones numerados para "Permitir ajustes restringidos" y "Activar accesibilidad".
 - Sidebar ordenado: solo lo de uso diario; Herramientas y Manos pasan a Ajustes.
 - Ajustes agrupados como la Configuración de Claude (IA, Tú, App, Ayuda), con Mi memoria dentro de Ajustes.
+- Burbuja flotante de Jarvis: al salir de la app queda una burbuja arrastrable; al tocarla se abre una barra arriba para escribirle o hablarle sin volver a abrir Jarvis.

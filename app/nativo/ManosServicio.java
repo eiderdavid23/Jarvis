@@ -49,6 +49,9 @@ import java.io.ByteArrayOutputStream;
  */
 public class ManosServicio extends AccessibilityService {
     static volatile ManosServicio instancia;
+    /** true mientras la pantalla de Jarvis esta delante (lo avisa ManosPlugin). */
+    static volatile boolean jarvisAdelante = false;
+    volatile BurbujaManos burbuja;
     private static final int MAX_NODOS = 110;
     private volatile long ultimaOrden = 0;
     private final Handler principal = new Handler(Looper.getMainLooper());
@@ -137,15 +140,30 @@ public class ManosServicio extends AccessibilityService {
     public void onInterrupt() {
     }
 
+    /** Jarvis paso al frente (true) o a segundo plano (false): la burbuja sale solo cuando esta fuera. */
+    static void alCambiarPrimerPlano(boolean adelante) {
+        jarvisAdelante = adelante;
+        ManosServicio s = instancia;
+        if (s != null && s.burbuja != null) {
+            s.burbuja.actualizar();
+        }
+    }
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
         instancia = this;
+        burbuja = new BurbujaManos(this);
+        burbuja.actualizar();
         arrancar();
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
+        if (burbuja != null) {
+            burbuja.quitar();
+            burbuja = null;
+        }
         instancia = null;
         generacion++;
         return super.onUnbind(intent);
@@ -469,6 +487,9 @@ public class ManosServicio extends AccessibilityService {
 
     /** Muestra una tarjeta encima de todo con Permitir / Rechazar. Sin respuesta en 30 s = rechazo. */
     private boolean confirmar(final String texto) throws InterruptedException {
+        if (burbuja != null) {
+            burbuja.plegar();
+        }
         if (getSharedPreferences("manos", Context.MODE_PRIVATE).getBoolean("auto", false)) {
             return true;
         }
