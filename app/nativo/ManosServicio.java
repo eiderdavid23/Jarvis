@@ -47,12 +47,27 @@ public class ManosServicio extends AccessibilityService {
     private volatile long ultimaOrden = 0;
     private final Handler principal = new Handler(Looper.getMainLooper());
     private volatile int generacion = 0;
+    private volatile long ultimoEvento = 0;
+    private static final String[] WA_PAQ = {"com.whatsapp", "com.whatsapp.w4b"};
 
     private static class SinPermiso extends Exception {
     }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent e) {
+        ultimoEvento = System.currentTimeMillis();
+    }
+
+    /** Espera a que la pantalla deje de cambiar (en vez de una pausa fija): rapido si ya esta lista. */
+    private void asentar(long max) {
+        long ini = System.currentTimeMillis();
+        dormir(80);
+        while (System.currentTimeMillis() - ini < max) {
+            if (System.currentTimeMillis() - ultimoEvento >= 120) {
+                return;
+            }
+            dormir(30);
+        }
     }
 
     @Override
@@ -111,7 +126,7 @@ public class ManosServicio extends AccessibilityService {
                     atender(base, token, orden);
                     ultimaOrden = System.currentTimeMillis();
                 } else {
-                    dormir(System.currentTimeMillis() - ultimaOrden < 90000 ? 400 : 2000);
+                    dormir(System.currentTimeMillis() - ultimaOrden < 90000 ? 150 : 1000);
                 }
             } catch (SinPermiso e) {
                 dormir(30000);
@@ -174,8 +189,9 @@ public class ManosServicio extends AccessibilityService {
                 String[] r = ejecutar(tipo, args);
                 ok = r[0].equals("1");
                 texto = r[1];
-                if (!tipo.equals("capturar") && !tipo.equals("esperar")) {
-                    dormir(600);
+                boolean verificada = tipo.equals("whatsapp_enviar") && ok;
+                if (!tipo.equals("capturar") && !tipo.equals("esperar") && !verificada) {
+                    asentar(700);
                     texto = texto + "\nPANTALLA AHORA:\n" + arbol();
                 }
             }
@@ -236,6 +252,11 @@ public class ManosServicio extends AccessibilityService {
             }
             case "tocar_texto":
                 return "Tocar el elemento \"" + limpiar(a.optString("texto")) + "\"";
+            case "abrir_app":
+                return "Abrir la app \"" + limpiar(a.optString("texto")) + "\"";
+            case "whatsapp_enviar":
+                return "Enviar por WhatsApp a \"" + limpiar(a.optString("contacto")) + "\":\n\""
+                        + limpiar(a.optString("mensaje")) + "\"";
             case "escribir":
                 return "Escribir: \"" + limpiar(a.optString("texto")) + "\"";
             case "tecla":
@@ -380,6 +401,10 @@ public class ManosServicio extends AccessibilityService {
                 return scroll(a.optString("direccion"), a.optInt("cantidad", 3));
             case "tocar_texto":
                 return tocarTexto(a.optString("texto"));
+            case "abrir_app":
+                return abrirApp(a.optString("texto"));
+            case "whatsapp_enviar":
+                return whatsappEnviar(a.optString("contacto"), a.optString("mensaje"));
             case "esperar":
                 dormir(Math.max(1, Math.min(10, a.optInt("segundos", 2))) * 1000L);
                 return ok("espera lista");
@@ -444,7 +469,7 @@ public class ManosServicio extends AccessibilityService {
         if (!gesto(b.build())) {
             return err("el sistema no completo el toque");
         }
-        dormir(250);
+        asentar(450);
         return ok("toque hecho en (" + x + "," + y + ")");
     }
 
@@ -514,7 +539,7 @@ public class ManosServicio extends AccessibilityService {
             if (!gesto(b.build())) {
                 return err("el sistema no completo el scroll");
             }
-            dormir(250);
+            asentar(350);
         }
         return ok("scroll hacia " + (abajo ? "abajo" : "arriba"));
     }
@@ -583,12 +608,405 @@ public class ManosServicio extends AccessibilityService {
         }
         String aviso = empates > 1 ? " (habia " + empates + " coincidencias, toque la primera)" : "";
         if (c != null && c.isClickable() && c.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-            dormir(250);
+            asentar(450);
             return ok("toque hecho en \"" + texto + "\"" + aviso);
         }
         Rect r = new Rect();
         mejor.getBoundsInScreen(r);
         return toque(r.centerX(), r.centerY(), 50, false);
+    }
+
+    // ---- Acciones compuestas: se ejecutan completas aqui, sin viajes al modelo ----
+
+    private String paqueteRaiz() {
+        AccessibilityNodeInfo r = getRootInActiveWindow();
+        return (r == null || r.getPackageName() == null) ? "" : r.getPackageName().toString();
+    }
+
+    private boolean esperarApp(String paq, long ms) {
+        long fin = System.currentTimeMillis() + ms;
+        while (System.currentTimeMillis() < fin) {
+            if (paqueteRaiz().equals(paq)) {
+                return true;
+            }
+            dormir(80);
+        }
+        return false;
+    }
+
+    private boolean lanzar(String paq) {
+        try {
+            Intent i = getPackageManager().getLaunchIntentForPackage(paq);
+            if (i == null) {
+                return false;
+            }
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+            startActivity(i);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Busca una app instalada por su nombre visible. Devuelve {paquete, nombre} o null. */
+    private String[] buscarApp(String nombre) {
+        String q = norm(nombre);
+        if (q.isEmpty()) {
+            return null;
+        }
+        Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        java.util.List<android.content.pm.ResolveInfo> lista = getPackageManager().queryIntentActivities(main, 0);
+        String[] mejor = null;
+        int puntos = 0;
+        int largo = Integer.MAX_VALUE;
+        for (android.content.pm.ResolveInfo ri : lista) {
+            String etiqueta = String.valueOf(ri.loadLabel(getPackageManager()));
+            String n = norm(etiqueta);
+            int pt = n.equals(q) ? 2 : (n.contains(q) ? 1 : 0);
+            if (pt > 0 && (pt > puntos || (pt == puntos && n.length() < largo))) {
+                puntos = pt;
+                largo = n.length();
+                mejor = new String[]{ri.activityInfo.packageName, etiqueta};
+            }
+        }
+        return mejor;
+    }
+
+    private String[] abrirApp(String nombre) throws Exception {
+        String[] app = buscarApp(nombre);
+        if (app == null) {
+            return err("no encontre una app llamada \"" + nombre + "\" instalada");
+        }
+        if (paqueteRaiz().equals(app[0])) {
+            return ok("la app " + app[1] + " ya estaba abierta");
+        }
+        if (lanzar(app[0]) && esperarApp(app[0], 2500)) {
+            asentar(500);
+            return ok("abri " + app[1]);
+        }
+        // Respaldo: ir a inicio y tocar el icono por su nombre
+        global(GLOBAL_ACTION_HOME);
+        asentar(500);
+        String[] r = tocarTexto(app[1]);
+        if (r[0].equals("1") && esperarApp(app[0], 2500)) {
+            asentar(500);
+            return ok("abri " + app[1]);
+        }
+        return err("no pude abrir " + app[1]);
+    }
+
+    private static boolean idTermina(AccessibilityNodeInfo n, String fin) {
+        String id = n.getViewIdResourceName();
+        return id != null && id.endsWith(fin);
+    }
+
+    private String pista(AccessibilityNodeInfo n) {
+        if (Build.VERSION.SDK_INT >= 26 && n.getHintText() != null) {
+            return norm(n.getHintText());
+        }
+        return "";
+    }
+
+    private void todos(AccessibilityNodeInfo n, java.util.List<AccessibilityNodeInfo> out, int prof) {
+        if (n == null || prof > 40 || out.size() >= 600) {
+            return;
+        }
+        if (n.isVisibleToUser()) {
+            out.add(n);
+        }
+        for (int i = 0; i < n.getChildCount(); i++) {
+            todos(n.getChild(i), out, prof + 1);
+        }
+    }
+
+    private java.util.List<AccessibilityNodeInfo> nodosVisibles() {
+        java.util.ArrayList<AccessibilityNodeInfo> l = new java.util.ArrayList<AccessibilityNodeInfo>();
+        todos(getRootInActiveWindow(), l, 0);
+        return l;
+    }
+
+    private static boolean esMetaAi(String t) {
+        return t.contains("meta ai") || t.startsWith("preguntar") || t.startsWith("ask ")
+                || t.startsWith("buscar") || t.startsWith("search");
+    }
+
+    private boolean pulsar(AccessibilityNodeInfo n) throws Exception {
+        AccessibilityNodeInfo c = n;
+        for (int i = 0; i < 6 && c != null && !c.isClickable(); i++) {
+            c = c.getParent();
+        }
+        if (c != null && c.isClickable() && c.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+            return true;
+        }
+        Rect r = new Rect();
+        n.getBoundsInScreen(r);
+        return toque(r.centerX(), r.centerY(), 50, false)[0].equals("1");
+    }
+
+    private AccessibilityNodeInfo campoMensaje() {
+        for (AccessibilityNodeInfo n : nodosVisibles()) {
+            if (!n.isEditable()) {
+                continue;
+            }
+            String p = pista(n);
+            if (idTermina(n, "/entry") || p.contains("mensaje") || p.contains("message")) {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    private AccessibilityNodeInfo campoBusqueda() {
+        for (AccessibilityNodeInfo n : nodosVisibles()) {
+            if (!n.isEditable()) {
+                continue;
+            }
+            String p = pista(n);
+            if (idTermina(n, "/search_input") || p.contains("buscar") || p.contains("search")
+                    || p.contains("meta ai")) {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    /** La lupa o barra de busqueda de la lista principal de WhatsApp. */
+    private AccessibilityNodeInfo entradaBusqueda() {
+        for (AccessibilityNodeInfo n : nodosVisibles()) {
+            if (n.isEditable()) {
+                continue;
+            }
+            String t = norm(n.getText());
+            String d = norm(n.getContentDescription());
+            if (idTermina(n, "/menuitem_search") || idTermina(n, "/my_search_bar")
+                    || t.contains("buscar") || d.contains("buscar") || t.equals("search") || d.equals("search")
+                    || t.contains("or search") || d.contains("or search")) {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    private AccessibilityNodeInfo botonEnviar() {
+        for (AccessibilityNodeInfo n : nodosVisibles()) {
+            if (n.isEditable()) {
+                continue;
+            }
+            String t = norm(n.getText());
+            String d = norm(n.getContentDescription());
+            if (idTermina(n, "/send") || t.equals("enviar") || d.equals("enviar")
+                    || t.equals("send") || d.equals("send")) {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    private boolean hayTexto(String parte) {
+        for (AccessibilityNodeInfo n : nodosVisibles()) {
+            if (!n.isEditable() && norm(n.getText()).contains(parte)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Titulo del chat abierto: texto en la franja de arriba que contiene el nombre. */
+    private boolean tituloEs(String q) {
+        int alto = tam()[1];
+        for (AccessibilityNodeInfo n : nodosVisibles()) {
+            if (n.isEditable() || !norm(n.getText()).contains(q)) {
+                continue;
+            }
+            Rect r = new Rect();
+            n.getBoundsInScreen(r);
+            if (r.top < alto * 0.22f) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Elige el chat o contacto cuyo nombre coincide. Exacto > empieza por el nombre. Ignora Meta AI,
+     * sugerencias y el propio campo de busqueda. Si hay varios distintos, no adivina: devuelve null
+     * y deja los nombres en candidatos.
+     */
+    private AccessibilityNodeInfo mejorCoincidencia(String q, java.util.List<String> candidatos) {
+        AccessibilityNodeInfo mejor = null;
+        int mejorPt = 0;
+        int mejorTop = Integer.MAX_VALUE;
+        java.util.HashSet<String> distintos = new java.util.HashSet<String>();
+        for (AccessibilityNodeInfo n : nodosVisibles()) {
+            if (n.isEditable() || n.isPassword()) {
+                continue;
+            }
+            String t = norm(n.getText());
+            if (t.isEmpty() || esMetaAi(t)) {
+                continue;
+            }
+            int pt = t.equals(q) ? 3 : (t.startsWith(q) ? 2 : 0);
+            if (pt == 0) {
+                continue;
+            }
+            Rect r = new Rect();
+            n.getBoundsInScreen(r);
+            if (pt > mejorPt) {
+                mejorPt = pt;
+                mejor = n;
+                mejorTop = r.top;
+                distintos.clear();
+                distintos.add(t);
+                candidatos.clear();
+                candidatos.add(limpiar(n.getText()));
+            } else if (pt == mejorPt) {
+                if (distintos.add(t)) {
+                    candidatos.add(limpiar(n.getText()));
+                }
+                if (r.top < mejorTop) {
+                    mejor = n;
+                    mejorTop = r.top;
+                }
+            }
+        }
+        if (mejorPt == 2 && distintos.size() > 1) {
+            return null;
+        }
+        return mejor;
+    }
+
+    private String[] whatsappEnviar(String contacto, String mensaje) throws Exception {
+        final String q = norm(contacto);
+        if (q.isEmpty() || mensaje == null || mensaje.trim().isEmpty()) {
+            return err("faltan el contacto o el mensaje");
+        }
+        String paq = null;
+        for (String p : WA_PAQ) {
+            if (getPackageManager().getLaunchIntentForPackage(p) != null) {
+                paq = p;
+                break;
+            }
+        }
+        if (paq == null) {
+            return err("WhatsApp no esta instalado en este celular");
+        }
+
+        // 1) Abrir WhatsApp
+        if (!paqueteRaiz().equals(paq)) {
+            if (!(lanzar(paq) && esperarApp(paq, 3000))) {
+                global(GLOBAL_ACTION_HOME);
+                asentar(500);
+                String[] t = tocarTexto("WhatsApp");
+                if (!t[0].equals("1") || !esperarApp(paq, 3000)) {
+                    return err("no pude abrir WhatsApp");
+                }
+            }
+            asentar(600);
+        }
+
+        // 2) Llegar al chat. Si ya estamos en el correcto, se salta todo.
+        boolean enChat = campoMensaje() != null && tituloEs(q);
+        if (!enChat) {
+            for (int i = 0; i < 4 && (campoMensaje() != null || campoBusqueda() != null); i++) {
+                global(GLOBAL_ACTION_BACK);
+                asentar(500);
+            }
+            java.util.ArrayList<String> cand = new java.util.ArrayList<String>();
+            // Atajo: si el chat ya sale en la lista principal con el nombre exacto, se toca directo
+            AccessibilityNodeInfo fila = null;
+            for (AccessibilityNodeInfo n : nodosVisibles()) {
+                if (!n.isEditable() && norm(n.getText()).equals(q)) {
+                    fila = n;
+                    break;
+                }
+            }
+            if (fila == null) {
+                AccessibilityNodeInfo entrada = null;
+                for (long fin = System.currentTimeMillis() + 2500; entrada == null && System.currentTimeMillis() < fin; ) {
+                    entrada = entradaBusqueda();
+                    if (entrada == null) {
+                        dormir(80);
+                    }
+                }
+                if (entrada == null || !pulsar(entrada)) {
+                    return err("no encontre la busqueda de WhatsApp");
+                }
+                AccessibilityNodeInfo campo = null;
+                for (long fin = System.currentTimeMillis() + 2500; campo == null && System.currentTimeMillis() < fin; ) {
+                    campo = campoBusqueda();
+                    if (campo == null) {
+                        dormir(80);
+                    }
+                }
+                if (campo == null) {
+                    return err("se abrio la busqueda pero no pude escribir en ella");
+                }
+                Bundle b = new Bundle();
+                b.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, contacto.trim());
+                if (!campo.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, b)) {
+                    return err("WhatsApp no dejo escribir el nombre en la busqueda");
+                }
+                for (long fin = System.currentTimeMillis() + 3000; fila == null && System.currentTimeMillis() < fin; ) {
+                    asentar(400);
+                    fila = mejorCoincidencia(q, cand);
+                    if (fila == null && cand.size() > 1) {
+                        break;
+                    }
+                }
+                if (fila == null) {
+                    return err(cand.size() > 1
+                            ? "hay varios contactos que empiezan por \"" + contacto + "\": " + cand
+                                    + ". Pregunta al usuario cual es."
+                            : "no encontre un chat o contacto llamado \"" + contacto + "\"");
+                }
+            }
+            if (!pulsar(fila)) {
+                return err("no pude abrir el chat de " + contacto);
+            }
+            long fin = System.currentTimeMillis() + 3000;
+            while (campoMensaje() == null && System.currentTimeMillis() < fin) {
+                dormir(80);
+            }
+            asentar(400);
+            if (campoMensaje() == null) {
+                return err("toque el resultado pero no se abrio el chat de " + contacto);
+            }
+            if (!tituloEs(q)) {
+                return err("se abrio un chat pero no es el de \"" + contacto + "\"; no envie nada");
+            }
+        }
+
+        // 3) Escribir y enviar
+        AccessibilityNodeInfo campo = campoMensaje();
+        if (campo == null) {
+            return err("no encontre el campo de mensaje");
+        }
+        Bundle b = new Bundle();
+        b.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, mensaje);
+        if (!campo.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, b)) {
+            return err("WhatsApp no dejo escribir el mensaje");
+        }
+        AccessibilityNodeInfo enviar = null;
+        for (long fin = System.currentTimeMillis() + 2500; enviar == null && System.currentTimeMillis() < fin; ) {
+            enviar = botonEnviar();
+            if (enviar == null) {
+                dormir(80);
+            }
+        }
+        if (enviar == null || !pulsar(enviar)) {
+            return err("escribi el mensaje pero no encontre el boton de enviar");
+        }
+
+        // 4) Comprobar que aparecio en el chat
+        String n = norm(mensaje);
+        String parte = n.length() > 25 ? n.substring(0, 25) : n;
+        for (long fin = System.currentTimeMillis() + 2500; System.currentTimeMillis() < fin; ) {
+            asentar(300);
+            if (hayTexto(parte)) {
+                return ok("mensaje enviado a " + contacto + " y confirmado en el chat");
+            }
+        }
+        return err("pulse enviar pero no pude confirmar que el mensaje aparezca en el chat");
     }
 
     // ---- Leer la pantalla: lo tocable siempre entra; del texto sobrante se omite el de arriba ----

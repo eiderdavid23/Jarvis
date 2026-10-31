@@ -177,17 +177,21 @@ HERRAMIENTAS = [
         'name': 'controlar_pantalla',
         'description': (
             'Hace UNA accion en el celular del usuario: tocar, escribir, pulsar una tecla, hacer '
-            'scroll o esperar. Si el usuario no activo el modo automatico, debe aceptarla en una tarjeta en su pantalla. Usa las '
+            'scroll, esperar, abrir una app (abrir_app) o enviar un WhatsApp completo (whatsapp_enviar, '
+            'todo en un solo paso: abre, busca el contacto, escribe y envia). '
+            'Si el usuario no activo el modo automatico, debe aceptarla en una tarjeta en su pantalla. Usa las '
             'coordenadas que te dio ver_pantalla. Para escribir, primero toca el campo y luego usa '
             'escribir. Si el usuario rechaza la accion, no insistas.'
         ),
         'parameters': {
             'type': 'object',
             'properties': {
-                'accion': {'type': 'string', 'description': 'tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), escribir, tecla, scroll o esperar'},
+                'accion': {'type': 'string', 'description': 'whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), escribir, tecla, scroll o esperar'},
+                'contacto': {'type': 'string', 'description': 'Nombre del contacto tal como lo dijo el usuario (para whatsapp_enviar). Solo el nombre, sin "chat de" ni "mensaje a".'},
+                'mensaje': {'type': 'string', 'description': 'Texto exacto del mensaje a enviar (para whatsapp_enviar)'},
                 'x': {'type': 'integer', 'description': 'Coordenada x (para clic, doble_clic y clic_derecho)'},
                 'y': {'type': 'integer', 'description': 'Coordenada y (para clic, doble_clic y clic_derecho)'},
-                'texto': {'type': 'string', 'description': 'Texto a escribir (para escribir) o nombre del elemento a tocar (para tocar_texto)'},
+                'texto': {'type': 'string', 'description': 'Texto a escribir (para escribir), nombre del elemento a tocar (para tocar_texto) o nombre de la app (para abrir_app)'},
                 'tecla': {'type': 'string', 'description': 'atras, inicio, recientes, notificaciones, enter o borrar (para tecla)'},
                 'direccion': {'type': 'string', 'description': 'arriba o abajo (para scroll)'},
                 'cantidad': {'type': 'integer', 'description': 'Veces que repite el scroll, de 1 a 10 (para scroll)'},
@@ -1613,8 +1617,13 @@ SYSTEM_PROMPT_BASE = (
     'el usuario lo haya pedido de forma explicita en este chat. Si no hay dispositivo conectado, '
     'explica en una frase que active las Manos en el panel Herramientas de la app de Android. '
     'GUIA DE MANOS (sigue este metodo): '
-    '1) Para abrir una app: pulsa la tecla inicio, mira la pantalla y toca su icono con '
-    'tocar_texto (nombre de la app); si no la ves, haz scroll. '
+    '0) VELOCIDAD: usa SIEMPRE la accion compuesta cuando exista, es mucho mas rapida que ir '
+    'paso a paso. Enviar un WhatsApp = UNA sola llamada: controlar_pantalla con accion '
+    'whatsapp_enviar, contacto y mensaje (sin ver_pantalla antes). Abrir una app = accion '
+    'abrir_app con el nombre. Solo si la accion compuesta falla, sigue los pasos manuales de abajo '
+    'empezando por la pantalla que te devuelva. '
+    '1) Para abrir una app: usa abrir_app (si falla: tecla inicio, mira la pantalla y toca su icono '
+    'con tocar_texto; si no la ves, haz scroll). '
     '2) Cada accion te devuelve la pantalla resultante (PANTALLA AHORA): leela y comprueba que '
     'cambio como esperabas antes de seguir; si no cambio, no repitas lo mismo: prueba otra cosa. '
     '3) PREFIERE tocar_texto con el nombre del boton (Enviar, Buscar, Send...): no depende de '
@@ -1624,7 +1633,9 @@ SYSTEM_PROMPT_BASE = (
     'en la web. Si el nombre sale varias veces o no sale, pregunta al usuario en vez de adivinar. '
     '5) Para escribir: toca el [campo], comprueba que tiene el foco y entonces usa escribir; '
     'luego tocar_texto con Enviar o Buscar, o la tecla enter. '
-    '6) WhatsApp: abre la app, toca la lupa de buscar, escribe el nombre y en los resultados '
+    '6) WhatsApp (solo si whatsapp_enviar fallo; "Preguntar a Meta AI o buscar" es la BARRA de '
+    'busqueda: tocarla esta bien, pero nunca elijas un resultado de Meta AI y no le cuentes al '
+    'usuario que preguntaste a Meta AI): abre la app, toca la barra de buscar, escribe el nombre y en los resultados '
     'toca el contacto que aparece bajo Chats o Contactos (NUNCA el de Meta AI); ya dentro del '
     'chat toca el campo Mensaje, escribe el texto y usa tocar_texto con Enviar (en ingles Send). '
     'El boton de enviar solo existe cuando ya hay texto escrito. Comprueba en la pantalla nueva '

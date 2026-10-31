@@ -47,5 +47,20 @@ SERVICIO = """
     """
 assert t.count('</application>') == 1, 'manos: manifiesto inesperado'
 assert 'ManosServicio' not in t, 'manos: el servicio ya estaba declarado'
-open(m, 'w', encoding='utf-8').write(t.replace('</application>', SERVICIO + '</application>'))
+t = t.replace('</application>', SERVICIO + '</application>')
+
+# Android 11+: sin <queries> el servicio no puede ver ni abrir otras apps (abrir_app, WhatsApp)
+QUERIES = """    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+"""
+assert t.count('<application') == 1 and '<queries>' not in t, 'manos: manifiesto inesperado (queries)'
+t = t.replace('<application', QUERIES + '    <application', 1)
+open(m, 'w', encoding='utf-8').write(t)
 print('Manos nativas listas')

@@ -47,6 +47,15 @@ def validar(tipo, args):
         if tipo == 'tocar_texto':
             texto = ' '.join(str(a.get('texto') or '').split())[:80]
             return ({'texto': texto}, None) if texto else (None, 'falta el nombre del elemento')
+        if tipo == 'abrir_app':
+            texto = ' '.join(str(a.get('texto') or a.get('app') or '').split())[:60]
+            return ({'texto': texto}, None) if texto else (None, 'falta el nombre de la app')
+        if tipo == 'whatsapp_enviar':
+            contacto = ' '.join(str(a.get('contacto') or '').split())[:60]
+            mensaje = str(a.get('mensaje') or '').strip()[:500]
+            if not contacto or not mensaje:
+                return None, 'whatsapp_enviar necesita contacto y mensaje'
+            return {'contacto': contacto, 'mensaje': mensaje}, None
         if tipo == 'tecla':
             tecla = re.sub(r'[^a-z0-9_+]', '', str(a.get('tecla') or '').lower())[:20]
             return ({'tecla': tecla}, None) if tecla else (None, 'falta la tecla')
@@ -246,7 +255,7 @@ def _pedir(did, tipo, args, espera):
     oid = f[0]['id']
     fin = time.time() + espera
     while time.time() < fin:
-        time.sleep(0.35)
+        time.sleep(0.15)
         r = supa._rest('GET', 'manos_ordenes', {'select': 'estado,resultado', 'id': 'eq.' + oid})
         if r and r[0]['estado'] in ESTADOS_FINALES:
             return r[0]
