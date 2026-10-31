@@ -36,6 +36,12 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import android.graphics.Bitmap;
+import android.hardware.HardwareBuffer;
+import android.util.Base64;
+import android.view.Display;
+import android.view.accessibility.AccessibilityWindowInfo;
+import java.io.ByteArrayOutputStream;
 
 /**
  * Manos de Jarvis: servicio de accesibilidad. Pregunta al servidor por ordenes
@@ -49,6 +55,10 @@ public class ManosServicio extends AccessibilityService {
     private volatile int generacion = 0;
     private volatile long ultimoEvento = 0;
     private static final String[] WA_PAQ = {"com.whatsapp", "com.whatsapp.w4b"};
+    private volatile long juegoHasta = 0;
+    private volatile String fotoB64 = null;
+    private volatile int fotoAncho = 0;
+    private volatile int fotoAlto = 0;
 
     private static class SinPermiso extends Exception {
     }
@@ -232,7 +242,7 @@ public class ManosServicio extends AccessibilityService {
         boolean rechazada = false;
         String texto = "";
         try {
-            boolean pide = !tipo.equals("capturar") && !tipo.equals("esperar");
+            boolean pide = !tipo.equals("capturar") && !tipo.equals("esperar") && !sinPreguntar(tipo, args);
             if (pide && !confirmar(describir(tipo, args))) {
                 rechazada = true;
                 texto = "El usuario rechazo la accion.";
@@ -244,7 +254,11 @@ public class ManosServicio extends AccessibilityService {
                 ok = r[0].equals("1");
                 texto = r[1];
                 boolean verificada = tipo.equals("whatsapp_enviar") && ok;
-                if (!tipo.equals("capturar") && !tipo.equals("esperar") && !verificada) {
+                if (args.optBoolean("imagen") && !tipo.equals("capturar") && !tipo.equals("esperar")) {
+                    asentar(500);
+                    String[] f = foto();
+                    texto = texto + "\n" + f[1];
+                } else if (!tipo.equals("capturar") && !tipo.equals("esperar") && !verificada) {
                     asentar(700);
                     texto = texto + "\nPANTALLA AHORA:\n" + arbol();
                 }
@@ -258,6 +272,13 @@ public class ManosServicio extends AccessibilityService {
             cuerpo.put("ok", ok);
             cuerpo.put("rechazada", rechazada);
             cuerpo.put("texto", texto);
+            String fb = fotoB64;
+            if (fb != null) {
+                cuerpo.put("pantalla", fb);
+                cuerpo.put("ancho", fotoAncho);
+                cuerpo.put("alto", fotoAlto);
+                fotoB64 = null;
+            }
             http("POST", base + "/manos/d/resultado", token, cuerpo);
         } catch (Exception ignorada) {
         }
@@ -272,6 +293,16 @@ public class ManosServicio extends AccessibilityService {
     }
 
     private int[] tam() {
+        if (Build.VERSION.SDK_INT >= 30) {
+            try {
+                Rect b = ((WindowManager) getSystemService(Context.WINDOW_SERVICE))
+                        .getMaximumWindowMetrics().getBounds();
+                if (b.width() > 0 && b.height() > 0) {
+                    return new int[]{b.width(), b.height()};
+                }
+            } catch (Exception ignorada) {
+            }
+        }
         DisplayMetrics m = getResources().getDisplayMetrics();
         return new int[]{m.widthPixels, m.heightPixels};
     }
@@ -298,8 +329,8 @@ public class ManosServicio extends AccessibilityService {
             case "clic":
             case "doble_clic":
             case "clic_derecho": {
-                int x = a.optInt("x");
-                int y = a.optInt("y");
+                int x = a.optBoolean("norm") ? Math.round(a.optInt("x") * tam()[0] / 1000f) : a.optInt("x");
+                int y = a.optBoolean("norm") ? Math.round(a.optInt("y") * tam()[1] / 1000f) : a.optInt("y");
                 String el = elementoEn(x, y);
                 String verbo = tipo.equals("doble_clic") ? "Tocar dos veces" : (tipo.equals("clic") ? "Tocar" : "Mantener pulsado");
                 return verbo + (el.isEmpty() ? " la pantalla" : " \"" + el + "\"") + " (" + x + ", " + y + ")";
@@ -331,6 +362,14 @@ public class ManosServicio extends AccessibilityService {
                         + limpiar(a.optString("mensaje")) + "\"";
             case "escribir":
                 return "Escribir: \"" + limpiar(a.optString("texto")) + "\"";
+            case "mantener":
+                return "Mantener el dedo pulsado " + a.optInt("segundos", 2) + " s";
+            case "arrastrar":
+                return "Deslizar el dedo por la pantalla"
+                        + (a.optInt("segundos", 0) > 0 ? " y mantenerlo " + a.optInt("segundos") + " s" : "");
+            case "modo_juego":
+                return "Dejar que Jarvis toque Minecraft sin preguntar durante " + a.optInt("minutos", 10)
+                        + " min (solo en la ventana del juego)";
             case "tecla":
                 return "Pulsar: " + a.optString("tecla");
             case "scroll":
@@ -456,14 +495,26 @@ public class ManosServicio extends AccessibilityService {
 
     private String[] ejecutar(String tipo, JSONObject a) throws Exception {
         switch (tipo) {
-            case "capturar":
-                return ok(arbol());
+            case "capturar": {
+                String t = arbol();
+                if (a.optBoolean("imagen")) {
+                    String[] f = foto();
+                    t = t + "\n" + f[1];
+                }
+                return ok(t);
+            }
+            case "mantener":
+                return mantener(a);
+            case "arrastrar":
+                return arrastrar(a);
+            case "modo_juego":
+                return modoJuego(a.optInt("minutos", 10));
             case "clic":
-                return toque(a.getInt("x"), a.getInt("y"), 50, false);
+                return toque(px(a, "x"), py(a, "y"), 50, false);
             case "doble_clic":
-                return toque(a.getInt("x"), a.getInt("y"), 50, true);
+                return toque(px(a, "x"), py(a, "y"), 50, true);
             case "clic_derecho":
-                return toque(a.getInt("x"), a.getInt("y"), 700, false);
+                return toque(px(a, "x"), py(a, "y"), 700, false);
             case "escribir":
                 return escribir(a.optString("texto"));
             case "tecla":
@@ -491,6 +542,10 @@ public class ManosServicio extends AccessibilityService {
     }
 
     private boolean gesto(final GestureDescription g) throws InterruptedException {
+        return gesto(g, 5000);
+    }
+
+    private boolean gesto(final GestureDescription g, long espera) throws InterruptedException {
         final CountDownLatch l = new CountDownLatch(1);
         final boolean[] fin = {false};
         principal.post(new Runnable() {
@@ -513,7 +568,7 @@ public class ManosServicio extends AccessibilityService {
                 }
             }
         });
-        l.await(5, TimeUnit.SECONDS);
+        l.await(espera, TimeUnit.MILLISECONDS);
         return fin[0];
     }
 
@@ -548,6 +603,202 @@ public class ManosServicio extends AccessibilityService {
         }
         asentar(450);
         return ok("toque hecho en (" + x + "," + y + ")");
+    }
+
+    // ---- Juegos (Minecraft): vista, pulsacion larga, arrastre y modo juego ----------
+
+    /** Convierte una coordenada: si viene normalizada (cuadricula 0-1000) la pasa a pixeles reales. */
+    private int px(JSONObject a, String k) throws Exception {
+        int v = a.getInt(k);
+        return a.optBoolean("norm") ? Math.round(v * tam()[0] / 1000f) : v;
+    }
+
+    private int py(JSONObject a, String k) throws Exception {
+        int v = a.getInt(k);
+        return a.optBoolean("norm") ? Math.round(v * tam()[1] / 1000f) : v;
+    }
+
+    /** true si el punto cae dentro de una ventana de Minecraft (sirve tambien en pantalla dividida). */
+    private boolean enMinecraft(int x, int y) {
+        try {
+            for (AccessibilityWindowInfo w : getWindows()) {
+                AccessibilityNodeInfo r = w.getRoot();
+                if (r == null || r.getPackageName() == null) {
+                    continue;
+                }
+                if (!r.getPackageName().toString().startsWith("com.mojang.")) {
+                    continue;
+                }
+                Rect b = new Rect();
+                w.getBoundsInScreen(b);
+                if (b.contains(x, y)) {
+                    return true;
+                }
+            }
+        } catch (Exception ignorada) {
+        }
+        return false;
+    }
+
+    /** Con el modo juego activo, los gestos sobre la ventana de Minecraft no piden confirmacion. */
+    private boolean sinPreguntar(String tipo, JSONObject a) {
+        if (tipo.equals("modo_juego") && a.optInt("minutos", 10) <= 0) {
+            return true;
+        }
+        if (System.currentTimeMillis() >= juegoHasta) {
+            return false;
+        }
+        try {
+            if (tipo.equals("clic") || tipo.equals("doble_clic") || tipo.equals("clic_derecho")
+                    || tipo.equals("mantener")) {
+                return enMinecraft(px(a, "x"), py(a, "y"));
+            }
+            if (tipo.equals("arrastrar")) {
+                return enMinecraft(px(a, "x1"), py(a, "y1")) && enMinecraft(px(a, "x2"), py(a, "y2"));
+            }
+        } catch (Exception ignorada) {
+        }
+        return false;
+    }
+
+    private String[] modoJuego(int minutos) {
+        if (minutos <= 0) {
+            juegoHasta = 0;
+            return ok("modo juego desactivado");
+        }
+        int m = Math.min(30, minutos);
+        juegoHasta = System.currentTimeMillis() + m * 60000L;
+        return ok("modo juego activo " + m + " min: toques, pulsaciones largas y arrastres sobre Minecraft "
+                + "sin preguntar (lo demas sigue pidiendo permiso)");
+    }
+
+    private String[] mantener(JSONObject a) throws Exception {
+        int x = px(a, "x");
+        int y = py(a, "y");
+        int[] t = tam();
+        if (x < 0 || y < 0 || x > t[0] || y > t[1]) {
+            return err("coordenadas fuera de la pantalla (" + t[0] + "x" + t[1] + ")");
+        }
+        long ms = Math.max(1, Math.min(10, a.optInt("segundos", 2))) * 1000L;
+        Path p = new Path();
+        p.moveTo(x, y);
+        GestureDescription.Builder b = new GestureDescription.Builder();
+        b.addStroke(new GestureDescription.StrokeDescription(p, 0, ms));
+        if (!gesto(b.build(), ms + 4000)) {
+            return err("el sistema no completo la pulsacion larga");
+        }
+        return ok("mantuve pulsado (" + x + "," + y + ") " + (ms / 1000) + " s");
+    }
+
+    /** Desliza el dedo de (x1,y1) a (x2,y2) y, si segundos > 0, lo deja quieto ahi (joystick: caminar). */
+    private String[] arrastrar(JSONObject a) throws Exception {
+        int x1 = px(a, "x1");
+        int y1 = py(a, "y1");
+        int x2 = px(a, "x2");
+        int y2 = py(a, "y2");
+        int[] t = tam();
+        if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0 || x1 > t[0] || x2 > t[0] || y1 > t[1] || y2 > t[1]) {
+            return err("coordenadas fuera de la pantalla (" + t[0] + "x" + t[1] + ")");
+        }
+        long quieto = Math.max(0, Math.min(10, a.optInt("segundos", 0))) * 1000L;
+        Path ida = new Path();
+        ida.moveTo(x1, y1);
+        if (x1 != x2 || y1 != y2) {
+            ida.lineTo(x2, y2);
+        }
+        if (quieto == 0) {
+            GestureDescription.Builder b = new GestureDescription.Builder();
+            b.addStroke(new GestureDescription.StrokeDescription(ida, 0, 300));
+            if (!gesto(b.build(), 4000)) {
+                return err("el sistema no completo el arrastre");
+            }
+            return ok("arrastre hecho de (" + x1 + "," + y1 + ") a (" + x2 + "," + y2 + ")");
+        }
+        GestureDescription.StrokeDescription s1 = new GestureDescription.StrokeDescription(ida, 0, 250, true);
+        GestureDescription.Builder b1 = new GestureDescription.Builder();
+        b1.addStroke(s1);
+        if (!gesto(b1.build(), 4000)) {
+            return err("el sistema no completo el arrastre");
+        }
+        Path fijo = new Path();
+        fijo.moveTo(x2, y2);
+        GestureDescription.Builder b2 = new GestureDescription.Builder();
+        b2.addStroke(s1.continueStroke(fijo, 0, quieto, false));
+        if (!gesto(b2.build(), quieto + 4000)) {
+            return err("el sistema corto el dedo antes de tiempo");
+        }
+        return ok("arrastre de (" + x1 + "," + y1 + ") a (" + x2 + "," + y2 + ") y dedo mantenido " + (quieto / 1000) + " s");
+    }
+
+    /** Captura la pantalla (Android 11+), la reduce y la deja lista para enviarla con el resultado. */
+    private String[] foto() throws Exception {
+        if (Build.VERSION.SDK_INT < 30) {
+            return err("captura de pantalla no disponible: requiere Android 11 o superior");
+        }
+        mostrarAviso("Jarvis está mirando tu pantalla...");
+        String motivo = "no pude capturar la pantalla";
+        for (int intento = 0; intento < 3; intento++) {
+            final CountDownLatch l = new CountDownLatch(1);
+            final Bitmap[] res = {null};
+            final int[] codigo = {0};
+            principal.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        takeScreenshot(Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
+                            @Override
+                            public void onSuccess(ScreenshotResult r) {
+                                try {
+                                    HardwareBuffer hb = r.getHardwareBuffer();
+                                    Bitmap hw = Bitmap.wrapHardwareBuffer(hb, r.getColorSpace());
+                                    if (hw != null) {
+                                        res[0] = hw.copy(Bitmap.Config.ARGB_8888, false);
+                                        hw.recycle();
+                                    }
+                                    hb.close();
+                                } catch (Exception e) {
+                                    codigo[0] = -1;
+                                }
+                                l.countDown();
+                            }
+
+                            @Override
+                            public void onFailure(int errorCode) {
+                                codigo[0] = errorCode;
+                                l.countDown();
+                            }
+                        });
+                    } catch (Exception e) {
+                        codigo[0] = -1;
+                        l.countDown();
+                    }
+                }
+            });
+            l.await(6, TimeUnit.SECONDS);
+            Bitmap bm = res[0];
+            if (bm != null) {
+                int an = bm.getWidth();
+                int al = bm.getHeight();
+                float esc = Math.min(1f, 1280f / Math.max(an, al));
+                Bitmap peq = esc < 1f
+                        ? Bitmap.createScaledBitmap(bm, Math.round(an * esc), Math.round(al * esc), true) : bm;
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                peq.compress(Bitmap.CompressFormat.JPEG, 55, bos);
+                fotoB64 = Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP);
+                fotoAncho = an;
+                fotoAlto = al;
+                return ok("captura lista (pantalla real " + an + "x" + al + ")");
+            }
+            if (codigo[0] == ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT) {
+                dormir(1100);
+                continue;
+            }
+            motivo = codigo[0] == ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS
+                    ? "falta el permiso de captura: desactiva y vuelve a activar el servicio de accesibilidad de Jarvis"
+                    : "no pude capturar la pantalla (codigo " + codigo[0] + ")";
+            break;
+        }
+        return err(motivo);
     }
 
     private String[] escribir(String texto) {

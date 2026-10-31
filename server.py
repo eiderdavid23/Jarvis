@@ -169,9 +169,15 @@ HERRAMIENTAS = [
             'Lee lo que hay AHORA en la pantalla del celular del usuario: apps, botones, textos y '
             'campos, cada uno con sus coordenadas x,y. Usala antes de tocar o escribir y despues de '
             'cada accion para comprobar el resultado. Solo funciona si el usuario activo las Manos '
-            'en la app de Jarvis para Android.'
+            'en la app de Jarvis para Android. En juegos (Minecraft) o apps que dibujan su propia '
+            'pantalla el texto sale casi vacio: usa imagen=true para recibir una captura.'
         ),
-        'parameters': {'type': 'object', 'properties': {}}
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'imagen': {'type': 'boolean', 'description': 'true para recibir ademas una captura de la pantalla como imagen (solo con modelos Gemini). Necesaria en juegos.'}
+            }
+        }
     },
     {
         'name': 'controlar_pantalla',
@@ -187,7 +193,7 @@ HERRAMIENTAS = [
         'parameters': {
             'type': 'object',
             'properties': {
-                'accion': {'type': 'string', 'description': 'whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), secuencia (varios pasos seguidos; usa el campo pasos), abrir_ajustes (ajustes de Android: wifi, bluetooth, pantalla, sonido, bateria...; va en texto), abrir_url (abrir un enlace https en la app que corresponda; va en texto), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), escribir, tecla, scroll o esperar'},
+                'accion': {'type': 'string', 'description': 'whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), secuencia (varios pasos seguidos; usa el campo pasos), abrir_ajustes (ajustes de Android: wifi, bluetooth, pantalla, sonido, bateria...; va en texto), abrir_url (abrir un enlace https en la app que corresponda; va en texto), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), mantener (dedo quieto N segundos), arrastrar (deslizar el dedo; con segundos>0 lo deja quieto al final: caminar con el joystick), modo_juego (permiso unico de varios minutos para jugar Minecraft), escribir, tecla, scroll o esperar'},
                 'contacto': {'type': 'string', 'description': 'Nombre del contacto tal como lo dijo el usuario (para whatsapp_enviar). Solo el nombre, sin "chat de" ni "mensaje a".'},
                 'mensaje': {'type': 'string', 'description': 'Texto exacto del mensaje a enviar (para whatsapp_enviar)'},
                 'pasos': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Para secuencia: lista de pasos, cada uno "accion: valor". Acciones: abrir (nombre de app), tocar (nombre del boton), escribir (texto), tecla (atras, inicio, enter...), scroll (abajo o arriba y opcional cantidad), esperar (segundos), url (enlace), ajustes (wifi, bluetooth...). Ejemplo: ["abrir: Spotify", "tocar: Buscar", "escribir: bad bunny", "tecla: enter"]. Maximo 10.'},
@@ -197,7 +203,14 @@ HERRAMIENTAS = [
                 'tecla': {'type': 'string', 'description': 'atras, inicio, recientes, notificaciones, enter o borrar (para tecla)'},
                 'direccion': {'type': 'string', 'description': 'arriba o abajo (para scroll)'},
                 'cantidad': {'type': 'integer', 'description': 'Veces que repite el scroll, de 1 a 10 (para scroll)'},
-                'segundos': {'type': 'integer', 'description': 'Segundos de espera, de 1 a 10 (para esperar)'}
+                'segundos': {'type': 'integer', 'description': 'Segundos: de espera (esperar, 1 a 10), que dura la pulsacion (mantener, 1 a 10) o que el dedo se queda quieto al final de un arrastre (arrastrar, 0 a 10; 0 = deslizar rapido, para mirar)'},
+                'x1': {'type': 'integer', 'description': 'Inicio x del arrastre (para arrastrar)'},
+                'y1': {'type': 'integer', 'description': 'Inicio y del arrastre (para arrastrar)'},
+                'x2': {'type': 'integer', 'description': 'Final x del arrastre (para arrastrar)'},
+                'y2': {'type': 'integer', 'description': 'Final y del arrastre (para arrastrar)'},
+                'normalizado': {'type': 'boolean', 'description': 'true si x,y (o x1..y2) vienen de la cuadricula 0-1000 de una captura (clic, clic_derecho, mantener, arrastrar)'},
+                'minutos': {'type': 'integer', 'description': 'Minutos de modo juego, de 1 a 30 (para modo_juego); 0 lo desactiva'},
+                'imagen': {'type': 'boolean', 'description': 'true para recibir una captura de pantalla despues de la accion (solo Gemini). Util en juegos; no la pidas en cada accion.'}
             },
             'required': ['accion']
         }
@@ -590,7 +603,7 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         return resultado
 
     if nombre == 'ver_pantalla':
-        return manos_api.leer_pantalla()
+        return manos_api.leer_pantalla(None, bool(argumentos.get('imagen')))
 
     if nombre == 'controlar_pantalla':
         return manos_api.accion(str(argumentos.get('accion') or ''), argumentos)
@@ -1388,6 +1401,14 @@ def llamar_groq(cuerpo, cfg_groq, api_key):
     return resp
 
 
+def _quitar_imagenes_viejas(capturas):
+    """Cambia por texto las capturas anteriores de esta ronda: solo importa la ultima y cada una gasta cuota."""
+    for p in capturas:
+        p.clear()
+        p['text'] = '[captura anterior omitida]'
+    del capturas[:]
+
+
 def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
     contenidos = []
     for h in turnos:
@@ -1398,6 +1419,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
     acciones = {'urls_abrir': [], 'busqueda': None, 'imagenes': []}
     acciones['_llave'] = api_key
     gen_config = config_gemini(nivel)
+    capturas = []
 
     acumulado, continuaciones = '', 0
     for _ in range(MAX_VUELTAS_HERRAMIENTAS + MAX_CONTINUACIONES):
@@ -1441,14 +1463,21 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
             return acumulado.strip(), acciones
 
         partes_respuesta = []
+        partes_imagen = []
         for llamada in llamadas:
             nombre = llamada.get('name', '')
             args = llamada.get('args', {}) or {}
             print(f'[GEMINI] Herramienta solicitada: {nombre}({args})')
             resultado = ejecutar_herramienta(nombre, args, acciones)
+            imagen = resultado.pop('_imagen', None) if isinstance(resultado, dict) else None
             partes_respuesta.append({'functionResponse': {'name': nombre, 'response': resultado}})
+            if imagen:
+                partes_imagen.append({'inlineData': {'mimeType': 'image/jpeg', 'data': imagen}})
 
-        contenidos.append({'role': 'user', 'parts': partes_respuesta})
+        if partes_imagen:
+            _quitar_imagenes_viejas(capturas)
+            capturas.extend(partes_imagen)
+        contenidos.append({'role': 'user', 'parts': partes_respuesta + partes_imagen})
         _paso_final()
 
     return 'Me enrede pensando demasiado en eso, señor. ¿Puede reformularlo?', acciones
@@ -1504,6 +1533,9 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
                 args = {}
             print(f'[GROQ] Herramienta solicitada: {nombre}({args})')
             resultado = ejecutar_herramienta(nombre, args, acciones)
+            if isinstance(resultado, dict) and resultado.pop('_imagen', None):
+                resultado['aviso_imagen'] = ('Con este modelo no puedes ver imagenes: dile al usuario que '
+                                             'elija un modelo Gemini en Ajustes si necesita que mires la pantalla.')
             mensajes.append({
                 'role': 'tool',
                 'tool_call_id': tc['id'],
@@ -1652,6 +1684,16 @@ SYSTEM_PROMPT_BASE = (
     '8) Si la pantalla dice que se omitio texto o necesitas ver mas, haz scroll. '
     '9) Entre pasos casi no hables; al final cuenta en una frase lo que hiciste, y si algo no '
     'salio di exactamente donde te quedaste. '
+    'JUEGOS (Minecraft y apps que dibujan su propia pantalla): ahi ver_pantalla sale casi vacio y '
+    'tocar_texto no sirve, porque los botones no existen para Android. Usa ver_pantalla con '
+    'imagen=true y mira la captura. Pide modo_juego una vez (un solo permiso, 10 minutos) y luego '
+    'actua con coordenadas de la cuadricula 0 a 1000 y normalizado=true: clic para botones, mantener '
+    'para dejar un boton pulsado, arrastrar para el joystick o la camara. CAMINAR: busca el joystick '
+    '(circulo abajo a la izquierda) y usa arrastrar desde su centro hacia arriba con segundos=3: el '
+    'dedo se queda ahi ese tiempo y el personaje avanza. Para girar la camara, arrastrar con '
+    'segundos=0 por el lado derecho. Pon imagen=true en una de cada dos o tres acciones, no en todas '
+    '(cada captura gasta cuota). Si no ves el boton pedido, dilo en vez de adivinar. No encadenes mas '
+    'de 6 acciones seguidas sin contarle al usuario. '
     'FORMATO DE RESPUESTA (el chat muestra Markdown): en charla simple o preguntas cortas '
     'responde en 1 a 3 frases, en prosa, sin titulos ni listas. Cuando la respuesta sea tecnica, '
     'tenga pasos o varias partes, ordenala: parrafos cortos de 1 a 3 frases; listas con guion para '
