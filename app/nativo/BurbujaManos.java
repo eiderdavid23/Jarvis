@@ -64,7 +64,9 @@ class BurbujaManos {
     private static final int TEXTO = Color.parseColor("#E6F7FF");
     private static final int SUAVE = Color.parseColor("#8FB3BF");
     private static final int FLAGS_PLEGADA = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-            | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
+            | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
     private static final int FLAGS_ABIERTA = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
 
     private final AccessibilityService srv;
@@ -112,8 +114,8 @@ class BurbujaManos {
         this.prefs = srv.getSharedPreferences("manos", Context.MODE_PRIVATE);
         this.d = srv.getResources().getDisplayMetrics().density;
         int ancho = srv.getResources().getDisplayMetrics().widthPixels;
-        bx = prefs.getInt("bx", ancho - (int) (64 * d));
-        by = prefs.getInt("by", (int) (110 * d));
+        bx = 0;
+        by = prefs.getInt("by2", (int) (6 * d));
     }
 
     // ---- Mostrar y ocultar ----------------------------------------------------
@@ -159,8 +161,8 @@ class BurbujaManos {
         lp = new WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, FLAGS_PLEGADA, PixelFormat.TRANSLUCENT);
-        lp.gravity = Gravity.TOP | Gravity.START;
-        lp.x = bx;
+        lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        lp.x = 0;
         lp.y = by;
         lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING;
         abierta = false;
@@ -183,8 +185,8 @@ class BurbujaManos {
 
     // ---- La burbuja (pildora arrastrable, como la isla de la musica) ------------
 
-    private static final int PILDORA_W = 104;
-    private static final int PILDORA_H = 38;
+    private static final int PILDORA_W = 88;
+    private static final int PILDORA_H = 26;
 
     private BurbujaUI.Icono icono(int tipo, int color, int padDp, int fondo) {
         BurbujaUI.Icono ic = new BurbujaUI.Icono(cx, tipo, color);
@@ -221,11 +223,11 @@ class BurbujaManos {
         pildora = new LinearLayout(cx);
         pildora.setOrientation(LinearLayout.HORIZONTAL);
         pildora.setGravity(Gravity.CENTER_VERTICAL);
-        pildora.setPadding((int) (14 * d), 0, (int) (5 * d), 0);
+        pildora.setPadding((int) (12 * d), 0, (int) (4 * d), 0);
         ondasMini = new BurbujaUI.Ondas(cx, 6);
-        pildora.addView(ondasMini, new LinearLayout.LayoutParams(0, (int) (18 * d), 1f));
+        pildora.addView(ondasMini, new LinearLayout.LayoutParams(0, (int) (12 * d), 1f));
         logoMini = new BurbujaUI.Logo(cx);
-        pildora.addView(logoMini, cuadro(28, 10));
+        pildora.addView(logoMini, cuadro(20, 6));
         raiz.addView(pildora, new FrameLayout.LayoutParams((int) (PILDORA_W * d), (int) (PILDORA_H * d)));
         pildora.setOnTouchListener(new View.OnTouchListener() {
             private float ox;
@@ -281,14 +283,11 @@ class BurbujaManos {
     private void soltar() {
         int ancho = srv.getResources().getDisplayMetrics().widthPixels;
         int alto = srv.getResources().getDisplayMetrics().heightPixels;
-        int pw = (int) (PILDORA_W * d);
-        int ph = (int) (PILDORA_H * d);
-        int margen = (int) (6 * d);
-        lp.x = (lp.x + pw / 2 < ancho / 2) ? margen : ancho - pw - margen;
-        lp.y = Math.max((int) (30 * d), Math.min(lp.y, alto - ph - (int) (60 * d)));
-        bx = lp.x;
+        lp.x = 0;
+        lp.y = Math.max(0, Math.min(lp.y, alto / 3));
+        bx = 0;
         by = lp.y;
-        prefs.edit().putInt("bx", bx).putInt("by", by).apply();
+        prefs.edit().putInt("by2", by).apply();
         try {
             wm.updateViewLayout(raiz, lp);
         } catch (Exception ignorada) {
@@ -458,8 +457,8 @@ class BurbujaManos {
             lp.flags = FLAGS_ABIERTA;
         } else {
             lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
-            lp.gravity = Gravity.TOP | Gravity.START;
-            lp.x = bx;
+            lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+            lp.x = 0;
             lp.y = by;
             lp.flags = FLAGS_PLEGADA | (pensando ? WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE : 0);
         }
