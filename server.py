@@ -26,6 +26,7 @@ import llaves_api
 import memoria_api
 import nexus_api
 import manos_api
+import cancelar_api
 import rotacion_ia
 
 app = Flask(__name__, static_folder='public', static_url_path='')
@@ -36,6 +37,7 @@ app.register_blueprint(llaves_api.bp)
 app.register_blueprint(memoria_api.bp)
 app.register_blueprint(nexus_api.bp)
 app.register_blueprint(manos_api.bp)
+app.register_blueprint(cancelar_api.bp)
 app.register_blueprint(rotacion_ia.bp)
 
 
@@ -542,6 +544,8 @@ def _paso_herramienta(nombre, argumentos):
 
 
 def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
+    if cancelar_api.cancelado(g.get('usuario_id'), g.get('inicio_chat', 0)):
+        return {'ok': False, 'error': 'El usuario pidio cancelar. No ejecutes nada mas: responde solo "Cancelado, señor."'}
     _paso_herramienta(nombre, argumentos)
     return _ejecutar_herramienta(nombre, argumentos, acciones_frontend)
 
@@ -1993,6 +1997,7 @@ def _chat_interno():
         mensaje_usuario = (data.get('mensaje', '') or '').strip()
         zona_horaria = data.get('zona_horaria', '') or 'UTC'
         g.zona_horaria = zona_horaria
+        g.inicio_chat = cancelar_api.ahora()
         chat_id = (data.get('chat_id') or '').strip()
         nivel = nivel_pensamiento(request.headers.get('X-Pensamiento', ''))
         g.apagadas = herramientas_apagadas(request.headers.get('X-Herramientas-Off', ''))

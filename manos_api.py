@@ -374,6 +374,8 @@ def leer_pantalla(nombre=None, imagen=False):
         return {'ok': False, 'error': 'No pude hablar con las manos ahora mismo.'}
     if not r:
         return {'ok': False, 'error': 'El dispositivo no respondio a tiempo.'}
+    if r['estado'] == 'vencida':
+        return {'ok': False, 'error': 'El usuario cancelo. No sigas ni lo reintentes.'}
     if r['estado'] != 'hecha':
         return {'ok': False, 'error': 'No pude leer la pantalla: ' + (r.get('resultado') or r['estado'])}
     salida = {'ok': True, 'dispositivo': disp['nombre'], 'pantalla': r.get('resultado') or '(pantalla vacia)',
@@ -406,6 +408,8 @@ def accion(tipo, args, nombre=None):
         return {'ok': False, 'error': 'No pude hablar con las manos ahora mismo.'}
     if not r:
         return {'ok': False, 'error': 'El dispositivo no respondio a tiempo (puede que el usuario no confirmo).'}
+    if r['estado'] == 'vencida':
+        return {'ok': False, 'error': 'El usuario cancelo la accion. Deten todo y no la reintentes.'}
     if r['estado'] == 'rechazada':
         return {'ok': False, 'error': 'El usuario rechazo la accion en su dispositivo. No insistas.'}
     if r['estado'] != 'hecha':

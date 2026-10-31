@@ -56,6 +56,8 @@ public class ManosServicio extends AccessibilityService {
     private volatile long ultimoEvento = 0;
     private static final String[] WA_PAQ = {"com.whatsapp", "com.whatsapp.w4b"};
     private volatile long juegoHasta = 0;
+    private volatile boolean cancelada = false;
+    private volatile String ordenActual = "";
     private volatile String fotoB64 = null;
     private volatile int fotoAncho = 0;
     private volatile int fotoAlto = 0;
@@ -238,6 +240,9 @@ public class ManosServicio extends AccessibilityService {
         if (args == null) {
             args = new JSONObject();
         }
+        cancelada = false;
+        ordenActual = id;
+        vigilar(base, token, id);
         boolean ok = false;
         boolean rechazada = false;
         String texto = "";
@@ -254,7 +259,9 @@ public class ManosServicio extends AccessibilityService {
                 ok = r[0].equals("1");
                 texto = r[1];
                 boolean verificada = tipo.equals("whatsapp_enviar") && ok;
-                if (args.optBoolean("imagen") && !tipo.equals("capturar") && !tipo.equals("esperar")) {
+                if (cancelada) {
+                    texto = texto + "\nCancelado por el usuario.";
+                } else if (args.optBoolean("imagen") && !tipo.equals("capturar") && !tipo.equals("esperar")) {
                     asentar(500);
                     String[] f = foto();
                     texto = texto + "\n" + f[1];
@@ -282,6 +289,57 @@ public class ManosServicio extends AccessibilityService {
             http("POST", base + "/manos/d/resultado", token, cuerpo);
         } catch (Exception ignorada) {
         }
+        ordenActual = "";
+    }
+
+    /** Mientras dura una orden, pregunta al servidor si el usuario la cancelo (boton Detener). */
+    private void vigilar(final String base, final String token, final String id) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (id.equals(ordenActual)) {
+                    dormir(600);
+                    if (!id.equals(ordenActual)) {
+                        return;
+                    }
+                    try {
+                        JSONObject r = http("GET", base + "/manos/d/orden/" + id, token, null);
+                        if ("vencida".equals(r.optString("estado"))) {
+                            cancelada = true;
+                            return;
+                        }
+                    } catch (Exception ignorada) {
+                    }
+                }
+            }
+        }, "manos-cancelar").start();
+    }
+
+    /** Deja el dedo quieto en (x,y) durante ms, a partir de un trazo que sigue apoyado, en trozos de 1 s:
+     *  si el usuario cancela, lo suelta. Devuelve null si todo fue bien. */
+    private String[] sostener(GestureDescription.StrokeDescription previo, int x, int y, long ms) throws Exception {
+        GestureDescription.StrokeDescription s = previo;
+        long resto = ms;
+        while (resto > 0) {
+            long t = cancelada ? 50L : Math.min(1000L, resto);
+            boolean sigue = !cancelada && resto - t > 0;
+            Path fijo = new Path();
+            fijo.moveTo(x, y);
+            s = s.continueStroke(fijo, 0, t, sigue);
+            GestureDescription.Builder b = new GestureDescription.Builder();
+            b.addStroke(s);
+            if (!gesto(b.build(), t + 4000)) {
+                return err("el sistema corto el dedo antes de tiempo");
+            }
+            if (!sigue) {
+                break;
+            }
+            resto -= t;
+        }
+        if (cancelada) {
+            return err("cancelado por el usuario: solte el dedo");
+        }
+        return null;
     }
 
     private String[] ok(String t) {
@@ -682,10 +740,18 @@ public class ManosServicio extends AccessibilityService {
         long ms = Math.max(1, Math.min(10, a.optInt("segundos", 2))) * 1000L;
         Path p = new Path();
         p.moveTo(x, y);
+        long trozo = Math.min(1000L, ms);
+        GestureDescription.StrokeDescription s0 = new GestureDescription.StrokeDescription(p, 0, trozo, ms > trozo);
         GestureDescription.Builder b = new GestureDescription.Builder();
-        b.addStroke(new GestureDescription.StrokeDescription(p, 0, ms));
-        if (!gesto(b.build(), ms + 4000)) {
+        b.addStroke(s0);
+        if (!gesto(b.build(), trozo + 4000)) {
             return err("el sistema no completo la pulsacion larga");
+        }
+        if (ms > trozo) {
+            String[] r = sostener(s0, x, y, ms - trozo);
+            if (r != null) {
+                return r;
+            }
         }
         return ok("mantuve pulsado (" + x + "," + y + ") " + (ms / 1000) + " s");
     }
@@ -720,12 +786,9 @@ public class ManosServicio extends AccessibilityService {
         if (!gesto(b1.build(), 4000)) {
             return err("el sistema no completo el arrastre");
         }
-        Path fijo = new Path();
-        fijo.moveTo(x2, y2);
-        GestureDescription.Builder b2 = new GestureDescription.Builder();
-        b2.addStroke(s1.continueStroke(fijo, 0, quieto, false));
-        if (!gesto(b2.build(), quieto + 4000)) {
-            return err("el sistema corto el dedo antes de tiempo");
+        String[] r = sostener(s1, x2, y2, quieto);
+        if (r != null) {
+            return r;
         }
         return ok("arrastre de (" + x1 + "," + y1 + ") a (" + x2 + "," + y2 + ") y dedo mantenido " + (quieto / 1000) + " s");
     }
@@ -1418,6 +1481,9 @@ public class ManosServicio extends AccessibilityService {
         }
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < pasos.length(); i++) {
+            if (cancelada) {
+                return err("cancelado por el usuario antes del paso " + (i + 1) + "\n" + sb);
+            }
             JSONObject p = pasos.getJSONObject(i);
             String t = p.optString("accion");
             String[] r = ejecutar(t, p);
