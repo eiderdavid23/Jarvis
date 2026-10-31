@@ -26,6 +26,7 @@ import llaves_api
 import memoria_api
 import nexus_api
 import manos_api
+import addon_mc
 import cancelar_api
 import rotacion_ia
 
@@ -365,6 +366,42 @@ HERRAMIENTAS = [
             'required': ['semilla', 'tipos']
         }
     },
+    {
+        'name': 'crear_addon_minecraft',
+        'description': (
+            'Crea un add-on de Minecraft BEDROCK (.mcaddon) que el usuario descarga desde un boton en el chat '
+            'y se abre en Minecraft. Tu escribes SOLO los archivos de contenido (JSON, .lang, .mcfunction); el '
+            'servidor crea los manifest y el zip. Paquete "bp" (comportamiento): carpetas entities, items, '
+            'recipes, loot_tables, trading, spawn_rules, functions, blocks, texts. Paquete "rp" (recursos): '
+            'entity, models, animations, animation_controllers, render_controllers, texts, textures (solo '
+            'json), attachables, particles. No se pueden crear imagenes ni sonidos: reutiliza los del juego. '
+            'Usa format_version actual (ej. "1.21.0"), identificadores con prefijo propio (ej. "mi:zombi_rey") '
+            'y nombres visibles en texts/en_US.lang (y es_ES.lang). Manten el add-on simple y el JSON valido; '
+            'si la herramienta devuelve un error, corrigelo y vuelve a llamarla. Usar cuando el usuario pida '
+            'un add-on, mod o pack para Minecraft Bedrock.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'nombre': {'type': 'string', 'description': 'Nombre corto del add-on (maximo 40 letras)'},
+                'descripcion': {'type': 'string', 'description': 'Una frase que describe el add-on'},
+                'archivos': {
+                    'type': 'array',
+                    'description': 'Archivos del add-on (maximo 40)',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'pack': {'type': 'string', 'description': 'bp o rp'},
+                            'ruta': {'type': 'string', 'description': 'Ruta dentro del paquete, ej. entities/zombi_rey.json'},
+                            'contenido': {'type': 'string', 'description': 'Texto completo del archivo (JSON valido si es .json)'}
+                        },
+                        'required': ['pack', 'ruta', 'contenido']
+                    }
+                }
+            },
+            'required': ['nombre', 'archivos']
+        }
+    },
 ]
 
 
@@ -507,6 +544,7 @@ def generar_imagen(descripcion, api_key):
 PASOS_HERRAMIENTAS = {
     'buscar_persona': 'Buscando a {consulta} en la web',
     'buscar_estructuras_minecraft': 'Calculando estructuras en tu semilla',
+    'crear_addon_minecraft': 'Armando el add-on',
     'generar_imagen': 'Generando la imagen',
     'leer_archivo': 'Leyendo el archivo',
     'abrir_url': 'Preparando el enlace',
@@ -606,6 +644,12 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
             acciones_frontend['mapa_mc'] = mapa
         return resultado
 
+    if nombre == 'crear_addon_minecraft':
+        resultado, addon = addon_mc.crear(argumentos)
+        if addon:
+            acciones_frontend.setdefault('addons', []).append(addon)
+        return resultado
+
     if nombre == 'ver_pantalla':
         return manos_api.leer_pantalla(None, bool(argumentos.get('imagen')))
 
@@ -695,7 +739,7 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
 
 # --- Panel Herramientas: grupos que el usuario puede apagar desde el sidebar ---
 GRUPOS_HERRAMIENTAS = {
-    'minecraft': ('Minecraft', ['buscar_estructuras_minecraft']),
+    'minecraft': ('Minecraft', ['buscar_estructuras_minecraft', 'crear_addon_minecraft']),
     'memoria': ('Memoria', ['guardar_recuerdo', 'olvidar_recuerdo']),
     'recordatorios': ('Recordatorios', ['crear_recordatorio', 'listar_recordatorios', 'borrar_recordatorio']),
     'imagenes': ('Imagenes', ['generar_imagen']),
@@ -1741,7 +1785,7 @@ def texto_capacidades():
         'las busquedas dentro de un sitio se hacen tras pedir confirmacion. Generas imagenes nuevas '
         'con IA a partir de una descripcion (con Gemini; con Groq solo si hay Cloudflare configurado) y las muestras en el chat; '
         'no se guardan en el historial. Con la semilla de un mundo de Minecraft (Bedrock o Java) localizas '
-        'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. ' + personas + telefono +
+        'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. Creas add-ons de Minecraft Bedrock (.mcaddon) con crear_addon_minecraft y los entregas como boton de descarga en el chat. ' + personas + telefono +
         '(5) Recordatorios: los creas, listas y borras con las herramientas crear_recordatorio, listar_recordatorios y '
         'borrar_recordatorio; suenan a su hora mientras la app este abierta, no con la app cerrada. '
         '(6) Herramientas: el menu lateral tiene un panel con interruptores para activar o desactivar '
@@ -2117,6 +2161,7 @@ def _chat_interno():
                         'imagenes': acciones.get('imagenes', []),
                         'recordatorios_cambio': bool(acciones.get('recordatorios')),
                         'mapa_mc': acciones.get('mapa_mc'),
+                        'addons': acciones.get('addons', []),
                         'modelo_usado': usado['nombre'],
                         'limites_groq': g.get('limites_groq'),
                         'marcas_llamadas': _marcas_llamadas()})

@@ -17,7 +17,8 @@ def ahora():
 
 def cancelado(uid, desde):
     """True si el usuario cancelo despues de 'desde' (inicio del mensaje que se esta atendiendo)."""
-    return bool(uid) and _CANCELADO.get(uid, 0) >= (desde or 0)
+    t = _CANCELADO.get(uid)
+    return bool(uid and t and desde and t >= desde)
 
 
 def _vencer_ordenes():
