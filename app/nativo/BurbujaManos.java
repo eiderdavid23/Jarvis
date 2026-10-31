@@ -69,9 +69,12 @@ class BurbujaManos {
     private final float d;
 
     private FrameLayout raiz;
-    private TextView circulo;
+    private LinearLayout pildora;
+    private BurbujaUI.Ondas ondasMini;
+    private BurbujaUI.Ondas ondasPanel;
+    private BurbujaUI.Logo logoMini;
     private TextView estadoTv;
-    private TextView micBtn;
+    private BurbujaUI.Icono micBtn;
     private LinearLayout panel;
     private EditText campo;
     private WindowManager.LayoutParams lp;
@@ -159,7 +162,29 @@ class BurbujaManos {
         abierta = false;
     }
 
-    // ---- La burbuja (circulo arrastrable) ---------------------------------------
+    // ---- La burbuja (pildora arrastrable, como la isla de la musica) ------------
+
+    private static final int PILDORA_W = 104;
+    private static final int PILDORA_H = 38;
+
+    private BurbujaUI.Icono icono(int tipo, int color, int padDp, int fondo) {
+        BurbujaUI.Icono ic = new BurbujaUI.Icono(cx, tipo, color);
+        int pd = (int) (padDp * d);
+        ic.setPadding(pd, pd, pd, pd);
+        if (fondo != 0) {
+            GradientDrawable g = new GradientDrawable();
+            g.setShape(GradientDrawable.OVAL);
+            g.setColor(fondo);
+            ic.setBackground(g);
+        }
+        return ic;
+    }
+
+    private LinearLayout.LayoutParams cuadro(int dp, int izqDp) {
+        LinearLayout.LayoutParams l = new LinearLayout.LayoutParams((int) (dp * d), (int) (dp * d));
+        l.leftMargin = (int) (izqDp * d);
+        return l;
+    }
 
     private void crearVistas() {
         raiz = new FrameLayout(cx) {
@@ -174,13 +199,16 @@ class BurbujaManos {
                 return super.dispatchKeyEvent(e);
             }
         };
-        int tam = (int) (52 * d);
-        circulo = new TextView(cx);
-        circulo.setGravity(Gravity.CENTER);
-        circulo.setTextSize(22);
-        circulo.setTypeface(null, Typeface.BOLD);
-        raiz.addView(circulo, new FrameLayout.LayoutParams(tam, tam));
-        circulo.setOnTouchListener(new View.OnTouchListener() {
+        pildora = new LinearLayout(cx);
+        pildora.setOrientation(LinearLayout.HORIZONTAL);
+        pildora.setGravity(Gravity.CENTER_VERTICAL);
+        pildora.setPadding((int) (14 * d), 0, (int) (5 * d), 0);
+        ondasMini = new BurbujaUI.Ondas(cx, 6);
+        pildora.addView(ondasMini, new LinearLayout.LayoutParams(0, (int) (18 * d), 1f));
+        logoMini = new BurbujaUI.Logo(cx);
+        pildora.addView(logoMini, cuadro(28, 10));
+        raiz.addView(pildora, new FrameLayout.LayoutParams((int) (PILDORA_W * d), (int) (PILDORA_H * d)));
+        pildora.setOnTouchListener(new View.OnTouchListener() {
             private float ox;
             private float oy;
             private int x0;
@@ -234,138 +262,17 @@ class BurbujaManos {
     private void soltar() {
         int ancho = srv.getResources().getDisplayMetrics().widthPixels;
         int alto = srv.getResources().getDisplayMetrics().heightPixels;
-        int tam = (int) (52 * d);
+        int pw = (int) (PILDORA_W * d);
+        int ph = (int) (PILDORA_H * d);
         int margen = (int) (6 * d);
-        lp.x = (lp.x + tam / 2 < ancho / 2) ? margen : ancho - tam - margen;
-        lp.y = Math.max((int) (30 * d), Math.min(lp.y, alto - tam - (int) (60 * d)));
+        lp.x = (lp.x + pw / 2 < ancho / 2) ? margen : ancho - pw - margen;
+        lp.y = Math.max((int) (30 * d), Math.min(lp.y, alto - ph - (int) (60 * d)));
         bx = lp.x;
         by = lp.y;
         prefs.edit().putInt("bx", bx).putInt("by", by).apply();
         try {
             wm.updateViewLayout(raiz, lp);
         } catch (Exception ignorada) {
-        }
-    }
-
-    /** Colores del circulo: cian normal, verde con respuesta nueva, apagado mientras Jarvis piensa. */
-    private void estiloCirculo() {
-        GradientDrawable f = new GradientDrawable();
-        f.setShape(GradientDrawable.OVAL);
-        f.setColor(Color.parseColor("#E6061018"));
-        int borde = nuevo ? VERDE : CIAN;
-        f.setStroke((int) (2 * d), borde);
-        circulo.setBackground(f);
-        circulo.setTextColor(borde);
-        circulo.setText(pensando ? "\u2026" : "J");
-        circulo.setAlpha(pensando ? 0.6f : 1f);
-    }
-
-    // ---- La barra de arriba (escribir, hablar, ver la respuesta) ----------------
-
-    private TextView boton(String txt, int sp, int color) {
-        TextView t = new TextView(cx);
-        t.setText(txt);
-        t.setTextSize(sp);
-        t.setTextColor(color);
-        t.setGravity(Gravity.CENTER);
-        int p = (int) (10 * d);
-        t.setPadding(p, (int) (6 * d), p, (int) (6 * d));
-        return t;
-    }
-
-    private void crearPanel() {
-        panel = new LinearLayout(cx);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        int p = (int) (12 * d);
-        panel.setPadding(p, p, p, p);
-        GradientDrawable f = new GradientDrawable();
-        f.setColor(FONDO);
-        f.setCornerRadius(22 * d);
-        f.setStroke((int) (1.2f * d), CIAN);
-        panel.setBackground(f);
-
-        LinearLayout cab = new LinearLayout(cx);
-        cab.setOrientation(LinearLayout.HORIZONTAL);
-        cab.setGravity(Gravity.CENTER_VERTICAL);
-        TextView titulo = new TextView(cx);
-        titulo.setText("Jarvis");
-        titulo.setTextColor(CIAN);
-        titulo.setTextSize(15);
-        titulo.setTypeface(null, Typeface.BOLD);
-        cab.addView(titulo, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        TextView abrirApp = boton("\u2197", 18, SUAVE);
-        abrirApp.setOnClickListener(v -> abrirJarvis());
-        TextView cerrar = boton("\u2014", 18, SUAVE);
-        cerrar.setOnClickListener(v -> cerrarPanel());
-        cab.addView(abrirApp);
-        cab.addView(cerrar);
-        panel.addView(cab);
-
-        estadoTv = new TextView(cx);
-        estadoTv.setTextColor(TEXTO);
-        estadoTv.setTextSize(14);
-        estadoTv.setMaxLines(9);
-        estadoTv.setMovementMethod(ScrollingMovementMethod.getInstance());
-        estadoTv.setPadding(0, (int) (6 * d), 0, (int) (2 * d));
-        estadoTv.setVisibility(View.GONE);
-        panel.addView(estadoTv);
-
-        LinearLayout fila = new LinearLayout(cx);
-        fila.setOrientation(LinearLayout.HORIZONTAL);
-        fila.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams lf = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lf.topMargin = (int) (8 * d);
-        campo = new EditText(cx);
-        campo.setHint("Escr\u00edbele a Jarvis\u2026");
-        campo.setHintTextColor(SUAVE);
-        campo.setTextColor(TEXTO);
-        campo.setTextSize(15);
-        campo.setRawInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        campo.setImeOptions(EditorInfo.IME_ACTION_SEND);
-        campo.setMaxLines(3);
-        campo.setHorizontallyScrolling(false);
-        GradientDrawable fc = new GradientDrawable();
-        fc.setColor(Color.parseColor("#1A2B36"));
-        fc.setCornerRadius(16 * d);
-        campo.setBackground(fc);
-        campo.setPadding((int) (14 * d), (int) (8 * d), (int) (14 * d), (int) (8 * d));
-        campo.setOnEditorActionListener((v, acc, ev) -> {
-            if (acc == EditorInfo.IME_ACTION_SEND) {
-                enviar();
-                return true;
-            }
-            return false;
-        });
-        micBtn = boton("\uD83C\uDFA4", 20, TEXTO);
-        micBtn.setOnClickListener(v -> escuchar());
-        TextView enviarBtn = boton("\u27A4", 20, CIAN);
-        enviarBtn.setOnClickListener(v -> enviar());
-        fila.addView(campo, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        fila.addView(micBtn);
-        fila.addView(enviarBtn);
-        panel.addView(fila, lf);
-
-        panel.setVisibility(View.GONE);
-        raiz.addView(panel, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
-    }
-
-    private void mostrarPlegada() {
-        panel.setVisibility(View.GONE);
-        circulo.setVisibility(View.VISIBLE);
-        estiloCirculo();
-    }
-
-    private void mostrarPanel() {
-        circulo.setVisibility(View.GONE);
-        panel.setVisibility(View.VISIBLE);
-        if (ultimo.isEmpty()) {
-            estadoTv.setVisibility(View.GONE);
-        } else {
-            estadoTv.setText(ultimo);
-            estadoTv.scrollTo(0, 0);
-            estadoTv.setVisibility(View.VISIBLE);
         }
     }
 
@@ -556,7 +463,8 @@ class BurbujaManos {
         }
         ocultarTeclado();
         escuchando = true;
-        micBtn.setTextColor(ROJO);
+        micBtn.color(ROJO);
+        ondasPanel.modo(2);
         mostrarTexto("Te escucho\u2026");
         sr = SpeechRecognizer.createSpeechRecognizer(srv);
         sr.setRecognitionListener(new RecognitionListener() {
@@ -570,6 +478,9 @@ class BurbujaManos {
 
             @Override
             public void onRmsChanged(float v) {
+                if (ondasPanel != null) {
+                    ondasPanel.nivel((v + 2f) / 12f);
+                }
             }
 
             @Override
@@ -624,7 +535,11 @@ class BurbujaManos {
     private void detenerVoz() {
         escuchando = false;
         if (micBtn != null) {
-            micBtn.setTextColor(TEXTO);
+            micBtn.color(TEXTO);
+            if (ondasPanel != null) {
+                ondasPanel.modo(0);
+                ondasPanel.nivel(0f);
+            }
         }
         if (sr != null) {
             try {
