@@ -207,3 +207,10 @@ Al terminar **cada** actualización:
 7. Si se agrega o quita una función de Jarvis, actualizar también `texto_capacidades()` en `server.py`, para que Jarvis sepa qué tiene.
 
 David comparte este archivo al abrir un chat nuevo, para que la IA tenga todo el contexto.
+
+## Manos de Jarvis: registro (31 oct 2026)
+
+- [HECHO] Conexión resuelta: faltaban las funciones `manos_orden_siguiente` y `manos_orden_resultado` en Supabase. Se ejecutó `supabase_manos2.sql` completo + `notify pgrst, 'reload schema'`. El celular ya consulta (`visto` de 1 s).
+- [PENDIENTE] Estado en vivo en la caja Manos (`/manos/estado`, parche `parche_estado.py`).
+- [PENDIENTE] Probar de extremo a extremo: "mira mi pantalla", scroll, abrir Wi-Fi, escribir.
+- [PENDIENTE] Batería ColorOS, error 504, rotar `firebase-credenciales.json`, agentes.
