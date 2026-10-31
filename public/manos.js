@@ -15,7 +15,7 @@
     '.mnBtn:disabled{opacity:.5}';
   document.head.appendChild(css);
 
-  var autoBtn;
+  var autoBtn, paso1Btn;
 
   function json(r) {
     return r.json().then(function (d) {
@@ -26,6 +26,12 @@
 
   function pintar() {
     M.estado().then(function (e) {
+      if (paso1Btn) {
+        paso1Btn.style.display = (e.vinculado && !e.servicio) ? 'block' : 'none';
+        var hecho = false;
+        try { hecho = !!localStorage.getItem('mnPaso1'); } catch (x) {}
+        paso1Btn.textContent = hecho ? '1. ✓ Permitir ajustes restringidos (abrir otra vez)' : '1. Permitir ajustes restringidos';
+      }
       if (autoBtn) {
         autoBtn.style.display = (e.vinculado && e.servicio) ? 'block' : 'none';
         autoBtn.textContent = e.auto ? 'Volver a pedir permiso' : 'Activar modo automático';
@@ -37,9 +43,9 @@
         boton.textContent = 'Vincular este celular';
         accion = vincular;
       } else if (!e.servicio) {
-        estadoEl.textContent = 'Vinculado. Falta activar el permiso de accesibilidad.';
-        ayudaEl.textContent = 'Busca Jarvis en «Aplicaciones instaladas» y actívalo. Si Android lo bloquea: Ajustes > Apps > Jarvis, toca ⋮ y elige «Permitir ajustes restringidos».';
-        boton.textContent = 'Abrir ajustes de accesibilidad';
+        estadoEl.textContent = 'Vinculado. Faltan 2 pasos para activar las manos.';
+        ayudaEl.textContent = 'Paso 1 (solo la primera vez): en la pantalla que se abre toca ⋮ arriba a la derecha y elige «Permitir ajustes restringidos». Si no ves el ⋮, ya está permitido. Luego vuelve y haz el paso 2: busca Jarvis y actívalo.';
+        boton.textContent = '2. Activar accesibilidad';
         accion = function () { M.abrirAjustes(); };
       } else {
         estadoEl.textContent = (e.auto ? 'Manos activas en MODO AUTOMÁTICO: Jarvis actúa sin pedirte permiso.' : 'Manos activas. Jarvis te pedirá permiso antes de tocar o escribir.');
@@ -113,7 +119,17 @@
     boton.className = 'mnBtn';
     boton.disabled = true;
     boton.addEventListener('click', function () { if (accion) accion(); });
-    [t, estadoEl, ayudaEl, boton].forEach(function (e) { caja.appendChild(e); });
+    paso1Btn = document.createElement('button');
+    paso1Btn.type = 'button';
+    paso1Btn.className = 'mnBtn';
+    paso1Btn.style.display = 'none';
+    paso1Btn.addEventListener('click', function () {
+      try { localStorage.setItem('mnPaso1', '1'); } catch (x) {}
+      var abrir = M.abrirInfoApp ? M.abrirInfoApp() : M.abrirAjustes();
+      Promise.resolve(abrir).catch(function () { return M.abrirAjustes(); });
+      paso1Btn.textContent = '1. ✓ Permitir ajustes restringidos (abrir otra vez)';
+    });
+    [t, estadoEl, ayudaEl, paso1Btn, boton].forEach(function (e) { caja.appendChild(e); });
     autoBtn = document.createElement('button');
     autoBtn.type = 'button';
     autoBtn.className = 'mnBtn';

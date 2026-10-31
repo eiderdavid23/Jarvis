@@ -3,6 +3,7 @@ package com.david.jarvis;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.provider.Settings;
 
 import com.getcapacitor.JSObject;
@@ -31,6 +32,16 @@ public class ManosPlugin extends Plugin {
     @PluginMethod
     public void abrirAjustes(PluginCall call) {
         Intent i = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(i);
+        call.resolve();
+    }
+
+    /** Abre directo "Informacion de la app" de Jarvis (ahi esta el menu con "Permitir ajustes restringidos"). */
+    @PluginMethod
+    public void abrirInfoApp(PluginCall call) {
+        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:" + getContext().getPackageName()));
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         getContext().startActivity(i);
         call.resolve();
