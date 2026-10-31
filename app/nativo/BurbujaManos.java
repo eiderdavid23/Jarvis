@@ -185,8 +185,8 @@ class BurbujaManos {
 
     // ---- La burbuja (pildora arrastrable, como la isla de la musica) ------------
 
-    private static final int PILDORA_W = 88;
-    private static final int PILDORA_H = 26;
+    private static final int PILDORA_W = 136;
+    private static final int PILDORA_H = 30;
 
     private BurbujaUI.Icono icono(int tipo, int color, int padDp, int fondo) {
         BurbujaUI.Icono ic = new BurbujaUI.Icono(cx, tipo, color);
@@ -223,11 +223,12 @@ class BurbujaManos {
         pildora = new LinearLayout(cx);
         pildora.setOrientation(LinearLayout.HORIZONTAL);
         pildora.setGravity(Gravity.CENTER_VERTICAL);
-        pildora.setPadding((int) (12 * d), 0, (int) (4 * d), 0);
+        pildora.setPadding((int) (7 * d), 0, (int) (8 * d), 0);
         ondasMini = new BurbujaUI.Ondas(cx, 6);
-        pildora.addView(ondasMini, new LinearLayout.LayoutParams(0, (int) (12 * d), 1f));
+        pildora.addView(ondasMini, new LinearLayout.LayoutParams((int) (28 * d), (int) (12 * d)));
+        pildora.addView(new View(cx), new LinearLayout.LayoutParams(0, 1, 1f));
         logoMini = new BurbujaUI.Logo(cx);
-        pildora.addView(logoMini, cuadro(20, 6));
+        pildora.addView(logoMini, cuadro(26, 0));
         raiz.addView(pildora, new FrameLayout.LayoutParams((int) (PILDORA_W * d), (int) (PILDORA_H * d)));
         pildora.setOnTouchListener(new View.OnTouchListener() {
             private float ox;
