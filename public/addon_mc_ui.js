@@ -1,18 +1,29 @@
-/* Tarjeta de descarga de add-ons de Minecraft (.mcaddon) dentro del chat. */
+/* Tarjeta de archivo para los add-ons de Minecraft (.mcaddon) dentro del chat. */
 (function () {
   var css = document.createElement('style');
   css.textContent =
-    '.tarjetaAd{align-self:stretch;margin:0 0 4px 44px;padding:12px;border:1px solid var(--borde,rgba(0,229,255,.25));' +
-    'border-radius:16px;background:var(--panel,rgba(8,16,26,.85));max-width:420px;animation:subir .38s both}' +
-    '.tarjetaAd h4{margin:0 0 2px;font-size:14px;font-weight:600;color:var(--texto,#e6f7fb)}' +
-    '.tarjetaAd .adSub{font-size:12px;color:var(--suave,#8fb4bf);margin-bottom:8px}' +
-    '.tarjetaAd .adRutas{font:11px/1.5 ui-monospace,monospace;color:var(--suave,#8fb4bf);margin:0 0 10px;' +
-    'max-height:84px;overflow:auto;white-space:pre-wrap;word-break:break-all}' +
-    '.tarjetaAd .adBtns{display:flex;gap:8px;flex-wrap:wrap}' +
-    '.tarjetaAd button{font:600 14px system-ui,sans-serif;padding:10px 16px;border-radius:12px;cursor:pointer;' +
-    'border:1.5px solid var(--cian,#00e5ff);background:transparent;color:var(--cian,#00e5ff)}' +
-    '.tarjetaAd button.pri{background:var(--cian,#00e5ff);color:#06121a}';
+    '.tarjetaAd{align-self:stretch;margin:0 0 6px 44px;max-width:420px;border:1px solid var(--linea,rgba(0,229,255,.2));' +
+    'border-radius:16px;background:var(--panel,#0b111b);overflow:hidden;animation:subir .38s both}' +
+    '.tarjetaAd .adFila{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;width:100%;' +
+    'background:none;border:0;font:inherit;color:var(--texto,#e6f7fb);text-align:left}' +
+    '.tarjetaAd .adFila:active{background:rgba(127,127,127,.12)}' +
+    '.tarjetaAd .adIcono{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;' +
+    'background:rgba(0,229,255,.12);color:var(--cian,#00e5ff)}' +
+    '.tarjetaAd .adTxt{flex:1;min-width:0;line-height:1.3}' +
+    '.tarjetaAd .adTxt b{display:block;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.tarjetaAd .adTxt small{font-size:12px;color:var(--suave,#8fb4bf)}' +
+    '.tarjetaAd .adBajar{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;' +
+    'background:var(--cian,#00e5ff);color:#06121a}' +
+    '.tarjetaAd details{border-top:1px solid var(--linea,rgba(0,229,255,.2));padding:8px 14px;font-size:12px;color:var(--suave,#8fb4bf)}' +
+    '.tarjetaAd summary{cursor:pointer;list-style:none}' +
+    '.tarjetaAd pre{margin:8px 0 0;font:11px/1.6 ui-monospace,monospace;white-space:pre-wrap;word-break:break-all;max-height:110px;overflow:auto}' +
+    '.tarjetaAd .adPie{padding:0 14px 10px;font-size:11px;color:var(--suave,#8fb4bf)}';
   document.head.appendChild(css);
+
+  var SVG_CAJA = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>';
+  var SVG_BAJAR = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>';
 
   function bytes(b64) {
     var bin = atob(b64);
@@ -21,52 +32,68 @@
     return u8;
   }
 
+  function enlace(url, nombre) {
+    var l = document.createElement('a');
+    l.href = url;
+    l.download = nombre;
+    document.body.appendChild(l);
+    l.click();
+    l.remove();
+  }
+
+  function descargar(a) {
+    if (a.url) {
+      var url = location.origin + a.url;
+      var cap = window.Capacitor;
+      var B = cap && cap.Plugins && cap.Plugins.Browser;
+      if (cap && cap.isNativePlatform && cap.isNativePlatform() && B) { B.open({ url: url }); return; }
+      enlace(url, a.archivo);
+      return;
+    }
+    if (!a.datos) return;
+    var blob = new Blob([bytes(a.datos)], { type: 'application/octet-stream' });
+    var u = URL.createObjectURL(blob);
+    enlace(u, a.archivo);
+    setTimeout(function () { URL.revokeObjectURL(u); }, 60000);
+  }
+
   function tarjeta(a) {
-    var u8 = bytes(a.datos);
-    var blob = new Blob([u8], { type: 'application/octet-stream' });
     var caja = document.createElement('div');
     caja.className = 'tarjetaAd';
-    var h = document.createElement('h4');
-    h.textContent = 'Add-on: ' + a.nombre;
-    var sub = document.createElement('div');
-    sub.className = 'adSub';
-    sub.textContent = a.archivo + ' \u00b7 ' + a.n + ' archivos \u00b7 ' + Math.max(1, Math.round(a.bytes / 1024)) + ' KB \u00b7 Bedrock';
-    var rutas = document.createElement('pre');
-    rutas.className = 'adRutas';
-    rutas.textContent = (a.rutas || []).join('\n');
-    var fila = document.createElement('div');
-    fila.className = 'adBtns';
-    var bajar = document.createElement('button');
-    bajar.type = 'button';
-    bajar.className = 'pri';
-    bajar.textContent = 'Descargar y abrir en Minecraft';
-    bajar.addEventListener('click', function () {
-      var url = URL.createObjectURL(blob);
-      var l = document.createElement('a');
-      l.href = url;
-      l.download = a.archivo;
-      document.body.appendChild(l);
-      l.click();
-      l.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-    });
-    fila.appendChild(bajar);
-    try {
-      var f = new File([u8], a.archivo, { type: 'application/octet-stream' });
-      if (navigator.canShare && navigator.canShare({ files: [f] })) {
-        var comp = document.createElement('button');
-        comp.type = 'button';
-        comp.textContent = 'Compartir';
-        comp.addEventListener('click', function () {
-          navigator.share({ files: [f], title: a.nombre }).catch(function () {});
-        });
-        fila.appendChild(comp);
-      }
-    } catch (e) {}
-    caja.appendChild(h);
-    caja.appendChild(sub);
-    caja.appendChild(rutas);
+    var fila = document.createElement('button');
+    fila.type = 'button';
+    fila.className = 'adFila';
+    var ic = document.createElement('span');
+    ic.className = 'adIcono';
+    ic.innerHTML = SVG_CAJA;
+    var tx = document.createElement('span');
+    tx.className = 'adTxt';
+    var b = document.createElement('b');
+    b.textContent = a.archivo;
+    var sm = document.createElement('small');
+    sm.textContent = 'Add-on de Minecraft \u00b7 MCADDON \u00b7 ' + Math.max(1, Math.round(a.bytes / 1024)) + ' KB';
+    tx.appendChild(b);
+    tx.appendChild(sm);
+    var bj = document.createElement('span');
+    bj.className = 'adBajar';
+    bj.innerHTML = SVG_BAJAR;
+    fila.appendChild(ic);
+    fila.appendChild(tx);
+    fila.appendChild(bj);
+    fila.addEventListener('click', function () { descargar(a); });
     caja.appendChild(fila);
+    var det = document.createElement('details');
+    var sum = document.createElement('summary');
+    sum.textContent = 'Ver archivos (' + a.n + ')';
+    var pre = document.createElement('pre');
+    pre.textContent = (a.rutas || []).join('\n');
+    det.appendChild(sum);
+    det.appendChild(pre);
+    caja.appendChild(det);
+    var pie = document.createElement('div');
+    pie.className = 'adPie';
+    pie.textContent = 'Toca para descargar y luego abre el archivo: se importa en Minecraft Bedrock.';
+    caja.appendChild(pie);
     return caja;
   }
 
@@ -75,7 +102,7 @@
     var cont = document.getElementById('chatInner');
     if (!cont) return;
     lista.forEach(function (a) {
-      if (a && a.datos) cont.appendChild(tarjeta(a));
+      if (a && (a.url || a.datos)) cont.appendChild(tarjeta(a));
     });
     if (typeof bajarChat === 'function') bajarChat();
   };
