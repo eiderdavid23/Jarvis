@@ -45,6 +45,8 @@ jobs:
       - name: Sincronizar
         working-directory: app
         run: npx cap sync android
+      - name: Numero de version (siempre sube)
+        run: echo "VERSION_CODE=$(date +%s)" >> "$GITHUB_ENV"
       - name: Parches nativos
         working-directory: app
         env:
@@ -53,10 +55,16 @@ jobs:
       - name: Compilar APK
         working-directory: app/android
         run: ./gradlew assembleDebug
+      - name: Firma y version de la APK
+        continue-on-error: true
+        run: |
+          AS=$(ls $ANDROID_HOME/build-tools/*/apksigner | sort -V | tail -1)
+          "$AS" verify --print-certs app/android/app/build/outputs/apk/debug/app-debug.apk | grep -i "SHA-256"
+          echo "versionCode: $VERSION_CODE"
       - name: Publicar APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/android/app/build/outputs/apk/debug/app-debug.apk jarvis.apk
           gh release delete apk-latest --yes --cleanup-tag || true
-          gh release create apk-latest jarvis.apk --title "Jarvis APK" --notes "build ${{ github.run_number }}"
+          gh release create apk-latest jarvis.apk --title "Jarvis APK" --notes "build ${{ github.run_number }} - versionCode ${VERSION_CODE}"
