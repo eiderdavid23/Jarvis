@@ -499,6 +499,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/claude_skin.css">
 <link rel="stylesheet" href="/dialogo.css">
+<link rel="stylesheet" href="/ajustes_claude.css">
 <link rel="stylesheet" href="/selector_modelo.css">
 <style>.campoClave { -webkit-text-security: disc; text-security: disc; }</style>
 <script>try { if (/[?&]panel=1/.test(location.search)) document.documentElement.classList.add("modo-panel"); } catch (e) {}</script>
@@ -627,6 +628,7 @@
       <button class="tabAjuste activo" data-tab="llave">Llave IA</button>
       <button class="tabAjuste" data-tab="herramientas">Herramientas</button>
       <button class="tabAjuste" data-tab="manos">Manos de Jarvis</button>
+      <button class="tabAjuste" data-tab="memoria">Mi memoria</button>
       <button class="tabAjuste" data-tab="voz">Voz</button>
       <button class="tabAjuste" data-tab="tema">Tema</button>
       <button class="tabAjuste" data-tab="uso">Uso</button>
@@ -720,6 +722,12 @@
       <div class="vistaAjuste" id="tabManos">
         <h3>Control de pantalla</h3>
         <p>Deja que Jarvis vea tu pantalla y toque, escriba o haga scroll cuando se lo pidas. Solo en la app de Android.</p>
+      </div>
+      <div class="vistaAjuste" id="tabMemoria">
+        <h3>Lo que Jarvis recuerda</h3>
+        <p>Esto es lo que Jarvis recuerda de usted entre chats. Puede borrar lo que quiera.</p>
+        <div id="mmLista"></div>
+        <div class="mmPie"><button id="mmTodo" hidden>Borrar todo</button></div>
       </div>
       <div class="vistaAjuste" id="tabVoz">
         <h3>Voz de Jarvis</h3>
@@ -2180,6 +2188,7 @@ pintarTema();
 <script src="/menu_cuenta.js"></script>
 <script src="/menu_mensaje.js"></script>
 <script src="/dialogo.js"></script>
+<script src="/ajustes_claude.js"></script>
 <script src="/selector_modelo.js"></script>
 <script>
 if ('serviceWorker' in navigator) {

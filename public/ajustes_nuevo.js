@@ -13,7 +13,8 @@
     uso: '<path d="M18 20V10M12 20V4M6 20v-6"/>',
     herramientas: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
     manos: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M12 18h.01"/>',
-    acerca: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>'
+    acerca: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+    memoria: '<path d="M12 4a4 4 0 0 0-4-1 3.5 3.5 0 0 0-3 4 3.5 3.5 0 0 0-1 5 3.5 3.5 0 0 0 3 5 3.5 3.5 0 0 0 5 1z"/><path d="M12 4a4 4 0 0 1 4-1 3.5 3.5 0 0 1 3 4 3.5 3.5 0 0 1 1 5 3.5 3.5 0 0 1-3 5 3.5 3.5 0 0 1-5 1z"/>'
   };
   var SUBS = {
     llave: 'Conecta Gemini o Groq',
@@ -22,7 +23,8 @@
     uso: 'Solicitudes de hoy',
     herramientas: 'Qué puede usar Jarvis',
     manos: 'Que Jarvis use tu pantalla',
-    acerca: 'Qué es Jarvis y con qué funciona'
+    acerca: 'Qué es Jarvis y con qué funciona',
+    memoria: 'Lo que Jarvis recuerda de ti'
   };
   function svg(inner, clase) {
     return '<svg class="' + clase + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
