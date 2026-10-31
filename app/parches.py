@@ -26,6 +26,12 @@ assert c1 == 1 and c2 == 1, 'build.gradle: no encontre versionCode o versionName
 open(g, 'w', encoding='utf-8').write(b)
 print('Version', n)
 
+b = open(g, encoding='utf-8').read()
+b, c3 = re.subn(r'applicationId\s*=?\s*"[^"]*"', 'applicationId "com.david.jarvis2"', b)
+assert c3 == 1, 'build.gradle: no encontre applicationId'
+open(g, 'w', encoding='utf-8').write(b)
+print('ID de la app: com.david.jarvis2')
+
 m = 'android/app/src/main/AndroidManifest.xml'
 t = open(m, encoding='utf-8').read()
 FILTRO = """            <intent-filter>
