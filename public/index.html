@@ -615,9 +615,6 @@
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
     Recordatorios
   </button>
-  <div class="sbSeccion">Próximamente</div>
-  <div class="sbItem pronto">Historial de chats <span class="chipPronto">Pronto</span></div>
-  <div class="sbItem pronto">Buscar <span class="chipPronto">Pronto</span></div>
   <div class="sbPie" id="sbPie"></div>
 </aside>
 <div id="overlayAjustes">
@@ -628,6 +625,8 @@
     </div>
     <div id="tabsAjustes">
       <button class="tabAjuste activo" data-tab="llave">Llave IA</button>
+      <button class="tabAjuste" data-tab="herramientas">Herramientas</button>
+      <button class="tabAjuste" data-tab="manos">Manos de Jarvis</button>
       <button class="tabAjuste" data-tab="voz">Voz</button>
       <button class="tabAjuste" data-tab="tema">Tema</button>
       <button class="tabAjuste" data-tab="uso">Uso</button>
@@ -714,6 +713,14 @@
         <p style="font-size:11px; opacity:0.7;">Tus llaves se guardan cifradas en tu cuenta y se copian a este dispositivo. Cada cuenta usa solo su propia llave.</p>
       </div>
 
+      <div class="vistaAjuste" id="tabHerramientas">
+        <h3>Qué puede usar Jarvis</h3>
+        <p>Elige qué puede usar Jarvis. Lo que apagues no se le ofrece al modelo.</p>
+      </div>
+      <div class="vistaAjuste" id="tabManos">
+        <h3>Control de pantalla</h3>
+        <p>Deja que Jarvis vea tu pantalla y toque, escriba o haga scroll cuando se lo pidas. Solo en la app de Android.</p>
+      </div>
       <div class="vistaAjuste" id="tabVoz">
         <h3>Voz de Jarvis</h3>
         <div class="card">
@@ -768,6 +775,7 @@
         <h3>Acerca de J.A.R.V.I.S.</h3>
         <div class="card">
           <p style="margin:0;">Asistente personal construido por David. Gemini + Groq + voz neuronal.</p>
+          <p style="margin:10px 0 0;">Próximamente: buscar en tus chats.</p>
         </div>
       </div>
 
@@ -2164,6 +2172,7 @@ pintarTema();
 <script src="/recordatorios.js"></script>
 <script src="/herramientas.js"></script>
 <script src="/manos.js"></script>
+<script src="/ajustes_extra.js"></script>
 <script src="/modulos.js"></script>
 <script src="/sidebar_orden.js"></script>
 <script src="/llaves_cuenta.js"></script>

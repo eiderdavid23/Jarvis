@@ -11,6 +11,8 @@
     voz: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>',
     tema: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>',
     uso: '<path d="M18 20V10M12 20V4M6 20v-6"/>',
+    herramientas: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+    manos: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M12 18h.01"/>',
     acerca: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>'
   };
   var SUBS = {
@@ -18,6 +20,8 @@
     voz: 'Tono, velocidad y voz premium',
     tema: 'Claro, oscuro o automático',
     uso: 'Solicitudes de hoy',
+    herramientas: 'Qué puede usar Jarvis',
+    manos: 'Que Jarvis use tu pantalla',
     acerca: 'Qué es Jarvis y con qué funciona'
   };
   function svg(inner, clase) {

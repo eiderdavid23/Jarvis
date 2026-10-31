@@ -458,7 +458,7 @@
   const pronto = Array.from(sb.querySelectorAll('.sbItem.pronto'))
     .find((e) => e.textContent.includes('Historial'));
   const seccionPronto = Array.from(sb.querySelectorAll('.sbSeccion'))
-    .find((e) => e.textContent.includes('Próximamente'));
+    .find((e) => e.textContent.includes('Próximamente')) || document.getElementById('sbPie');
   if (pronto) pronto.remove();
   const titulo = document.createElement('div');
   titulo.className = 'sbSeccion';
