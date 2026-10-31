@@ -41,9 +41,12 @@ import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Burbuja flotante de Jarvis. Vive dentro del servicio de accesibilidad (no pide el permiso
@@ -79,6 +82,11 @@ class BurbujaManos {
     private EditText campo;
     private WindowManager.LayoutParams lp;
     private SpeechRecognizer sr;
+    private SpeechRecognizer srp;
+    private boolean viaPalabra;
+    private int fallosPalabra;
+    private final Runnable reinicioPalabra = this::sincronizarPalabra;
+    private final Runnable cierreAuto = this::cierreAutomatico;
 
     private boolean puesta;
     private boolean abierta;
@@ -117,6 +125,7 @@ class BurbujaManos {
                 }
             } catch (Exception ignorada) {
             }
+            sincronizarPalabra();
         });
     }
 
@@ -153,6 +162,7 @@ class BurbujaManos {
     }
 
     private void sacar() {
+        detenerPalabra();
         detenerVoz();
         try {
             wm.removeView(raiz);
@@ -553,6 +563,17 @@ class BurbujaManos {
             estiloCirculo();
             aplicar();
         }
+        if (viaPalabra && puesta) {
+            viaPalabra = false;
+            if (!abierta) {
+                abrir();
+            } else {
+                mostrarTexto(texto);
+            }
+            ui.removeCallbacks(cierreAuto);
+            ui.postDelayed(cierreAuto, 20000);
+        }
+        sincronizarPalabra();
     }
 
     private static String leer(InputStream in) throws Exception {
@@ -577,6 +598,159 @@ class BurbujaManos {
         return s.trim();
     }
 
+    // ---- Palabra de activacion: decir "Jarvis" ------------------------------------
+
+    private static final Pattern PALABRA = Pattern.compile(
+            "\\b(jarvis|jarvi|yarvis|jarbis|harvis|charvis|yarbis|garvis|jarviz|jarves|yarvi)\\b");
+
+    private boolean palabraActiva() {
+        return puesta && prefs.getBoolean("palabra", false) && !pensando && !escuchando
+                && srv.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                && SpeechRecognizer.isRecognitionAvailable(srv);
+    }
+
+    /** Enciende o apaga la escucha de la palabra segun el estado actual (siempre en el hilo principal). */
+    void sincronizarPalabra() {
+        ui.removeCallbacks(reinicioPalabra);
+        boolean debe = palabraActiva();
+        if (debe && srp == null) {
+            arrancarPalabra();
+        } else if (!debe && srp != null) {
+            detenerPalabra();
+        }
+    }
+
+    /** Cierra la barra que se abrio sola con la respuesta, si no la tocaste. */
+    private void cierreAutomatico() {
+        if (puesta && abierta && !pensando && !escuchando && campo != null && !campo.hasFocus()) {
+            cerrarPanel();
+        }
+    }
+
+    private void arrancarPalabra() {
+        try {
+            srp = SpeechRecognizer.createSpeechRecognizer(srv);
+            srp.setRecognitionListener(new RecognitionListener() {
+                @Override
+                public void onReadyForSpeech(Bundle p) {
+                }
+
+                @Override
+                public void onBeginningOfSpeech() {
+                }
+
+                @Override
+                public void onRmsChanged(float v) {
+                }
+
+                @Override
+                public void onBufferReceived(byte[] b) {
+                }
+
+                @Override
+                public void onEndOfSpeech() {
+                }
+
+                @Override
+                public void onEvent(int t, Bundle p) {
+                }
+
+                @Override
+                public void onPartialResults(Bundle p) {
+                }
+
+                @Override
+                public void onResults(Bundle p) {
+                    final String t = primero(p);
+                    ui.post(() -> alOirPalabra(t));
+                }
+
+                @Override
+                public void onError(int codigo) {
+                    ui.post(() -> errorPalabra(codigo));
+                }
+            });
+            Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag());
+            i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, srv.getPackageName());
+            srp.startListening(i);
+        } catch (Exception e) {
+            detenerPalabra();
+            ui.postDelayed(reinicioPalabra, 3000);
+        }
+    }
+
+    private void detenerPalabra() {
+        ui.removeCallbacks(reinicioPalabra);
+        if (srp != null) {
+            try {
+                srp.cancel();
+                srp.destroy();
+            } catch (Exception ignorada) {
+            }
+            srp = null;
+        }
+    }
+
+    /** Quita acentos y pasa a minusculas sin cambiar el largo (para que los indices coincidan con el original). */
+    private static String plano(String s) {
+        StringBuilder b = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            String n = Normalizer.normalize(String.valueOf(s.charAt(i)), Normalizer.Form.NFD);
+            b.append(Character.toLowerCase(n.charAt(0)));
+        }
+        return b.toString();
+    }
+
+    private void alOirPalabra(String t) {
+        if (srp == null) {
+            return;
+        }
+        detenerPalabra();
+        fallosPalabra = 0;
+        Matcher m = t.isEmpty() ? null : PALABRA.matcher(plano(t));
+        if (m == null || !m.find()) {
+            ui.postDelayed(reinicioPalabra, 300);
+            return;
+        }
+        if (pensando) {
+            return;
+        }
+        String resto = t.substring(Math.min(m.end(), t.length()))
+                .replaceFirst("^[\\s,.:;!?\\u00bf\\u00a1-]+", "").trim();
+        viaPalabra = true;
+        ui.removeCallbacks(cierreAuto);
+        if (!resto.isEmpty()) {
+            abrir();
+            campo.setText(resto);
+            enviar();
+        } else {
+            abrir();
+            ui.postDelayed(this::escuchar, 250);
+        }
+    }
+
+    private void errorPalabra(int c) {
+        if (srp == null) {
+            return;
+        }
+        detenerPalabra();
+        if (c == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+            prefs.edit().putBoolean("palabra", false).apply();
+            mostrarTexto("Falta el permiso del micr\u00f3fono para o\u00edr \u00abJarvis\u00bb.");
+            return;
+        }
+        long espera = 350;
+        if (c == SpeechRecognizer.ERROR_NO_MATCH || c == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+            fallosPalabra = 0;
+        } else {
+            fallosPalabra++;
+            espera = Math.min(15000L, 1000L * (1 << Math.min(fallosPalabra, 4)));
+        }
+        ui.postDelayed(reinicioPalabra, espera);
+    }
+
     // ---- Microfono --------------------------------------------------------------
 
     private void escuchar() {
@@ -596,6 +770,7 @@ class BurbujaManos {
             return;
         }
         ocultarTeclado();
+        detenerPalabra();
         escuchando = true;
         micBtn.color(ROJO);
         ondasPanel.modo(2);
@@ -643,6 +818,7 @@ class BurbujaManos {
                 ui.post(() -> {
                     detenerVoz();
                     if (t.isEmpty()) {
+                        viaPalabra = false;
                         mostrarTexto("No te escuch\u00e9. Intenta de nuevo.");
                     } else {
                         campo.setText(t);
@@ -655,6 +831,7 @@ class BurbujaManos {
             public void onError(int codigo) {
                 ui.post(() -> {
                     detenerVoz();
+                    viaPalabra = false;
                     mostrarTexto(errorVoz(codigo));
                 });
             }
@@ -683,6 +860,8 @@ class BurbujaManos {
             }
             sr = null;
         }
+        ui.removeCallbacks(reinicioPalabra);
+        ui.postDelayed(reinicioPalabra, 700);
     }
 
     private static String primero(Bundle p) {

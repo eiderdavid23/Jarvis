@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 31 oct 2026
-Versión actual: 1.4 (ver CAMBIOS.md)
+Versión actual: 1.5 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -224,3 +224,5 @@ David comparte este archivo al abrir un chat nuevo, para que la IA tenga todo el
 - [HECHO 31 oct 2026] Cancelar funciones en curso: el boton Detener tambien corta la orden del celular (consulta `/manos/d/orden/<id>` cada 0,6 s; `mantener` y el dedo quieto de `arrastrar` van en trozos de 1 s y se sueltan; `secuencia` se detiene entre pasos). Requiere APK nueva. Sin probar en celular.
 - [HECHO 31 oct 2026] Add-ons de Minecraft Bedrock: herramienta `crear_addon_minecraft` (`addon_mc.py`): el modelo escribe solo archivos JSON/.lang/.mcfunction de los paquetes bp y rp; el servidor crea los manifest (UUID estable por nombre), valida rutas y JSON (max 40 archivos, 300 KB) y arma el `.mcaddon`; el chat muestra una tarjeta con boton de descarga (`addon_mc_ui.js`). Sin imagenes ni sonidos, sin scripts. La tarjeta no se guarda en el historial del chat. Va en el grupo Minecraft del panel Herramientas.
 - [HECHO 31 oct 2026, parte servidor/web] Cancelar funciones: boton Detener (`cancelar.js`) corta la espera del chat, `POST /manos/cancelar` (`cancelar_api.py`) vence las ordenes del celular y frena las herramientas del mensaje en curso. Requiere `supabase_manos3.sql` y reiniciar `python server.py`. Parte APK (`parche_cancelar_2.py`) aun por probar.
+- [HECHO 31 oct 2026, sin probar en celular] Palabra de activación «Jarvis» (v1.5): `EscuchaServicio.java` (servicio en primer plano tipo micrófono, aviso fijo «Jarvis escuchando») mantiene vivo el micrófono; `BurbujaManos.java` repite un `SpeechRecognizer` y busca «jarvis» (y variantes como yarvis/harvis) en lo que oye, sin importar quién hable. Si hay texto después de la palabra, lo envía a `/chat`; si no, abre la barra y escucha la orden. La respuesta sale solo en texto en la burbuja (se abre sola y se cierra a los 20 s) y vuelve a esperar. Se pausa mientras Jarvis está abierto, pensando o con el micro manual. Interruptor en Ajustes → Manos de Jarvis (`ManosPlugin.palabra`, preferencia `palabra`); se reinicia al abrir la app. Requiere APK nueva y permiso del micrófono.
+- [LIMITACIÓN] Palabra «Jarvis»: usa el reconocimiento de voz de Google (necesita internet, gasta batería y puede sonar un bip al reiniciar la escucha); Android muestra el punto verde del micrófono todo el tiempo; en ColorOS hay que sacar la app del ahorro de batería; si el servicio se cierra solo, hay que abrir Jarvis para que vuelva a arrancar. Si molestan el bip o la batería, el siguiente paso es cambiar a Porcupine (offline, trae «Jarvis»).

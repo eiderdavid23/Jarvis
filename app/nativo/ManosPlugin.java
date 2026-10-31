@@ -29,6 +29,7 @@ public class ManosPlugin extends Plugin {
         r.put("vinculado", !prefs().getString("token", "").isEmpty());
         r.put("auto", prefs().getBoolean("auto", false));
         r.put("burbuja", prefs().getBoolean("burbuja", true));
+        r.put("palabra", prefs().getBoolean("palabra", false));
         r.put("mic", getContext().checkSelfPermission(Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED);
         call.resolve(r);
@@ -110,6 +111,20 @@ public class ManosPlugin extends Plugin {
         call.resolve();
     }
 
+    /** Activa o apaga la escucha de la palabra "Jarvis" (servicio con aviso fijo + burbuja). */
+    @PluginMethod
+    public void palabra(PluginCall call) {
+        boolean on = Boolean.TRUE.equals(call.getBoolean("activa", false));
+        prefs().edit().putBoolean("palabra", on).apply();
+        if (on) {
+            EscuchaServicio.iniciar(getContext());
+        } else {
+            EscuchaServicio.detener(getContext());
+        }
+        refrescarBurbuja();
+        call.resolve();
+    }
+
     @PluginMethod
     public void pedirMicrofono(PluginCall call) {
         if (getContext().checkSelfPermission(Manifest.permission.RECORD_AUDIO)
@@ -122,6 +137,9 @@ public class ManosPlugin extends Plugin {
     @Override
     protected void handleOnResume() {
         super.handleOnResume();
+        if (prefs().getBoolean("palabra", false)) {
+            EscuchaServicio.iniciar(getContext());
+        }
         ManosServicio.alCambiarPrimerPlano(true);
     }
 

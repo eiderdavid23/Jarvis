@@ -15,7 +15,7 @@
     '.mnBtn:disabled{opacity:.5}';
   document.head.appendChild(css);
 
-  var autoBtn, paso1Btn, burbujaBtn, micBtn;
+  var autoBtn, paso1Btn, burbujaBtn, micBtn, palabraBtn;
 
   function json(r) {
     return r.json().then(function (d) {
@@ -41,6 +41,11 @@
         burbujaBtn.style.display = (e.vinculado && e.servicio) ? 'block' : 'none';
         burbujaBtn.textContent = e.burbuja ? 'Burbuja flotante: activada (tocar para apagar)' : 'Burbuja flotante: apagada (tocar para activar)';
         burbujaBtn.dataset.on = e.burbuja ? '1' : '';
+      }
+      if (palabraBtn) {
+        palabraBtn.style.display = (e.vinculado && e.servicio && e.burbuja && e.mic) ? 'block' : 'none';
+        palabraBtn.textContent = e.palabra ? 'Llamar diciendo \u00abJarvis\u00bb: activado (tocar para apagar)' : 'Llamar diciendo \u00abJarvis\u00bb: apagado (tocar para activar)';
+        palabraBtn.dataset.on = e.palabra ? '1' : '';
       }
       if (micBtn) micBtn.style.display = (e.vinculado && e.servicio && e.burbuja && !e.mic) ? 'block' : 'none';
       if (!e.vinculado) {
@@ -150,6 +155,14 @@
       Promise.resolve(M.burbuja({ activa: !burbujaBtn.dataset.on })).then(pintar).catch(function () {});
     });
     caja.appendChild(burbujaBtn);
+    palabraBtn = document.createElement('button');
+    palabraBtn.type = 'button';
+    palabraBtn.className = 'mnBtn';
+    palabraBtn.style.display = 'none';
+    palabraBtn.addEventListener('click', function () {
+      Promise.resolve(M.palabra({ activa: !palabraBtn.dataset.on })).then(pintar).catch(function () {});
+    });
+    caja.appendChild(palabraBtn);
     micBtn = document.createElement('button');
     micBtn.type = 'button';
     micBtn.className = 'mnBtn';

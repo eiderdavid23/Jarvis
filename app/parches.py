@@ -6,6 +6,8 @@ permisos = [
     'android.permission.POST_NOTIFICATIONS',
     'android.permission.RECORD_AUDIO',
     'android.permission.MODIFY_AUDIO_SETTINGS',
+    'android.permission.FOREGROUND_SERVICE',
+    'android.permission.FOREGROUND_SERVICE_MICROPHONE',
 ]
 extra = ''
 for x in permisos:
