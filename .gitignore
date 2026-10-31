@@ -17,3 +17,7 @@ memoria.json
 memorias/
 recordatorios/
 jarvis.apk
+
+*.bak
+*.bak[0-9]
+parche_*.py
