@@ -18,3 +18,16 @@
 - Diseño profesional: nueva paleta azul tinta con cian y dorado, títulos en serif, perfil en Ajustes y tema claro y oscuro afinados.
 - Módulos: sección nueva en el sidebar donde cada función es un módulo que se abre dentro de Jarvis; NEXUS (plataformas) es el primero, y hay una plantilla para crear los siguientes con un comando.
 - Rotación de modelos gratis (Gemini, Groq, Mistral, OpenRouter): cuando uno se agota o falla, Jarvis pasa solo al siguiente, y la píldora de la caja de texto es ahora un selector de modelo al estilo Claude (Automático, modelos, Esfuerzo y Más modelos).
+- Voz principal con edge-tts (es-AR-TomasNeural) sin límite de créditos; ElevenLabs queda solo como opción si hay llave y créditos.
+- Personalidad nueva: como el Jarvis de las películas, calmado, técnico y directo, sin cortesías al cerrar.
+- Adjuntos (cámara, fotos y archivos), lectura de ZIP y archivos guardados en el chat con `leer_archivo`.
+- Generación de imágenes con Cloudflare FLUX o Gemini.
+- Uso real de la API por cuenta (Ajustes → Uso) con metas guardadas en Supabase.
+- Pasos en vivo: se ve lo que Jarvis está haciendo mientras responde, y el nivel Medio sube solo a Alto en tareas difíciles.
+- App Android (APK) con GitHub Actions y recordatorios nativos que suenan con la app cerrada.
+- NEXUS pasa a ser un módulo dentro de Jarvis, con plantilla (`plantilla_modulo/`) para crear los siguientes con un comando.
+- Ventanitas estilo Claude (modo de color, confirmaciones y diálogos de proyectos).
+- Manos de Jarvis: ver y usar la pantalla del celular con un servicio de accesibilidad, con confirmación en cada acción.
+- Permisos de las Manos más directos: botones numerados para "Permitir ajustes restringidos" y "Activar accesibilidad".
+- Sidebar ordenado: solo lo de uso diario; Herramientas y Manos pasan a Ajustes.
+- Ajustes agrupados como la Configuración de Claude (IA, Tú, App, Ayuda), con Mi memoria dentro de Ajustes.
