@@ -47,6 +47,15 @@ def validar(tipo, args):
         if tipo == 'tocar_texto':
             texto = ' '.join(str(a.get('texto') or '').split())[:80]
             return ({'texto': texto}, None) if texto else (None, 'falta el nombre del elemento')
+        if tipo == 'secuencia':
+            return _validar_secuencia(a.get('pasos'))
+        if tipo == 'abrir_ajustes':
+            return {'texto': ' '.join(str(a.get('texto') or '').split())[:40]}, None
+        if tipo == 'abrir_url':
+            url = str(a.get('texto') or a.get('url') or '').strip()[:400].replace(' ', '%20')
+            if not re.match(r'^https?://\S+$', url):
+                return None, 'el enlace debe empezar por http:// o https://'
+            return {'texto': url}, None
         if tipo == 'abrir_app':
             texto = ' '.join(str(a.get('texto') or a.get('app') or '').split())[:60]
             return ({'texto': texto}, None) if texto else (None, 'falta el nombre de la app')
@@ -71,6 +80,40 @@ def validar(tipo, args):
     except (TypeError, ValueError):
         return None, 'argumentos no validos'
     return None, 'accion desconocida'
+
+
+ALIAS_PASO = {'abrir': 'abrir_app', 'app': 'abrir_app', 'tocar': 'tocar_texto', 'toca': 'tocar_texto',
+              'escribir': 'escribir', 'tecla': 'tecla', 'scroll': 'scroll', 'esperar': 'esperar',
+              'url': 'abrir_url', 'enlace': 'abrir_url', 'ajustes': 'abrir_ajustes'}
+
+
+def _validar_secuencia(pasos):
+    """pasos: lista de textos 'accion: valor'. Devuelve ({'pasos': [...]}, error)."""
+    if not isinstance(pasos, list) or not pasos:
+        return None, 'la secuencia necesita pasos'
+    if len(pasos) > 10:
+        return None, 'maximo 10 pasos por secuencia'
+    limpios = []
+    for i, p in enumerate(pasos, 1):
+        nombre, _, valor = str(p).partition(':')
+        tipo = ALIAS_PASO.get(nombre.strip().lower())
+        valor = valor.strip()
+        if not tipo:
+            return None, 'paso %d: accion desconocida "%s"' % (i, nombre.strip()[:20])
+        if tipo == 'scroll':
+            partes = valor.lower().split()
+            args = {'direccion': partes[0] if partes else 'abajo', 'cantidad': partes[1] if len(partes) > 1 else 3}
+        elif tipo == 'esperar':
+            args = {'segundos': valor or 2}
+        elif tipo == 'tecla':
+            args = {'tecla': valor}
+        else:
+            args = {'texto': valor}
+        limpio, err = validar(tipo, args)
+        if err:
+            return None, 'paso %d (%s): %s' % (i, nombre.strip()[:20], err)
+        limpios.append(dict(limpio, accion=tipo))
+    return {'pasos': limpios}, None
 
 
 # --- Rutas que usa el agente del dispositivo -------------------------------
@@ -292,7 +335,7 @@ def accion(tipo, args, nombre=None):
         disp, err = _elegir(nombre)
         if err:
             return {'ok': False, 'error': err}
-        r = _pedir(disp['id'], tipo, limpio, 45)
+        r = _pedir(disp['id'], tipo, limpio, 90 if tipo == 'secuencia' else 45)
     except supa.SupaError as e:
         print('[MANOS]', e)
         return {'ok': False, 'error': 'No pude hablar con las manos ahora mismo.'}

@@ -178,7 +178,8 @@ HERRAMIENTAS = [
         'description': (
             'Hace UNA accion en el celular del usuario: tocar, escribir, pulsar una tecla, hacer '
             'scroll, esperar, abrir una app (abrir_app) o enviar un WhatsApp completo (whatsapp_enviar, '
-            'todo en un solo paso: abre, busca el contacto, escribe y envia). '
+            'todo en un solo paso: abre, busca el contacto, escribe y envia) o VARIOS pasos de golpe con '
+            'secuencia (mucho mas rapido que uno por uno). '
             'Si el usuario no activo el modo automatico, debe aceptarla en una tarjeta en su pantalla. Usa las '
             'coordenadas que te dio ver_pantalla. Para escribir, primero toca el campo y luego usa '
             'escribir. Si el usuario rechaza la accion, no insistas.'
@@ -186,9 +187,10 @@ HERRAMIENTAS = [
         'parameters': {
             'type': 'object',
             'properties': {
-                'accion': {'type': 'string', 'description': 'whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), escribir, tecla, scroll o esperar'},
+                'accion': {'type': 'string', 'description': 'whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), secuencia (varios pasos seguidos; usa el campo pasos), abrir_ajustes (ajustes de Android: wifi, bluetooth, pantalla, sonido, bateria...; va en texto), abrir_url (abrir un enlace https en la app que corresponda; va en texto), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), escribir, tecla, scroll o esperar'},
                 'contacto': {'type': 'string', 'description': 'Nombre del contacto tal como lo dijo el usuario (para whatsapp_enviar). Solo el nombre, sin "chat de" ni "mensaje a".'},
                 'mensaje': {'type': 'string', 'description': 'Texto exacto del mensaje a enviar (para whatsapp_enviar)'},
+                'pasos': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Para secuencia: lista de pasos, cada uno "accion: valor". Acciones: abrir (nombre de app), tocar (nombre del boton), escribir (texto), tecla (atras, inicio, enter...), scroll (abajo o arriba y opcional cantidad), esperar (segundos), url (enlace), ajustes (wifi, bluetooth...). Ejemplo: ["abrir: Spotify", "tocar: Buscar", "escribir: bad bunny", "tecla: enter"]. Maximo 10.'},
                 'x': {'type': 'integer', 'description': 'Coordenada x (para clic, doble_clic y clic_derecho)'},
                 'y': {'type': 'integer', 'description': 'Coordenada y (para clic, doble_clic y clic_derecho)'},
                 'texto': {'type': 'string', 'description': 'Texto a escribir (para escribir), nombre del elemento a tocar (para tocar_texto) o nombre de la app (para abrir_app)'},
@@ -1621,7 +1623,12 @@ SYSTEM_PROMPT_BASE = (
     'paso a paso. Enviar un WhatsApp = UNA sola llamada: controlar_pantalla con accion '
     'whatsapp_enviar, contacto y mensaje (sin ver_pantalla antes). Abrir una app = accion '
     'abrir_app con el nombre. Solo si la accion compuesta falla, sigue los pasos manuales de abajo '
-    'empezando por la pantalla que te devuelva. '
+    'empezando por la pantalla que te devuelva. Si el trabajo necesita varios pasos que ya conoces '
+    '(abrir una app, tocar, escribir, enter), mandalos juntos en UNA llamada con accion secuencia y '
+    'pasos; usa ver_pantalla solo cuando no sepas como esta la pantalla. Para ajustes de Android usa '
+    'abrir_ajustes (wifi, bluetooth, pantalla, sonido...); para YouTube, Maps, Mercado Libre y similares '
+    'usa abrir_url con la URL de busqueda y asi abre directo la app. tocar_texto espera hasta 2 segundos '
+    'a que el boton aparezca y escribir usa el unico campo visible sin tocarlo antes. '
     '1) Para abrir una app: usa abrir_app (si falla: tecla inicio, mira la pantalla y toca su icono '
     'con tocar_texto; si no la ves, haz scroll). '
     '2) Cada accion te devuelve la pantalla resultante (PANTALLA AHORA): leela y comprueba que '

@@ -214,3 +214,4 @@ David comparte este archivo al abrir un chat nuevo, para que la IA tenga todo el
 - [PENDIENTE] Estado en vivo en la caja Manos (`/manos/estado`, parche `parche_estado.py`).
 - [PENDIENTE] Probar de extremo a extremo: "mira mi pantalla", scroll, abrir Wi-Fi, escribir.
 - [PENDIENTE] Batería ColorOS, error 504, rotar `firebase-credenciales.json`, agentes.
+- [HECHO 31 oct 2026] Manos rápidas 2: acción `secuencia` (hasta 10 pasos "accion: valor" en una sola orden, un solo permiso), `abrir_ajustes`, `abrir_url`; `tocar_texto` espera hasta 1,8 s a que aparezca el botón; `escribir` usa el único campo visible si no hay foco. Aviso fijo "Jarvis está leyendo tu pantalla" (pastilla en overlay de accesibilidad) cada vez que lee o actúa. Requiere APK nueva y reiniciar el servidor.

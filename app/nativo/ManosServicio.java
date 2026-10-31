@@ -58,6 +58,57 @@ public class ManosServicio extends AccessibilityService {
         ultimoEvento = System.currentTimeMillis();
     }
 
+    private TextView pastilla;
+    private final Runnable quitarPastilla = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                if (pastilla != null) {
+                    ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).removeView(pastilla);
+                }
+            } catch (Exception ignorada) {
+            }
+            pastilla = null;
+        }
+    };
+
+    /** Aviso encima de todo (no tapa toques) de que Jarvis esta usando el celular. */
+    private void mostrarAviso(final String texto) {
+        principal.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    principal.removeCallbacks(quitarPastilla);
+                    if (pastilla == null) {
+                        float d = getResources().getDisplayMetrics().density;
+                        TextView t = new TextView(ManosServicio.this);
+                        t.setTextColor(Color.parseColor("#E6F7FF"));
+                        t.setTextSize(14);
+                        t.setPadding((int) (16 * d), (int) (8 * d), (int) (16 * d), (int) (8 * d));
+                        GradientDrawable f = new GradientDrawable();
+                        f.setColor(Color.parseColor("#E6061018"));
+                        f.setCornerRadius(30 * d);
+                        f.setStroke((int) (1.5f * d), Color.parseColor("#00E5FF"));
+                        t.setBackground(f);
+                        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                                WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+                                WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                                        | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                                PixelFormat.TRANSLUCENT);
+                        lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+                        lp.y = (int) (48 * d);
+                        ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).addView(t, lp);
+                        pastilla = t;
+                    }
+                    pastilla.setText(texto);
+                    principal.postDelayed(quitarPastilla, 1800);
+                } catch (Exception ignorada) {
+                }
+            }
+        });
+    }
+
     /** Espera a que la pantalla deje de cambiar (en vez de una pausa fija): rapido si ya esta lista. */
     private void asentar(long max) {
         long ini = System.currentTimeMillis();
@@ -186,6 +237,9 @@ public class ManosServicio extends AccessibilityService {
                 rechazada = true;
                 texto = "El usuario rechazo la accion.";
             } else {
+                if (!tipo.equals("capturar") && !tipo.equals("esperar")) {
+                    mostrarAviso("Jarvis est\u00e1 usando tu celular...");
+                }
                 String[] r = ejecutar(tipo, args);
                 ok = r[0].equals("1");
                 texto = r[1];
@@ -252,6 +306,24 @@ public class ManosServicio extends AccessibilityService {
             }
             case "tocar_texto":
                 return "Tocar el elemento \"" + limpiar(a.optString("texto")) + "\"";
+            case "abrir_ajustes":
+                return "Abrir los ajustes: " + limpiar(a.optString("texto"));
+            case "abrir_url":
+                return "Abrir el enlace " + limpiar(a.optString("texto"));
+            case "secuencia": {
+                org.json.JSONArray ps = a.optJSONArray("pasos");
+                StringBuilder sb = new StringBuilder("Hacer " + (ps == null ? 0 : ps.length()) + " pasos:");
+                for (int i = 0; ps != null && i < ps.length() && i < 6; i++) {
+                    JSONObject p = ps.optJSONObject(i);
+                    if (p != null) {
+                        sb.append("\n").append(i + 1).append(". ").append(describir(p.optString("accion"), p));
+                    }
+                }
+                if (ps != null && ps.length() > 6) {
+                    sb.append("\n...");
+                }
+                return sb.toString();
+            }
             case "abrir_app":
                 return "Abrir la app \"" + limpiar(a.optString("texto")) + "\"";
             case "whatsapp_enviar":
@@ -385,7 +457,6 @@ public class ManosServicio extends AccessibilityService {
     private String[] ejecutar(String tipo, JSONObject a) throws Exception {
         switch (tipo) {
             case "capturar":
-                avisar("Jarvis esta leyendo la pantalla");
                 return ok(arbol());
             case "clic":
                 return toque(a.getInt("x"), a.getInt("y"), 50, false);
@@ -401,6 +472,12 @@ public class ManosServicio extends AccessibilityService {
                 return scroll(a.optString("direccion"), a.optInt("cantidad", 3));
             case "tocar_texto":
                 return tocarTexto(a.optString("texto"));
+            case "abrir_ajustes":
+                return abrirAjustes(a.optString("texto"));
+            case "abrir_url":
+                return abrirUrl(a.optString("texto"));
+            case "secuencia":
+                return secuencia(a.optJSONArray("pasos"));
             case "abrir_app":
                 return abrirApp(a.optString("texto"));
             case "whatsapp_enviar":
@@ -476,7 +553,20 @@ public class ManosServicio extends AccessibilityService {
     private String[] escribir(String texto) {
         AccessibilityNodeInfo n = findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
         if (n == null || !n.isEditable()) {
-            return err("no hay un campo de texto activo; toca primero el campo y vuelve a intentar");
+            // Sin foco: si hay un unico campo de texto visible se usa ese (ahorra un paso)
+            AccessibilityNodeInfo unico = null;
+            int campos = 0;
+            for (AccessibilityNodeInfo c : nodosVisibles()) {
+                if (c.isEditable()) {
+                    unico = c;
+                    campos++;
+                }
+            }
+            if (campos != 1) {
+                return err("no hay un campo de texto activo; toca primero el campo y vuelve a intentar");
+            }
+            n = unico;
+            n.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
         }
         CharSequence actual = n.getText();
         boolean pista = Build.VERSION.SDK_INT >= 26 && n.isShowingHintText();
@@ -574,12 +664,16 @@ public class ManosServicio extends AccessibilityService {
         if (q.isEmpty()) {
             return err("falta el nombre del elemento a tocar");
         }
-        AccessibilityNodeInfo raiz = getRootInActiveWindow();
-        if (raiz == null) {
-            return err("no pude leer la pantalla");
-        }
         java.util.ArrayList<AccessibilityNodeInfo> res = new java.util.ArrayList<AccessibilityNodeInfo>();
-        hallar(raiz, q, res, 0);
+        for (long fin = System.currentTimeMillis() + 1800; res.isEmpty() && System.currentTimeMillis() < fin; ) {
+            AccessibilityNodeInfo raiz = getRootInActiveWindow();
+            if (raiz != null) {
+                hallar(raiz, q, res, 0);
+            }
+            if (res.isEmpty()) {
+                dormir(100);
+            }
+        }
         if (res.isEmpty()) {
             return err("no encontre en pantalla un elemento que diga \"" + texto + "\"; usa el nombre exacto que ves");
         }
@@ -1009,9 +1103,88 @@ public class ManosServicio extends AccessibilityService {
         return err("pulse enviar pero no pude confirmar que el mensaje aparezca en el chat");
     }
 
+    private String[] abrirAjustes(String que) {
+        String q = norm(que);
+        String a = "android.settings.SETTINGS";
+        if (q.contains("wifi") || q.contains("wi-fi")) {
+            a = "android.settings.WIFI_SETTINGS";
+        } else if (q.contains("bluetooth")) {
+            a = "android.settings.BLUETOOTH_SETTINGS";
+        } else if (q.contains("avion") || q.contains("airplane")) {
+            a = "android.settings.AIRPLANE_MODE_SETTINGS";
+        } else if (q.contains("datos") || q.contains("movil")) {
+            a = "android.settings.DATA_ROAMING_SETTINGS";
+        } else if (q.contains("pantalla") || q.contains("brillo")) {
+            a = "android.settings.DISPLAY_SETTINGS";
+        } else if (q.contains("sonido") || q.contains("volumen")) {
+            a = "android.settings.SOUND_SETTINGS";
+        } else if (q.contains("bateria")) {
+            a = "android.settings.BATTERY_SAVER_SETTINGS";
+        } else if (q.contains("ubicacion") || q.contains("gps")) {
+            a = "android.settings.LOCATION_SOURCE_SETTINGS";
+        } else if (q.contains("accesibilidad")) {
+            a = "android.settings.ACCESSIBILITY_SETTINGS";
+        } else if (q.contains("app") || q.contains("aplicacion")) {
+            a = "android.settings.APPLICATION_SETTINGS";
+        } else if (q.contains("nfc")) {
+            a = "android.settings.NFC_SETTINGS";
+        } else if (q.contains("fecha") || q.contains("hora")) {
+            a = "android.settings.DATE_SETTINGS";
+        } else if (q.contains("idioma")) {
+            a = "android.settings.LOCALE_SETTINGS";
+        }
+        try {
+            Intent i = new Intent(a);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            return err("no pude abrir esos ajustes: " + e.getMessage());
+        }
+        asentar(800);
+        return ok("abri los ajustes" + (q.isEmpty() ? "" : " de " + que));
+    }
+
+    private String[] abrirUrl(String url) {
+        String u = url == null ? "" : url.trim();
+        if (!(u.startsWith("https://") || u.startsWith("http://"))) {
+            return err("solo puedo abrir enlaces http o https");
+        }
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(u));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            return err("no pude abrir el enlace: " + e.getMessage());
+        }
+        asentar(1200);
+        return ok("abri el enlace " + (u.length() > 60 ? u.substring(0, 60) : u));
+    }
+
+    /** Varios pasos seguidos en una sola orden: se detiene en el primero que falle. */
+    private String[] secuencia(org.json.JSONArray pasos) throws Exception {
+        if (pasos == null || pasos.length() == 0) {
+            return err("la secuencia esta vacia");
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < pasos.length(); i++) {
+            JSONObject p = pasos.getJSONObject(i);
+            String t = p.optString("accion");
+            String[] r = ejecutar(t, p);
+            sb.append(i + 1).append(". ").append(t).append(": ").append(r[1]).append('\n');
+            if (!r[0].equals("1")) {
+                return err("se detuvo en el paso " + (i + 1) + " de " + pasos.length() + "\n" + sb);
+            }
+            if (i < pasos.length() - 1) {
+                asentar(300);
+            }
+        }
+        return ok(pasos.length() + " pasos hechos\n" + sb);
+    }
+
     // ---- Leer la pantalla: lo tocable siempre entra; del texto sobrante se omite el de arriba ----
 
     private String arbol() {
+        mostrarAviso("Jarvis est\u00e1 leyendo tu pantalla...");
         AccessibilityNodeInfo raiz = getRootInActiveWindow();
         if (raiz == null) {
             return "(no pude leer la pantalla; puede ser una app protegida)";
