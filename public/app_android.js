@@ -63,7 +63,7 @@
       return fetch('https://api.github.com/repos/' + REPO + '/releases/tags/apk-latest').then(function (r) {
         return r.ok ? r.json() : null;
       }).then(function (d) {
-        var m = d && /build\s+(\d+)/i.exec(d.body || '');
+        var m = d && /versionCode\s+(\d+)/i.exec(d.body || '');
         if (m && parseInt(m[1], 10) > actual) mostrar();
       });
     }).catch(function () {});
