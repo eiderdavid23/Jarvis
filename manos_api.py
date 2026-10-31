@@ -44,6 +44,9 @@ def validar(tipo, args):
         if tipo == 'escribir':
             texto = str(a.get('texto') or '')[:500]
             return ({'texto': texto}, None) if texto else (None, 'falta el texto')
+        if tipo == 'tocar_texto':
+            texto = ' '.join(str(a.get('texto') or '').split())[:80]
+            return ({'texto': texto}, None) if texto else (None, 'falta el nombre del elemento')
         if tipo == 'tecla':
             tecla = re.sub(r'[^a-z0-9_+]', '', str(a.get('tecla') or '').lower())[:20]
             return ({'tecla': tecla}, None) if tecla else (None, 'falta la tecla')
@@ -243,7 +246,7 @@ def _pedir(did, tipo, args, espera):
     oid = f[0]['id']
     fin = time.time() + espera
     while time.time() < fin:
-        time.sleep(1)
+        time.sleep(0.35)
         r = supa._rest('GET', 'manos_ordenes', {'select': 'estado,resultado', 'id': 'eq.' + oid})
         if r and r[0]['estado'] in ESTADOS_FINALES:
             return r[0]

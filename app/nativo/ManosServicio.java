@@ -43,7 +43,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class ManosServicio extends AccessibilityService {
     static volatile ManosServicio instancia;
-    private static final int MAX_NODOS = 120;
+    private static final int MAX_NODOS = 110;
+    private volatile long ultimaOrden = 0;
     private final Handler principal = new Handler(Looper.getMainLooper());
     private volatile int generacion = 0;
 
@@ -108,8 +109,9 @@ public class ManosServicio extends AccessibilityService {
                 JSONObject orden = r.optJSONObject("orden");
                 if (orden != null) {
                     atender(base, token, orden);
+                    ultimaOrden = System.currentTimeMillis();
                 } else {
-                    dormir(2000);
+                    dormir(System.currentTimeMillis() - ultimaOrden < 90000 ? 400 : 2000);
                 }
             } catch (SinPermiso e) {
                 dormir(30000);
@@ -172,6 +174,10 @@ public class ManosServicio extends AccessibilityService {
                 String[] r = ejecutar(tipo, args);
                 ok = r[0].equals("1");
                 texto = r[1];
+                if (!tipo.equals("capturar") && !tipo.equals("esperar")) {
+                    dormir(600);
+                    texto = texto + "\nPANTALLA AHORA:\n" + arbol();
+                }
             }
         } catch (Exception e) {
             texto = "fallo: " + e.getMessage();
@@ -228,6 +234,8 @@ public class ManosServicio extends AccessibilityService {
                 String verbo = tipo.equals("doble_clic") ? "Tocar dos veces" : (tipo.equals("clic") ? "Tocar" : "Mantener pulsado");
                 return verbo + (el.isEmpty() ? " la pantalla" : " \"" + el + "\"") + " (" + x + ", " + y + ")";
             }
+            case "tocar_texto":
+                return "Tocar el elemento \"" + limpiar(a.optString("texto")) + "\"";
             case "escribir":
                 return "Escribir: \"" + limpiar(a.optString("texto")) + "\"";
             case "tecla":
@@ -370,6 +378,8 @@ public class ManosServicio extends AccessibilityService {
                 return tecla(a.optString("tecla"));
             case "scroll":
                 return scroll(a.optString("direccion"), a.optInt("cantidad", 3));
+            case "tocar_texto":
+                return tocarTexto(a.optString("texto"));
             case "esperar":
                 dormir(Math.max(1, Math.min(10, a.optInt("segundos", 2))) * 1000L);
                 return ok("espera lista");
@@ -434,7 +444,7 @@ public class ManosServicio extends AccessibilityService {
         if (!gesto(b.build())) {
             return err("el sistema no completo el toque");
         }
-        dormir(400);
+        dormir(250);
         return ok("toque hecho en (" + x + "," + y + ")");
     }
 
@@ -509,7 +519,79 @@ public class ManosServicio extends AccessibilityService {
         return ok("scroll hacia " + (abajo ? "abajo" : "arriba"));
     }
 
-    // ---- Leer la pantalla -------------------------------------------------------
+    private static String norm(CharSequence cs) {
+        if (cs == null) {
+            return "";
+        }
+        String s = java.text.Normalizer.normalize(cs.toString(), java.text.Normalizer.Form.NFD);
+        return s.replaceAll("\\p{M}", "").toLowerCase(java.util.Locale.ROOT).trim();
+    }
+
+    private void hallar(AccessibilityNodeInfo n, String q, java.util.List<AccessibilityNodeInfo> res, int prof) {
+        if (n == null || prof > 40 || res.size() >= 12) {
+            return;
+        }
+        if (n.isVisibleToUser()) {
+            String t = n.isPassword() ? "" : norm(n.getText());
+            String d = norm(n.getContentDescription());
+            if ((!t.isEmpty() && t.contains(q)) || (!d.isEmpty() && d.contains(q))) {
+                res.add(n);
+            }
+        }
+        for (int i = 0; i < n.getChildCount(); i++) {
+            hallar(n.getChild(i), q, res, prof + 1);
+        }
+    }
+
+    /** Toca un elemento por su nombre (texto o descripcion), sin depender de coordenadas. */
+    private String[] tocarTexto(String texto) throws Exception {
+        String q = norm(texto);
+        if (q.isEmpty()) {
+            return err("falta el nombre del elemento a tocar");
+        }
+        AccessibilityNodeInfo raiz = getRootInActiveWindow();
+        if (raiz == null) {
+            return err("no pude leer la pantalla");
+        }
+        java.util.ArrayList<AccessibilityNodeInfo> res = new java.util.ArrayList<AccessibilityNodeInfo>();
+        hallar(raiz, q, res, 0);
+        if (res.isEmpty()) {
+            return err("no encontre en pantalla un elemento que diga \"" + texto + "\"; usa el nombre exacto que ves");
+        }
+        AccessibilityNodeInfo mejor = null;
+        int puntos = -1;
+        int empates = 0;
+        for (AccessibilityNodeInfo n : res) {
+            int pt = 0;
+            if (norm(n.getText()).equals(q) || norm(n.getContentDescription()).equals(q)) {
+                pt += 2;
+            }
+            if (n.isClickable()) {
+                pt += 1;
+            }
+            if (pt > puntos) {
+                puntos = pt;
+                mejor = n;
+                empates = 1;
+            } else if (pt == puntos) {
+                empates++;
+            }
+        }
+        AccessibilityNodeInfo c = mejor;
+        for (int i = 0; i < 6 && c != null && !c.isClickable(); i++) {
+            c = c.getParent();
+        }
+        String aviso = empates > 1 ? " (habia " + empates + " coincidencias, toque la primera)" : "";
+        if (c != null && c.isClickable() && c.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+            dormir(250);
+            return ok("toque hecho en \"" + texto + "\"" + aviso);
+        }
+        Rect r = new Rect();
+        mejor.getBoundsInScreen(r);
+        return toque(r.centerX(), r.centerY(), 50, false);
+    }
+
+    // ---- Leer la pantalla: lo tocable siempre entra; del texto sobrante se omite el de arriba ----
 
     private String arbol() {
         AccessibilityNodeInfo raiz = getRootInActiveWindow();
@@ -517,19 +599,51 @@ public class ManosServicio extends AccessibilityService {
             return "(no pude leer la pantalla; puede ser una app protegida)";
         }
         int[] t = tam();
+        java.util.ArrayList<String> lineas = new java.util.ArrayList<String>();
+        java.util.ArrayList<Boolean> vivas = new java.util.ArrayList<Boolean>();
+        recorrer(raiz, lineas, vivas, 0);
+        int interactivas = 0;
+        for (int i = 0; i < vivas.size(); i++) {
+            if (vivas.get(i)) {
+                interactivas++;
+            }
+        }
+        int textos = lineas.size() - interactivas;
+        int saltar = Math.max(0, textos - Math.max(0, MAX_NODOS - interactivas));
+        while (true) {
+            int total = 0;
+            int ss = saltar;
+            for (int i = 0; i < lineas.size(); i++) {
+                if (!vivas.get(i) && ss > 0) {
+                    ss--;
+                    continue;
+                }
+                total += lineas.get(i).length();
+            }
+            if (total <= 5200 || saltar >= textos) {
+                break;
+            }
+            saltar += 5;
+        }
         StringBuilder sb = new StringBuilder();
         sb.append("App: ").append(raiz.getPackageName()).append(" | pantalla ")
                 .append(t[0]).append("x").append(t[1]).append('\n');
-        int[] cuenta = {0};
-        recorrer(raiz, sb, cuenta, 0);
-        if (cuenta[0] >= MAX_NODOS || sb.length() > 5500) {
-            sb.append("(hay mas elementos; haz scroll para ver el resto)\n");
+        int omitir = saltar;
+        for (int i = 0; i < lineas.size(); i++) {
+            if (!vivas.get(i) && omitir > 0) {
+                omitir--;
+                continue;
+            }
+            sb.append(lineas.get(i));
+        }
+        if (saltar > 0) {
+            sb.append("(se omitio texto de arriba; haz scroll si buscas algo mas)\n");
         }
         return sb.toString();
     }
 
-    private void recorrer(AccessibilityNodeInfo n, StringBuilder sb, int[] cuenta, int prof) {
-        if (n == null || cuenta[0] >= MAX_NODOS || prof > 40 || sb.length() > 5500) {
+    private void recorrer(AccessibilityNodeInfo n, java.util.List<String> lineas, java.util.List<Boolean> vivas, int prof) {
+        if (n == null || lineas.size() >= 400 || prof > 40) {
             return;
         }
         if (n.isVisibleToUser()) {
@@ -540,6 +654,7 @@ public class ManosServicio extends AccessibilityService {
                 n.getBoundsInScreen(r);
                 String clase = n.getClassName() == null ? "" : n.getClassName().toString();
                 clase = clase.substring(clase.lastIndexOf('.') + 1);
+                StringBuilder sb = new StringBuilder();
                 sb.append("- ").append(clase);
                 if (!texto.isEmpty()) {
                     sb.append(" \"").append(texto).append('"');
@@ -554,11 +669,12 @@ public class ManosServicio extends AccessibilityService {
                     sb.append(" [tocable]");
                 }
                 sb.append('\n');
-                cuenta[0]++;
+                lineas.add(sb.toString());
+                vivas.add(n.isClickable() || n.isEditable());
             }
         }
         for (int i = 0; i < n.getChildCount(); i++) {
-            recorrer(n.getChild(i), sb, cuenta, prof + 1);
+            recorrer(n.getChild(i), lineas, vivas, prof + 1);
         }
     }
 }
