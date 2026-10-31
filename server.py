@@ -177,7 +177,7 @@ HERRAMIENTAS = [
         'name': 'controlar_pantalla',
         'description': (
             'Hace UNA accion en el celular del usuario: tocar, escribir, pulsar una tecla, hacer '
-            'scroll o esperar. El usuario debe aceptarla en una tarjeta en su pantalla. Usa las '
+            'scroll o esperar. Si el usuario no activo el modo automatico, debe aceptarla en una tarjeta en su pantalla. Usa las '
             'coordenadas que te dio ver_pantalla. Para escribir, primero toca el campo y luego usa '
             'escribir. Si el usuario rechaza la accion, no insistas.'
         ),
@@ -726,7 +726,7 @@ def construir_tools_groq():
     return [{'type': 'function', 'function': h} for h in _activas()]
 
 
-MAX_VUELTAS_HERRAMIENTAS = 8
+MAX_VUELTAS_HERRAMIENTAS = 16
 MAX_LECTURA_PARTE = 12000      # caracteres que devuelve leer_archivo por llamada
 
 # =========================================================================
@@ -1612,6 +1612,25 @@ SYSTEM_PROMPT_BASE = (
     'usuario. No toques pagos, compras, transferencias, borrados ni envios de mensajes salvo que '
     'el usuario lo haya pedido de forma explicita en este chat. Si no hay dispositivo conectado, '
     'explica en una frase que active las Manos en el panel Herramientas de la app de Android. '
+    'GUIA DE MANOS (sigue este metodo): '
+    '1) Para abrir una app: pulsa la tecla inicio, ver_pantalla y toca su icono; si no la ves, '
+    'haz scroll. '
+    '2) Despues de CADA accion llama ver_pantalla y comprueba que la pantalla cambio como '
+    'esperabas antes de seguir; si no cambio, no repitas lo mismo: prueba otra cosa. '
+    '3) En resultados de busqueda elige SIEMPRE el que coincide con lo pedido (un contacto, un '
+    'chat) y evita lo que no es lo buscado: sugerencias, anuncios, Preguntar a Meta AI, Buscar '
+    'en la web. Si el nombre sale varias veces o no sale, pregunta al usuario en vez de adivinar. '
+    '4) Para escribir: toca el [campo], comprueba que tiene el foco y entonces usa escribir; '
+    'luego toca el boton de enviar o buscar, o usa la tecla enter. '
+    '5) WhatsApp: abre la app, toca la lupa de buscar, escribe el nombre y en los resultados '
+    'toca el contacto que aparece bajo Chats o Contactos (NUNCA el de Meta AI); ya dentro del '
+    'chat toca el campo Mensaje, escribe el texto y toca el boton de enviar; despues '
+    'ver_pantalla y comprueba que el mensaje aparece en el chat. '
+    '6) Si te pierdes (otra app, otra pantalla, Meta AI abierta), pulsa la tecla atras hasta '
+    'volver al punto conocido y reintenta; no sigas escribiendo en la pantalla equivocada. '
+    '7) Si la pantalla dice que hay mas elementos, haz scroll. '
+    '8) Entre pasos casi no hables; al final cuenta en una frase lo que hiciste, y si algo no '
+    'salio di exactamente donde te quedaste. '
     'FORMATO DE RESPUESTA (el chat muestra Markdown): en charla simple o preguntas cortas '
     'responde en 1 a 3 frases, en prosa, sin titulos ni listas. Cuando la respuesta sea tecnica, '
     'tenga pasos o varias partes, ordenala: parrafos cortos de 1 a 3 frases; listas con guion para '
