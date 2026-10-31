@@ -38,3 +38,4 @@
 - v1.4 (31 oct 2026): arreglada la compilación de la APK (a la burbuja nueva le faltaba la segunda mitad del panel) y repo de la APK confirmado como `eiderdavid23/Jarvis` (el que muestra GitHub). Incluye la burbuja de v1.2 y el ID nuevo de v1.3.
 - v1.5 (31 oct 2026): palabra de activación: con la burbuja y el interruptor «Llamar diciendo «Jarvis»» (Ajustes → Manos de Jarvis), Jarvis escucha en segundo plano; al oír «Jarvis» (con la orden en la misma frase o después) la manda al chat, muestra la respuesta en la burbuja y vuelve a esperar. Requiere APK nueva.
 - v1.6 (31 oct 2026): se silencia el bip del reconocimiento de voz al escuchar «Jarvis» (solo en los instantes en que se reinicia la escucha). Requiere APK nueva.
+- v1.7 (31 oct 2026): botón en la barra de arriba, junto a la bocina, para encender o apagar la burbuja y el «Jarvis» de voz sin entrar a Ajustes. Solo web.
