@@ -32,3 +32,4 @@
 - Sidebar ordenado: solo lo de uso diario; Herramientas y Manos pasan a Ajustes.
 - Ajustes agrupados como la Configuración de Claude (IA, Tú, App, Ayuda), con Mi memoria dentro de Ajustes.
 - Burbuja flotante de Jarvis: al salir de la app queda una burbuja arrastrable; al tocarla se abre una barra arriba para escribirle o hablarle sin volver a abrir Jarvis.
+- v1.1 (31 oct 2026): arreglado el aviso de actualización de la APK (ahora compara `versionCode`, no el número de build) y repo de la APK fijado en `eiderdavidgarcia23/Jarvis`; regla de cambio de versión en cada cambio.

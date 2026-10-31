@@ -4,7 +4,7 @@
   if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
   var P = cap.Plugins || {};
   var APP = P.App, NAV = P.Browser;
-  var REPO = 'eiderdavid23/Jarvis';
+  var REPO = 'eiderdavidgarcia23/Jarvis';
   var APK = 'https://github.com/' + REPO + '/releases/download/apk-latest/jarvis.apk';
   var ultimoChequeo = 0, pospuesta = false;
   function cerrarSiAbierto(id) {
