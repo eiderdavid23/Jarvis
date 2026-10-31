@@ -11,6 +11,7 @@ import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -32,6 +33,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -512,8 +514,11 @@ class BurbujaManos {
     }
 
     /** Manda el mensaje a /chat con la sesion que le paso la app (el servidor usa tus llaves de la cuenta). */
+    private static final Pattern ACCION_ABRIR = Pattern.compile("\\[ACCION:abrir:(.*?)\\]");
+
     private void llamar(String mensaje) {
         String texto = "";
+        final ArrayList<String> enlaces = new ArrayList<>();
         try {
             String base = prefs.getString("url", "");
             String acceso = prefs.getString("acceso", "");
@@ -541,6 +546,17 @@ class BurbujaManos {
                     texto = "Tu sesi\u00f3n caduc\u00f3. Abre Jarvis un momento y vuelve a intentarlo.";
                 } else {
                     JSONObject j = new JSONObject(cuerpo);
+                    JSONArray ua = j.optJSONArray("urls_abrir");
+                    for (int k = 0; ua != null && k < ua.length(); k++) {
+                        String u = ua.optString(k, "").trim();
+                        if (!u.isEmpty()) {
+                            enlaces.add(u);
+                        }
+                    }
+                    Matcher ma = ACCION_ABRIR.matcher(j.optString("respuesta", ""));
+                    while (ma.find()) {
+                        enlaces.add(ma.group(1).trim());
+                    }
                     texto = limpiar(j.optString("respuesta", ""));
                     String nuevoId = j.optString("chat_id", "");
                     if (cod < 400 && !nuevoId.isEmpty()) {
@@ -559,7 +575,26 @@ class BurbujaManos {
             texto = "No pude conectar con Jarvis.";
         }
         final String fin = texto;
-        ui.post(() -> terminar(fin));
+        ui.post(() -> {
+            abrirEnlace(enlaces);
+            terminar(fin);
+        });
+    }
+
+    /** Jarvis pidio abrir una pagina: la web lo hace sola, pero la burbuja no es la web, asi que lo hace aqui. */
+    private void abrirEnlace(ArrayList<String> enlaces) {
+        for (String u : enlaces) {
+            if (!u.matches("(?i)^https?://\\S+$")) {
+                continue;
+            }
+            try {
+                Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(u));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                srv.startActivity(i);
+                return;
+            } catch (Exception ignorada) {
+            }
+        }
     }
 
     private void terminar(String texto) {

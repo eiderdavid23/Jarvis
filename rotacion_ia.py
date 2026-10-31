@@ -238,6 +238,10 @@ def _generar_openai(prov, modelo, system_prompt, turnos, api_key, nivel):
         mensajes.append({'role': 'assistant', 'content': _texto_de(msg.get('content')),
                          **({'tool_calls': tool_calls} if tool_calls else {})})
         if not tool_calls:
+            aviso_guardia = '' if acumulado else srv.exigir_herramienta(acciones)
+            if aviso_guardia:
+                mensajes.append({'role': 'user', 'content': aviso_guardia})
+                continue
             acumulado += _texto_de(msg.get('content'))
             if eleccion.get('finish_reason') == 'length':
                 if continuaciones < srv.MAX_CONTINUACIONES:
@@ -275,6 +279,20 @@ def _generar_uno(m, system_prompt, turnos, llave, nivel):
 
 
 # ---------------------------------------------------------------- cadena
+# Modelos que en pruebas inventan acciones en vez de llamar herramientas: se evitan cuando piden algo del celular.
+SIN_HERRAMIENTAS_FIABLES = {'openrouter/free', 'open-mistral-nemo', 'meta-llama/llama-4-scout-17b-16e-instruct'}
+
+
+def _para_celular(lista):
+    try:
+        if not g.get('pide_celular'):
+            return lista
+    except RuntimeError:
+        return lista
+    mejores = [m for m in lista if m['modelo'] not in SIN_HERRAMIENTAS_FIABLES]
+    return mejores or lista
+
+
 def cadena(llaves, eleccion='auto', cambio_auto=True, solo_gemini=False):
     """Modelos a probar, en orden. eleccion: 'auto', 'prov|modelo' o solo 'prov' (valor antiguo)."""
     cat = [m for m in catalogo() if m['prov'] in llaves]
@@ -284,8 +302,8 @@ def cadena(llaves, eleccion='auto', cambio_auto=True, solo_gemini=False):
     if eleccion != 'auto':
         fijo = [m for m in cat if m['id'] == eleccion] or [m for m in cat if m['prov'] == eleccion][:1]
         if fijo:
-            return fijo + [m for m in cat if m is not fijo[0]] if cambio_auto else fijo
-    return cat
+            return fijo + _para_celular([m for m in cat if m is not fijo[0]]) if cambio_auto else fijo
+    return _para_celular(cat)
 
 
 def proveedor_de_texto(llaves, eleccion, cambio_auto, solo_gemini):
