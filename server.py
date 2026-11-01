@@ -28,6 +28,7 @@ import nexus_api
 import manos_api
 import addon_mc
 import cancelar_api
+import funciones_voz
 import rotacion_ia
 import web_api
 
@@ -2228,6 +2229,10 @@ def _chat_interno():
         chat_id = (data.get('chat_id') or '').strip()
         nivel = nivel_pensamiento(request.headers.get('X-Pensamiento', ''))
         g.apagadas = herramientas_apagadas(request.headers.get('X-Herramientas-Off', ''))
+        if not data.get('adjuntos'):
+            orden_voz = funciones_voz.interpretar(mensaje_usuario, request.headers.get('X-Herramientas-Off', ''))
+            if orden_voz:
+                return jsonify({'respuesta': orden_voz['respuesta'], 'comandos': orden_voz['comandos'], 'chat_id': chat_id})
 
         eleccion = (request.headers.get('X-Modelo', '') or request.headers.get('X-Proveedor', '') or 'auto').strip()
         cambio_auto = request.headers.get('X-Cambio-Auto', '1') != '0'
