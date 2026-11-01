@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 1 nov 2026
-Versión actual: 1.24 (ver CAMBIOS.md)
+Versión actual: 1.25 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -47,3 +47,4 @@ Pedido de David sobre la burbuja y las funciones:
   - [ ] Parte 4 (PAUSADA, David la dejo para despues): `agente_pc.py` (encender el monitor y evitar la suspension). No retomarla hasta que David lo pida.
 - [ ] Controlar la TV desde Jarvis (pedido el 1 nov 2026). Falta saber marca, modelo y si esta en la misma wifi que el celular. El servidor esta en la nube y no ve la red de la casa: la orden debe salir de un dispositivo dentro de esa red (celular con la APK o PC).
 - [ ] Probar `agente_pc.py` en un PC real (hecho sin poder probarlo): vincular, abrir programa, capturar, volumen, mover archivo. Herramienta `controlar_pc` en server.py; ordenes `pc_*` en la cola de Manos; el PC se vincula con plataforma 'pc'. El agente pide permiso en pantalla salvo con --control; apagar, reiniciar y mover archivos siempre piden permiso.
+- [ ] Probar `agente_tv.py` en la TV real (MOKA R3GS, Android TV, 10.0.0.43): emparejar con `--emparejar`, vincular, volumen, silenciar, abrir YouTube, apagar y encender. Herramienta `controlar_tv` en server.py; ordenes `tv_*` en la cola de Manos; la TV se vincula con plataforma 'tv'. Requiere `supabase_tv.sql`. Libreria: `androidtvremote2` (la misma de `gtv-remote`).

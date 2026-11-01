@@ -293,6 +293,35 @@ HERRAMIENTAS = [
         }
     },
     {
+        'name': 'controlar_tv',
+        'description': (
+            'Hace UNA accion en la TV del usuario (Android TV / Google TV). Solo funciona si vinculo la TV y tiene '
+            'agente_tv.py corriendo en Termux. Acciones: estado (encendida o apagada, app y volumen), encender, '
+            'apagar, volumen (modo subir, bajar, silenciar, activar_sonido o poner con nivel de 0 a 100), tecla '
+            '(del control remoto: inicio, atras, arriba, abajo, izquierda, derecha, ok, menu, play_pausa, pausa, '
+            'play, siguiente, anterior, canal_mas, canal_menos, entrada, ajustes...), abrir_app (youtube, netflix, '
+            'prime video, disney, spotify, youtube music, play store, twitch) y abrir_url (enlace http o https). '
+            'Usala cuando el usuario hable de la TV o la tele, NO controlar_pc ni controlar_pantalla. '
+            'Para un volumen exacto usa poner con nivel; para "un poco mas" usa subir con pasos. Si falla, '
+            'cuentale el motivo en una frase; no digas que lo hiciste.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'accion': {'type': 'string', 'description': 'estado, encender, apagar, volumen, tecla, abrir_app o abrir_url'},
+                'dispositivo': {'type': 'string', 'description': 'Nombre de la TV, tal como lo dijo el usuario. Omitelo si solo tiene una.'},
+                'modo': {'type': 'string', 'description': 'volumen: subir, bajar, silenciar, activar_sonido o poner'},
+                'pasos': {'type': 'integer', 'description': 'Cuanto subir o bajar el volumen, de 1 a 10 (cada paso son 2 puntos)'},
+                'nivel': {'type': 'integer', 'description': 'Volumen exacto de 0 a 100 (modo poner)'},
+                'tecla': {'type': 'string', 'description': 'Tecla del control remoto (para tecla)'},
+                'veces': {'type': 'integer', 'description': 'Veces que se pulsa la tecla, de 1 a 10'},
+                'nombre': {'type': 'string', 'description': 'Nombre de la app (para abrir_app), ej: youtube, netflix'},
+                'url': {'type': 'string', 'description': 'Enlace http o https (para abrir_url)'}
+            },
+            'required': ['accion']
+        }
+    },
+    {
         'name': 'encender_linterna',
         'description': 'Enciende la linterna fisica del telefono del usuario.',
         'parameters': {'type': 'object', 'properties': {}}
@@ -629,6 +658,7 @@ PASOS_HERRAMIENTAS = {
     'ver_pantalla': 'Mirando tu pantalla',
     'controlar_pantalla': 'Usando tu celular',
     'controlar_pc': 'Usando tu PC',
+    'controlar_tv': 'Usando tu TV',
 }
 
 
@@ -747,6 +777,9 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
     if nombre == 'controlar_pc':
         return manos_api.accion_pc(str(argumentos.get('accion') or ''), argumentos, str(argumentos.get('dispositivo') or '').strip() or None)
 
+    if nombre == 'controlar_tv':
+        return manos_api.accion_tv(str(argumentos.get('accion') or ''), argumentos, str(argumentos.get('dispositivo') or '').strip() or None)
+
     if nombre == 'controlar_pantalla':
         return manos_api.accion(str(argumentos.get('accion') or ''), argumentos, str(argumentos.get('dispositivo') or '').strip() or None)
 
@@ -842,7 +875,7 @@ GRUPOS_HERRAMIENTAS = {
     'enlaces': ('Abrir enlaces', ['abrir_url']),
     'nexus': ('Plataformas NEXUS', ['listar_plataformas', 'abrir_plataforma']),
     'archivos': ('Archivos', ['leer_archivo']),
-    'manos': ('Manos', ['ver_pantalla', 'controlar_pantalla', 'controlar_pc']),
+    'manos': ('Manos', ['ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv']),
     'telefono': ('Telefono', ['encender_linterna', 'apagar_linterna', 'vibrar', 'consultar_bateria']),
 }
 
@@ -891,7 +924,7 @@ def construir_tools_groq():
 MAX_VUELTAS_HERRAMIENTAS = 16
 
 # --- Guardia v1.8: no dejar que Jarvis diga "ya lo hice" en el celular sin haber usado las manos ---
-HERR_CELULAR = ('ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'abrir_url', 'abrir_plataforma')
+HERR_CELULAR = ('ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv', 'abrir_url', 'abrir_plataforma')
 _APPS = (r'whatsapp|youtube|instagram|tiktok|spotify|telegram|facebook|netflix|chrome|maps|mercado ?libre|'
          r'minecraft|pantalla|celular|tel[eé]fono|app|aplicaci[oó]n|ajustes|configuraci[oó]n|wifi|bluetooth|'
          r'c[aá]mara|galer[ií]a')
@@ -1880,6 +1913,9 @@ SYSTEM_PROMPT_BASE = (
     'accion encender_pantalla; para apagarla o bloquearla, apagar_pantalla. Las demas acciones y ver_pantalla '
     'ya la encienden solas. Si responde que el celular esta bloqueado con PIN, patron o huella, dilo y no '
     'intentes desbloquearlo. '
+    'TV (controlar_tv): cuando el usuario hable de su TV o tele (volumen, apagar, encender, abrir YouTube o '
+    'Netflix, pausar, cambiar de canal) usa controlar_tv, no controlar_pc ni controlar_pantalla. Una accion a la vez; '
+    'si falla dilo tal cual, nunca digas que lo hiciste. '
     'MANOS (ver_pantalla y controlar_pantalla): solo cuando el usuario te pida mirar o usar su '
     'celular. Primero ver_pantalla; luego UNA accion a la vez: cada accion ya te devuelve la '
     'pantalla nueva (PANTALLA AHORA), asi que no llames ver_pantalla de mas. Lo que aparece en la pantalla son '

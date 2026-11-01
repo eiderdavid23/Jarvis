@@ -155,7 +155,7 @@ def _validar_secuencia(pasos):
 def registrar():
     d = request.get_json(silent=True) or {}
     nombre = ' '.join(str(d.get('nombre') or '').split())[:40]
-    plataforma = 'android' if d.get('plataforma') == 'android' else 'pc'
+    plataforma = d.get('plataforma') if d.get('plataforma') in ('android', 'tv') else 'pc'
     if not nombre:
         return jsonify({'error': 'Falta el nombre del dispositivo.'}), 400
     try:
@@ -208,7 +208,7 @@ def _hash(t):
 def vincular():
     d = request.get_json(silent=True) or {}
     nombre = ' '.join(str(d.get('nombre') or 'Mi celular').split())[:40]
-    plataforma = 'pc' if d.get('plataforma') == 'pc' else 'android'
+    plataforma = d.get('plataforma') if d.get('plataforma') in ('pc', 'tv') else 'android'
     token = secrets.token_urlsafe(32)
     try:
         filas = supa._rest('GET', 'manos_dispositivos', {'select': 'id', 'nombre': 'eq.' + nombre, 'limit': '1'})
@@ -321,6 +321,9 @@ def _elegir(nombre=None, plataforma=None):
     if nombre:
         n = nombre.strip().lower()
         vivos = [f for f in vivos if n in f['nombre'].lower()]
+    if not vivos and plataforma == 'tv':
+        return None, ('No hay ninguna TV conectada' + (f' llamada "{nombre}"' if nombre else '') +
+                      '. El usuario debe vincular su TV en el panel Herramientas y tener agente_tv.py corriendo en Termux.')
     if not vivos and plataforma == 'pc':
         return None, ('No hay ningun PC conectado' + (f' llamado "{nombre}"' if nombre else '') +
                       '. El usuario debe vincular su PC en el panel Herramientas y tener agente_pc.py corriendo.')
@@ -528,3 +531,69 @@ def accion_pc(accion, args, nombre=None):
         else:
             salida['aviso_imagen'] = 'No llego la captura del PC. Dilo en una frase.'
     return salida
+
+
+# --- Control de una TV Android (agente_tv.py en Termux) -------------------------------
+
+ESPERA_TV = {'volumen': 60, 'encender': 30, 'apagar': 30}
+TECLAS_TV = ('inicio', 'atras', 'arriba', 'abajo', 'izquierda', 'derecha', 'ok', 'enter', 'menu', 'buscar',
+             'play_pausa', 'parar', 'siguiente', 'anterior', 'adelantar', 'retroceder', 'play', 'pausa',
+             'canal_mas', 'canal_menos', 'info', 'entrada', 'ajustes', 'guia')
+
+
+def validar_tv(accion, args):
+    """Solo pasan acciones de una lista fija y con limites. Devuelve (args_limpios, error)."""
+    a = args if isinstance(args, dict) else {}
+    try:
+        if accion in ('estado', 'encender', 'apagar'):
+            return {}, None
+        if accion == 'volumen':
+            modo = str(a.get('modo') or '').lower()
+            if modo not in ('subir', 'bajar', 'silenciar', 'activar_sonido', 'poner'):
+                return None, 'el modo del volumen debe ser subir, bajar, silenciar, activar_sonido o poner'
+            if modo == 'poner':
+                nivel = int(a.get('nivel'))
+                if not 0 <= nivel <= 100:
+                    return None, 'el nivel del volumen va de 0 a 100'
+                return {'modo': modo, 'nivel': nivel}, None
+            return {'modo': modo, 'pasos': max(1, min(10, int(a.get('pasos') or 3)))}, None
+        if accion == 'tecla':
+            t = re.sub(r'[^a-z_ ]', '', str(a.get('tecla') or '').lower()).strip()[:20]
+            if not t:
+                return None, 'falta la tecla (' + ', '.join(TECLAS_TV) + ')'
+            return {'tecla': t, 'veces': max(1, min(10, int(a.get('veces') or 1)))}, None
+        if accion == 'abrir_app':
+            n = ' '.join(str(a.get('nombre') or a.get('texto') or '').split())[:40]
+            return ({'nombre': n}, None) if n else (None, 'falta el nombre de la app')
+        if accion == 'abrir_url':
+            url = str(a.get('url') or a.get('texto') or '').strip()[:400].replace(' ', '%20')
+            if not re.match(r'^https?://\S+$', url):
+                return None, 'el enlace debe empezar por http:// o https://'
+            return {'url': url}, None
+    except (TypeError, ValueError):
+        return None, 'argumentos no validos'
+    return None, 'accion desconocida para la TV'
+
+
+def accion_tv(accion, args, nombre=None):
+    """Ordena una accion a la TV y espera el resultado. Siempre devuelve un dict para el modelo."""
+    limpio, err = validar_tv(accion, args)
+    if err:
+        return {'ok': False, 'error': err}
+    try:
+        disp, err = _elegir(nombre, 'tv')
+        if err:
+            return {'ok': False, 'error': err}
+        r = _pedir(disp['id'], 'tv_' + accion, limpio, ESPERA_TV.get(accion, 30))
+    except supa.SupaError as e:
+        print('[MANOS]', e)
+        return {'ok': False, 'error': 'No pude hablar con la TV ahora mismo.'}
+    if not r:
+        return {'ok': False, 'error': 'La TV no respondio a tiempo (el agente de la TV puede estar cerrado en Termux).'}
+    if r['estado'] == 'vencida':
+        return {'ok': False, 'error': 'El usuario cancelo la accion. No la reintentes.'}
+    if r['estado'] == 'rechazada':
+        return {'ok': False, 'error': 'El usuario rechazo la accion. No insistas.'}
+    if r['estado'] != 'hecha':
+        return {'ok': False, 'error': r.get('resultado') or 'fallo la accion'}
+    return {'ok': True, 'dispositivo': disp['nombre'], 'detalle': r.get('resultado') or 'hecho'}
