@@ -218,7 +218,7 @@ def _generar_openai(prov, modelo, system_prompt, turnos, api_key, nivel):
         cab['X-Title'] = 'Jarvis'
     acumulado, continuaciones = '', 0
     for _ in range(srv.MAX_VUELTAS_HERRAMIENTAS + srv.MAX_CONTINUACIONES):
-        cuerpo = {'model': modelo, 'messages': mensajes, 'temperature': 0.7,
+        cuerpo = {'model': modelo, 'messages': mensajes, 'temperature': srv._temp(),
                   'max_tokens': max(srv.TOKENS_GROQ[nivel], 2048)}
         if tools:
             cuerpo['tools'] = tools

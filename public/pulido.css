@@ -1,0 +1,107 @@
+/* Pulido final de Jarvis: letra mas fina, espacios mas juntos, todo mas elegante.
+   Se carga DESPUES de todos los demas estilos. Quitar su <link> en index.html devuelve el diseño anterior.
+   Prefijo :root:root:root para ganarle a diseno_pro.css, claude_skin.css y texto_grande.css. */
+
+:root:root:root {
+  --p-lectura: 16.5px;      /* respuestas de Jarvis */
+  --p-interlinea: 1.62;
+  --p-codigo: 13px;
+  --p-radio: 14px;
+}
+
+/* ---------- Zona del chat: columna centrada y mas junta ---------- */
+:root:root:root #chat { padding: 10px 16px 18px; }
+:root:root:root #chatInner { max-width: 720px; gap: 18px; }
+
+/* ---------- Respuestas de Jarvis ---------- */
+:root:root:root .fila.jarvis .burbuja {
+  font-size: var(--p-lectura); line-height: var(--p-interlinea); letter-spacing: .05px;
+  font-optical-sizing: auto; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+  hyphens: manual; overflow-wrap: break-word;
+}
+:root:root:root .burbuja.md p { margin: 0 0 10px; }
+:root:root:root .burbuja.md ul, :root:root:root .burbuja.md ol { margin: 0 0 10px; padding-left: 22px; }
+:root:root:root .burbuja.md li { margin: 3px 0; padding-left: 3px; }
+:root:root:root .burbuja.md li > p { margin: 0 0 4px; }
+:root:root:root .burbuja.md li > ul, :root:root:root .burbuja.md li > ol { margin: 3px 0 3px; }
+:root:root:root .burbuja.md li::marker { color: var(--suave); font-size: .92em; }
+:root:root:root .burbuja.md ol li::marker { font-variant-numeric: tabular-nums; }
+
+/* Titulos: jerarquia clara pero discreta */
+:root:root:root .burbuja.md h1, :root:root:root .burbuja.md h2,
+:root:root:root .burbuja.md h3, :root:root:root .burbuja.md h4 {
+  margin: 16px 0 6px; line-height: 1.28; font-weight: 600; letter-spacing: -.1px;
+}
+:root:root:root .burbuja.md > :first-child { margin-top: 0; }
+:root:root:root .burbuja.md h1 { font-size: 21px; }
+:root:root:root .burbuja.md h2 { font-size: 19px; }
+:root:root:root .burbuja.md h3 { font-size: 17.5px; }
+:root:root:root .burbuja.md h4 { font-size: 16.5px; }
+:root:root:root .burbuja.md hr { margin: 14px 0; border-top-color: var(--linea); }
+:root:root:root .burbuja.md blockquote { margin: 0 0 10px; padding: 1px 0 1px 13px; border-left-width: 2px; opacity: .92; }
+
+/* Codigo en linea: discreto, sin borde */
+:root:root:root .burbuja.md code {
+  font-size: .84em; padding: 1px 5px; border: 0; border-radius: 6px;
+  background: var(--ch-azul-bg); line-height: 1.4;
+}
+
+/* Bloques de codigo: cabecera fina y cuerpo compacto, el codigo manda */
+:root:root:root .codBloque { margin: 4px 0 12px; border-radius: var(--p-radio); overflow: hidden; }
+:root:root:root .codCab { padding: 3px 4px 0 14px; min-height: 0; font-size: 12px; letter-spacing: .2px; text-transform: lowercase; }
+:root:root:root .codCab button, :root:root:root .codCab .codBtn { width: 34px; height: 34px; }
+:root:root:root .codCab svg { width: 18px; height: 18px; }
+:root:root:root .burbuja.md pre, :root:root:root .codBloque pre { margin: 0; padding: 0 14px 12px; font-size: var(--p-codigo); line-height: 1.55; tab-size: 4; }
+:root:root:root .burbuja.md pre code, :root:root:root .codBloque pre code {
+  font-size: var(--p-codigo); line-height: 1.55; background: none; padding: 0; border: 0; border-radius: 0;
+}
+
+/* Tablas */
+:root:root:root .burbuja.md .tablaMd { margin: 0 0 12px; }
+:root:root:root .burbuja.md table { font-size: 14px; }
+:root:root:root .burbuja.md th, :root:root:root .burbuja.md td { padding: 7px 11px; }
+
+/* ---------- Tus mensajes ---------- */
+:root:root:root .fila.user .burbuja {
+  max-width: 82%; font-size: 16px; line-height: 1.45; padding: 9px 15px 10px; border-radius: 20px 20px 6px 20px;
+}
+
+/* ---------- Botones bajo la respuesta: pequeños y discretos ---------- */
+:root:root:root .accMsg { margin: 0 0 0 -8px; gap: 0; }
+:root:root:root .accBtn { width: 34px; height: 34px; opacity: .5; }
+:root:root:root .accBtn svg { width: 18px; height: 18px; }
+:root:root:root .accBtn:active, :root:root:root .accBtn.activo, :root:root:root .accBtn.marcado { opacity: 1; }
+
+/* ---------- Pasos en vivo y tarjetas: mas pegados al texto ---------- */
+:root:root:root .pasosBox { margin-bottom: 8px; }
+
+/* ---------- Caja de entrada: mas baja y limpia ---------- */
+:root:root:root #inputArea { max-width: 720px; padding: 6px 6px 6px; border-radius: 26px; margin-bottom: max(10px, env(safe-area-inset-bottom)); }
+:root:root:root #inputArea.multi { border-radius: 22px; }
+:root:root:root #texto { font-size: 16.5px; line-height: 23px; padding: 9px 10px 8px 14px; }
+:root:root:root #btnMas, :root:root:root #btnAccion, :root:root:root #btnVoz { width: 38px; height: 38px; }
+:root:root:root #pildora { height: 36px; padding: 0 11px; font-size: 14.5px; gap: 4px; }
+
+/* ---------- Inicio: saludo y sugerencias mas finos ---------- */
+:root:root:root #bienvenida h1 { font-size: clamp(24px, 7vw, 31px); font-weight: 500; letter-spacing: -.2px; margin-bottom: 4px; }
+:root:root:root #bienvenida p { font-size: 14.5px; margin-bottom: 14px; }
+:root:root:root .chips { gap: 7px; }
+:root:root:root .chip { padding: 7px 13px; font-size: 13.5px; border-radius: 18px; }
+:root:root:root #estado { font-size: 12.5px; letter-spacing: .4px; }
+
+/* ---------- Pantalla ancha: columna de lectura comoda ---------- */
+@media (min-width: 900px) {
+  :root:root:root { --p-lectura: 17px; }
+  :root:root:root #chat { padding: 14px 24px 24px; }
+  :root:root:root #chatInner { gap: 22px; }
+  :root:root:root .fila.user .burbuja { max-width: 70%; }
+}
+
+/* ---------- Pantallas muy angostas ---------- */
+@media (max-width: 360px) {
+  :root:root:root { --p-lectura: 16px; }
+  :root:root:root #chat { padding-left: 12px; padding-right: 12px; }
+}
+
+/* ---------- Tema claro: mismo ritmo, solo sombras mas suaves ---------- */
+:root:root:root[data-tema="claro"] .codBloque { box-shadow: inset 0 0 0 1px var(--linea); }

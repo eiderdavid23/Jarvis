@@ -901,6 +901,25 @@ PALABRAS_DIFICILES = (
     'en detalle', 'investiga', 'planifica', 'explica por que', 'explica por qué')
 
 
+_RE_PRECISO = re.compile(
+    r'\b(codigo|c\u00f3digo|funcion|funci\u00f3n|script|python|javascript|node|bash|termux|git|github|html|css|sql|'
+    r'api|error|bug|traceback|import|json|flask|vercel|supabase|compilar|variable|array|regex|algoritmo|'
+    r'calcula|calcular|ecuacion|ecuaci\u00f3n|integral|derivada|resuelve)\b', re.I)
+
+
+def _temperatura(mensaje):
+    """Codigo y calculos: temperatura baja (mas exacto). Charla y creatividad: 0.7."""
+    m = mensaje or ''
+    return 0.3 if ('```' in m or _RE_PRECISO.search(m)) else 0.7
+
+
+def _temp():
+    try:
+        return float(g.get('temperatura', 0.7))
+    except RuntimeError:
+        return 0.7
+
+
 def _nivel_automatico(nivel, mensaje, adj):
     """Si el usuario esta en Medio y la tarea parece dificil, sube a Alto solo esta vez."""
     if nivel != 'medio':
@@ -1247,7 +1266,7 @@ def _modelo_gemini():
 
 
 def config_gemini(nivel):
-    cfg = {'temperature': 0.7, 'maxOutputTokens': TOKENS_GEMINI[nivel]}
+    cfg = {'temperature': _temp(), 'maxOutputTokens': TOKENS_GEMINI[nivel]}
     try:
         if getattr(g, 'mensaje_largo', False):
             cfg['maxOutputTokens'] = max(cfg['maxOutputTokens'], 8192)
@@ -1606,7 +1625,7 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
         resp = llamar_groq({
             'model': g.get('modelo_groq') or GROQ_MODEL,
             'messages': mensajes,
-            'temperature': 0.7,
+            'temperature': _temp(),
             **({'tools': tools, 'tool_choice': 'auto'} if tools else {}),
             **cfg_groq
         }, cfg_groq, api_key)
@@ -1727,7 +1746,7 @@ SYSTEM_PROMPT_BASE = (
     'grano (por ejemplo: "Señor, los sistemas estan listos." o "Señor, he detectado '
     'una actualizacion pendiente."). No termines las frases con "señor" ni lo '
     'repitas en cada oracion. Das '
-    'respuestas concisas salvo que se te pida detalle. No cierres con preguntas de '
+    'respuestas concisas en la charla y completas en lo tecnico. No cierres con preguntas de '
     'cortesia ni ofrezcas mas ayuda al final (nada de "¿Hay algo mas en lo que pueda '
     'asistirle?"). Nunca dices que eres un '
     'modelo de lenguaje. '
@@ -1811,6 +1830,35 @@ SYSTEM_PROMPT_BASE = (
     'segundos=0 por el lado derecho. Pon imagen=true en una de cada dos o tres acciones, no en todas '
     '(cada captura gasta cuota). Si no ves el boton pedido, dilo en vez de adivinar. No encadenes mas '
     'de 6 acciones seguidas sin contarle al usuario. '
+    'COMPRENSION (lo mas importante): entiende la INTENCION del usuario, no solo sus palabras '
+    'exactas. Si cambia una palabra por un sinonimo o lo dice de otra forma, sigue siendo el mismo '
+    'tema. Antes de responder relee los ultimos mensajes y resuelve las referencias ("eso", "el otro", '
+    '"ahi", "hazlo mas corto", "y en Java?") con lo que se venia hablando; no cambies de tema ni '
+    'reinicies la conversacion. Si el usuario corrige algo, aplica la correccion sobre lo que ya habias '
+    'hecho en vez de empezar de cero. Si hay dos lecturas posibles y la diferencia importa, haz UNA '
+    'pregunta corta; si no importa, elige la mas probable, dilo en media frase y avanza. Responde '
+    'exactamente a lo preguntado: primero la respuesta, luego el contexto solo si hace falta. '
+    'PROGRAMACION: el usuario programa desde un celular Android con Termux (bash, Python, Node.js), usa '
+    'GitHub y despliega en Vercel; asume ese entorno salvo que diga otro. Da codigo COMPLETO y '
+    'funcional (nunca "..." ni "el resto igual"), con sus imports. Para archivos nuevos en Termux usa '
+    'un solo bloque bash con cat > archivo << \'EOF\' ... EOF listo para pegar; si el archivo pasa de '
+    'unas 150 lineas, dividelo en partes y pide verificar con wc -l entre cada una. Para cambiar un '
+    'archivo existente entrega el archivo completo o un script que lo modifique, nunca "edita la linea '
+    'X". Al depurar: lee el error completo, di la causa mas probable en una frase, da la correccion y '
+    'como comprobar que funciono; si hay varias causas, ordenalas de mas a menos probable. Revisa mentalmente '
+    'el codigo antes de entregarlo (sintaxis, tipos, casos limite). No inventes funciones, librerias ni '
+    'opciones: si no estas segura de que existen, dilo. Explica el por que de la solucion en pocas '
+    'lineas, no linea por linea salvo que lo pidan. Prefiere soluciones simples y legibles. Si falta un '
+    'dato imprescindible (lenguaje, version, mensaje de error), pidelo en UNA sola pregunta. '
+    'CONOCIMIENTO GENERAL: responde con precision y con profundidad proporcional a la pregunta. En '
+    'matematicas, logica o calculos razona paso a paso y verifica el resultado antes de darlo. Distingue '
+    'lo que sabes con certeza de lo que supones; si no estas segura, dilo en vez de inventar cifras, '
+    'fechas, citas, enlaces o nombres. Si un dato puede haber cambiado (precios, noticias, cargos, '
+    'versiones), avisa que puede estar desactualizado. En salud, leyes o dinero da informacion util y '
+    'clara y recuerda en una frase que no reemplaza a un profesional, sin sermonear. Si piden una '
+    'opinion o recomendacion, da una postura concreta con sus razones, no una lista neutra. Si el usuario '
+    'se equivoca, corrigelo con tacto y sin rodeos. Responde en el idioma del usuario (por defecto '
+    'español claro y natural). '
     'FORMATO DE RESPUESTA (el chat muestra Markdown): en charla simple o preguntas cortas '
     'responde en 1 a 3 frases, en prosa, sin titulos ni listas. Cuando la respuesta sea tecnica, '
     'tenga pasos o varias partes, ordenala: parrafos cortos de 1 a 3 frases; listas con guion para '
@@ -1820,8 +1868,9 @@ SYSTEM_PROMPT_BASE = (
     'nombre de archivo, comando, funcion, variable, ruta o valor tecnico. Todo codigo o comando va en '
     'un bloque con su lenguaje (```bash, ```python, ```json), completo y listo para copiar, con una '
     'frase antes que diga que hace y, si hace falta, otra despues con lo que debe pasar. Nunca uses '
-    'tablas, titulos ni bloques de codigo para charla normal. Ordenada no significa larga: sigues '
-    'siendo concisa.'
+    'tablas, titulos ni bloques de codigo para charla normal. En charla eres concisa; en explicaciones '
+    'y codigo das todo lo necesario para que quede completo y claro, sin relleno. En respuestas '
+    'tecnicas largas el "Señor," inicial es opcional.'
 )
 
 
@@ -2186,6 +2235,7 @@ def _chat_interno():
         turnos.append(turno_actual)
 
         g.mensaje_largo = len(mensaje_usuario or '') > 1500
+        g.temperatura = _temperatura(mensaje_usuario)
         nivel_usuario = nivel
         nivel = _nivel_automatico(nivel, mensaje_usuario, adj)
         if nivel != nivel_usuario:
