@@ -10,6 +10,8 @@ permisos = [
     'android.permission.FOREGROUND_SERVICE_MICROPHONE',
     'android.permission.WAKE_LOCK',
     'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+    'android.permission.ACCESS_WIFI_STATE',
+    'android.permission.CHANGE_WIFI_MULTICAST_STATE',
 ]
 extra = ''
 for x in permisos:

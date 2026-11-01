@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 1 nov 2026
-Versión actual: 1.25 (ver CAMBIOS.md)
+Versión actual: 1.26 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -45,6 +45,6 @@ Pedido de David sobre la burbuja y las funciones:
   - [x] Parte 2: la APK mantiene la CPU despierta, enciende y apaga la pantalla (v1.23). Requiere APK nueva.
   - [x] Parte 3: la palabra «Jarvis» con pantalla apagada.
   - [ ] Parte 4 (PAUSADA, David la dejo para despues): `agente_pc.py` (encender el monitor y evitar la suspension). No retomarla hasta que David lo pida.
-- [ ] Controlar la TV desde Jarvis (pedido el 1 nov 2026). Falta saber marca, modelo y si esta en la misma wifi que el celular. El servidor esta en la nube y no ve la red de la casa: la orden debe salir de un dispositivo dentro de esa red (celular con la APK o PC).
+- [ ] Controlar la TV desde la APK sin Termux (pedido el 1 nov 2026, v1.26, requiere APK nueva): `TvRemoto.java` (protocolo Android TV Remote v2: certificado propio, emparejamiento con codigo, teclas, volumen, apps), `TvOrdenes.java` (lista fija de ordenes, igual que agente_tv.py) y `TvAgente.java` (lee la cola con el token de la TV y busca TVs por mDNS). La pantalla de vincular esta en `public/vincular_tv.js` (en el navegador queda el metodo de Termux). Pendiente: probarlo en la TV real (MOKA R3GS) y marcar esta tarea.
 - [ ] Probar `agente_pc.py` en un PC real (hecho sin poder probarlo): vincular, abrir programa, capturar, volumen, mover archivo. Herramienta `controlar_pc` en server.py; ordenes `pc_*` en la cola de Manos; el PC se vincula con plataforma 'pc'. El agente pide permiso en pantalla salvo con --control; apagar, reiniciar y mover archivos siempre piden permiso.
-- [ ] Probar `agente_tv.py` en la TV real (MOKA R3GS, Android TV, 10.0.0.43): emparejar con `--emparejar`, vincular, volumen, silenciar, abrir YouTube, apagar y encender. Herramienta `controlar_tv` en server.py; ordenes `tv_*` en la cola de Manos; la TV se vincula con plataforma 'tv'. Requiere `supabase_tv.sql`. Libreria: `androidtvremote2` (la misma de `gtv-remote`).
+- [ ] Probar la TV real (MOKA R3GS, Android TV, 10.0.0.43), primero desde la APK (Herramientas > Controlar una TV: buscar, codigo, volumen, abrir YouTube, apagar y encender) y solo si falla, con `agente_tv.py` en Termux. Herramienta `controlar_tv` en server.py; ordenes `tv_*` en la cola de Manos; la TV se vincula con plataforma 'tv'. Requiere `supabase_tv.sql`.

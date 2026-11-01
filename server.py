@@ -296,7 +296,7 @@ HERRAMIENTAS = [
         'name': 'controlar_tv',
         'description': (
             'Hace UNA accion en la TV del usuario (Android TV / Google TV). Solo funciona si vinculo la TV y tiene '
-            'agente_tv.py corriendo en Termux. Acciones: estado (encendida o apagada, app y volumen), encender, '
+            'su celular con la app de Jarvis abierta en el mismo WiFi. Acciones: estado (encendida o apagada y volumen), encender, '
             'apagar, volumen (modo subir, bajar, silenciar, activar_sonido o poner con nivel de 0 a 100), tecla '
             '(del control remoto: inicio, atras, arriba, abajo, izquierda, derecha, ok, menu, play_pausa, pausa, '
             'play, siguiente, anterior, canal_mas, canal_menos, entrada, ajustes...), abrir_app (youtube, netflix, '

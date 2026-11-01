@@ -323,7 +323,7 @@ def _elegir(nombre=None, plataforma=None):
         vivos = [f for f in vivos if n in f['nombre'].lower()]
     if not vivos and plataforma == 'tv':
         return None, ('No hay ninguna TV conectada' + (f' llamada "{nombre}"' if nombre else '') +
-                      '. El usuario debe vincular su TV en el panel Herramientas y tener agente_tv.py corriendo en Termux.')
+                      '. El usuario debe vincular su TV en el panel Herramientas y tener la app de Jarvis abierta en un celular con el mismo WiFi que la TV.')
     if not vivos and plataforma == 'pc':
         return None, ('No hay ningun PC conectado' + (f' llamado "{nombre}"' if nombre else '') +
                       '. El usuario debe vincular su PC en el panel Herramientas y tener agente_pc.py corriendo.')
@@ -589,7 +589,7 @@ def accion_tv(accion, args, nombre=None):
         print('[MANOS]', e)
         return {'ok': False, 'error': 'No pude hablar con la TV ahora mismo.'}
     if not r:
-        return {'ok': False, 'error': 'La TV no respondio a tiempo (el agente de la TV puede estar cerrado en Termux).'}
+        return {'ok': False, 'error': 'La TV no respondio a tiempo (el celular que controla la TV puede estar sin WiFi o con la app cerrada).'}
     if r['estado'] == 'vencida':
         return {'ok': False, 'error': 'El usuario cancelo la accion. No la reintentes.'}
     if r['estado'] == 'rechazada':

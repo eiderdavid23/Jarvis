@@ -161,6 +161,7 @@ public class ManosServicio extends AccessibilityService {
         burbuja = new BurbujaManos(this);
         burbuja.actualizar();
         arrancar();
+        TvAgente.iniciar(this);
     }
 
     @Override

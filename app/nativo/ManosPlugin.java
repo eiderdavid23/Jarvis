@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.PowerManager;
 import android.provider.Settings;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -177,6 +178,105 @@ public class ManosPlugin extends Plugin {
                 != PackageManager.PERMISSION_GRANTED && getActivity() != null) {
             getActivity().requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 7231);
         }
+        call.resolve();
+    }
+
+    // ---- Control de la TV desde la app (sin Termux) ----------------------------------
+
+    /** Busca Android TV en el WiFi. Devuelve {tvs: [{nombre, ip}]}. */
+    @PluginMethod
+    public void tvBuscar(final PluginCall call) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    JSArray lista = new JSArray();
+                    for (String[] t : TvAgente.buscar(getContext())) {
+                        JSObject o = new JSObject();
+                        o.put("nombre", t[0]);
+                        o.put("ip", t[1]);
+                        lista.put(o);
+                    }
+                    JSObject r = new JSObject();
+                    r.put("tvs", lista);
+                    call.resolve(r);
+                } catch (Exception e) {
+                    call.reject(TvRemoto.mensaje(e));
+                }
+            }
+        }, "tv-buscar").start();
+    }
+
+    /** Paso 1 del emparejamiento: la TV muestra un codigo en pantalla. */
+    @PluginMethod
+    public void tvEmparejarIniciar(final PluginCall call) {
+        final String ip = call.getString("ip", "");
+        if (ip == null || !ip.matches("\\d{1,3}(\\.\\d{1,3}){3}")) {
+            call.reject("Esa IP no parece valida.");
+            return;
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    TvAgente.remoto(getContext()).emparejarIniciar(ip);
+                    call.resolve();
+                } catch (Exception e) {
+                    call.reject(TvRemoto.mensaje(e));
+                }
+            }
+        }, "tv-emparejar").start();
+    }
+
+    /** Paso 2: el codigo que salio en la TV. */
+    @PluginMethod
+    public void tvEmparejarCodigo(final PluginCall call) {
+        final String codigo = call.getString("codigo", "");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    TvAgente.remoto(getContext()).emparejarTerminar(codigo);
+                    call.resolve();
+                } catch (Exception e) {
+                    call.reject(TvRemoto.mensaje(e));
+                }
+            }
+        }, "tv-codigo").start();
+    }
+
+    /** Guarda el token de la TV (creado en el servidor) y arranca el agente. */
+    @PluginMethod
+    public void tvVincular(PluginCall call) {
+        String url = call.getString("url", "");
+        String token = call.getString("token", "");
+        String ip = call.getString("ip", "");
+        String nombre = call.getString("nombre", "TV");
+        if (url == null || url.isEmpty() || token == null || token.isEmpty() || ip == null || ip.isEmpty()) {
+            call.reject("Faltan url, token o IP de la TV.");
+            return;
+        }
+        prefs().edit().putString("tv_url", url.replaceAll("/+$", "")).putString("tv_token", token)
+                .putString("tv_ip", ip).putString("tv_nombre", nombre == null ? "TV" : nombre).apply();
+        TvAgente.iniciar(getContext());
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void tvEstado(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("vinculada", !prefs().getString("tv_token", "").isEmpty());
+        r.put("ip", prefs().getString("tv_ip", ""));
+        r.put("nombre", prefs().getString("tv_nombre", ""));
+        r.put("conectada", TvAgente.remoto(getContext()).conectada());
+        r.put("credencial", TvAgente.remoto(getContext()).hayCredencial());
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void tvDesvincular(PluginCall call) {
+        prefs().edit().remove("tv_token").remove("tv_url").remove("tv_ip").remove("tv_nombre").apply();
+        TvAgente.detener();
         call.resolve();
     }
 
