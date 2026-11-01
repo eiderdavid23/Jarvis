@@ -7,7 +7,7 @@ PAQ = 'android/app/src/main/java/com/david/jarvis'
 RES = 'android/app/src/main/res'
 assert os.path.isdir(PAQ), 'manos: no existe ' + PAQ + ' (cambio el appId o la plantilla de Capacitor)'
 
-for f in ('ManosServicio.java', 'ManosPlugin.java', 'BurbujaManos.java', 'BurbujaUI.java', 'EscuchaServicio.java'):
+for f in ('ManosServicio.java', 'ManosPlugin.java', 'BurbujaManos.java', 'BurbujaUI.java', 'EscuchaServicio.java', 'BurbujaVoz.java'):
     shutil.copy('nativo/' + f, PAQ + '/' + f)
 os.makedirs(RES + '/xml', exist_ok=True)
 shutil.copy('nativo/manos_accesibilidad.xml', RES + '/xml/manos_accesibilidad.xml')
@@ -60,6 +60,9 @@ QUERIES = """    <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
     </queries>
 

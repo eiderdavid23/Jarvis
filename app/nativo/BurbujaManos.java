@@ -75,6 +75,7 @@ class BurbujaManos {
     private final SharedPreferences prefs;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final float d;
+    private final BurbujaVoz voz;
 
     private FrameLayout raiz;
     private LinearLayout pildora;
@@ -113,6 +114,7 @@ class BurbujaManos {
         this.wm = (WindowManager) srv.getSystemService(Context.WINDOW_SERVICE);
         this.prefs = srv.getSharedPreferences("manos", Context.MODE_PRIVATE);
         this.d = srv.getResources().getDisplayMetrics().density;
+        this.voz = new BurbujaVoz(srv, this::sincronizarPalabra);
         int ancho = srv.getResources().getDisplayMetrics().widthPixels;
         bx = 0;
         by = prefs.getInt("by2", (int) (6 * d));
@@ -172,6 +174,7 @@ class BurbujaManos {
     }
 
     private void sacar() {
+        voz.parar();
         detenerPalabra();
         restaurarSonido();
         detenerVoz();
@@ -507,6 +510,7 @@ class BurbujaManos {
             return;
         }
         campo.setText("");
+        voz.parar();
         pensando = true;
         ultimo = "";
         cerrarPanel();
@@ -601,6 +605,10 @@ class BurbujaManos {
         pensando = false;
         ultimo = texto;
         nuevo = true;
+        if (puesta && prefs.getBoolean("vozBurbuja", true)) {
+            restaurarSonido();
+            voz.hablar(prefs.getString("url", ""), prefs.getString("acceso", ""), texto);
+        }
         if (puesta && !abierta) {
             estiloCirculo();
             aplicar();
@@ -646,7 +654,7 @@ class BurbujaManos {
             "\\b(jarvis|jarvi|yarvis|jarbis|harvis|charvis|yarbis|garvis|jarviz|jarves|yarvi)\\b");
 
     private boolean palabraActiva() {
-        return puesta && prefs.getBoolean("palabra", false) && !pensando && !escuchando
+        return puesta && prefs.getBoolean("palabra", false) && !pensando && !escuchando && !voz.hablando()
                 && srv.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
                 && SpeechRecognizer.isRecognitionAvailable(srv);
     }
@@ -870,6 +878,7 @@ class BurbujaManos {
             mostrarTexto("Este celular no tiene reconocimiento de voz disponible.");
             return;
         }
+        voz.parar();
         ocultarTeclado();
         detenerPalabra();
         restaurarSonido();
