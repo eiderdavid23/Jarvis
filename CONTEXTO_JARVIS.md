@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 31 oct 2026
-Versión actual: 1.16 (ver CAMBIOS.md)
+Versión actual: 1.17 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -36,4 +36,4 @@ Pedido de David sobre la burbuja y las funciones:
   - [x] Parte 1: el servidor entiende la orden (`funciones_voz.py`).
   - [x] Parte 2: la burbuja la aplica y confirma con voz.
   - [x] Parte 3: el chat de la app la aplica (`public/ordenes_voz.js`) y los interruptores de Herramientas se sincronizan con la burbuja.
-- [ ] Poder abrir la burbuja mientras trabaja (hoy se bloquea) y botón Detener dentro de la burbuja. Requiere APK nueva.
+- [x] Poder abrir la burbuja mientras trabaja y botón Detener dentro de la burbuja (v1.17). Requiere APK nueva.

@@ -104,6 +104,9 @@ class BurbujaManos {
     private boolean pensando;
     private boolean escuchando;
     private boolean nuevo;
+    private TextView detenerBtn;
+    private volatile HttpURLConnection conexion;
+    private int peticion;
     private int bx;
     private int by;
     private String ultimo = "";
@@ -361,6 +364,25 @@ class BurbujaManos {
         estadoTv.setVisibility(View.GONE);
         panel.addView(estadoTv);
 
+        detenerBtn = new TextView(cx);
+        detenerBtn.setText("\u25A0  Detener");
+        detenerBtn.setTextColor(ROJO);
+        detenerBtn.setTextSize(15);
+        detenerBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        detenerBtn.setGravity(Gravity.CENTER);
+        GradientDrawable fd = new GradientDrawable();
+        fd.setColor(Color.parseColor("#1AFF5C5C"));
+        fd.setCornerRadius(22 * d);
+        fd.setStroke((int) (1.2f * d), ROJO);
+        detenerBtn.setBackground(fd);
+        detenerBtn.setPadding(0, (int) (11 * d), 0, (int) (11 * d));
+        detenerBtn.setOnClickListener(v -> detener());
+        LinearLayout.LayoutParams ld = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        ld.topMargin = (int) (12 * d);
+        detenerBtn.setVisibility(View.GONE);
+        panel.addView(detenerBtn, ld);
+
         LinearLayout fila = new LinearLayout(cx);
         fila.setOrientation(LinearLayout.HORIZONTAL);
         fila.setGravity(Gravity.CENTER_VERTICAL);
@@ -423,6 +445,7 @@ class BurbujaManos {
             estadoTv.scrollTo(0, 0);
             estadoTv.setVisibility(View.VISIBLE);
         }
+        actualizarTrabajo();
         panel.setPivotX(srv.getResources().getDisplayMetrics().widthPixels * 0.47f);
         panel.setPivotY(0f);
         panel.setAlpha(0f);
@@ -433,9 +456,6 @@ class BurbujaManos {
     }
 
     private void abrir() {
-        if (pensando) {
-            return;
-        }
         abierta = true;
         nuevo = false;
         mostrarPanel();
@@ -464,7 +484,7 @@ class BurbujaManos {
             lp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
             lp.x = 0;
             lp.y = by;
-            lp.flags = FLAGS_PLEGADA | (pensando ? WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE : 0);
+            lp.flags = FLAGS_PLEGADA;
         }
         try {
             wm.updateViewLayout(raiz, lp);
@@ -504,6 +524,69 @@ class BurbujaManos {
         }
     }
 
+    /** Con Jarvis trabajando, la barra muestra el boton Detener; si no, vuelve a escribir normal. */
+    private void actualizarTrabajo() {
+        if (detenerBtn == null || campo == null) {
+            return;
+        }
+        detenerBtn.setVisibility(pensando ? View.VISIBLE : View.GONE);
+        campo.setEnabled(!pensando);
+        campo.setAlpha(pensando ? 0.5f : 1f);
+        if (ondasPanel != null && !escuchando) {
+            ondasPanel.modo(pensando ? 1 : 0);
+        }
+        if (pensando && abierta && ultimo.isEmpty() && estadoTv != null) {
+            estadoTv.setText("Jarvis est\u00e1 trabajando\u2026");
+            estadoTv.setVisibility(View.VISIBLE);
+        }
+    }
+
+    /** Boton Detener: corta la tarea en curso (servidor y celular) y deja a Jarvis listo para otra orden. */
+    private void detener() {
+        if (!pensando) {
+            return;
+        }
+        peticion++;
+        pensando = false;
+        viaPalabra = false;
+        voz.parar();
+        final HttpURLConnection actual = conexion;
+        conexion = null;
+        final String base = prefs.getString("url", "");
+        final String acceso = prefs.getString("acceso", "");
+        new Thread(() -> {
+            try {
+                if (actual != null) {
+                    actual.disconnect();
+                }
+            } catch (Exception ignorada) {
+            }
+            try {
+                HttpURLConnection k = (HttpURLConnection) new URL(base + "/manos/cancelar").openConnection();
+                try {
+                    k.setRequestMethod("POST");
+                    k.setConnectTimeout(8000);
+                    k.setReadTimeout(8000);
+                    k.setDoOutput(true);
+                    k.setRequestProperty("Authorization", "Bearer " + acceso);
+                    k.getOutputStream().close();
+                    k.getResponseCode();
+                } finally {
+                    k.disconnect();
+                }
+            } catch (Exception ignorada) {
+            }
+        }, "burbuja-detener").start();
+        nuevo = false;
+        ultimo = "Cancelado, se\u00f1or.";
+        if (puesta) {
+            estiloCirculo();
+            mostrarTexto(ultimo);
+            actualizarTrabajo();
+        }
+        sincronizarPalabra();
+    }
+
     private void enviar() {
         final String t = campo.getText().toString().trim();
         if (t.isEmpty() || pensando) {
@@ -514,13 +597,14 @@ class BurbujaManos {
         pensando = true;
         ultimo = "";
         cerrarPanel();
-        new Thread(() -> llamar(t), "burbuja-chat").start();
+        final int mi = ++peticion;
+        new Thread(() -> llamar(t, mi), "burbuja-chat").start();
     }
 
     /** Manda el mensaje a /chat con la sesion que le paso la app (el servidor usa tus llaves de la cuenta). */
     private static final Pattern ACCION_ABRIR = Pattern.compile("\\[ACCION:abrir:(.*?)\\]");
 
-    private void llamar(String mensaje) {
+    private void llamar(String mensaje, final int mi) {
         String texto = "";
         final ArrayList<String> enlaces = new ArrayList<>();
         final JSONArray[] ordenes = new JSONArray[1];
@@ -535,6 +619,7 @@ class BurbujaManos {
                 b.put("chat_id", cid);
             }
             HttpURLConnection c = (HttpURLConnection) new URL(base + "/chat").openConnection();
+            conexion = c;
             try {
                 c.setRequestMethod("POST");
                 c.setConnectTimeout(10000);
@@ -574,6 +659,9 @@ class BurbujaManos {
                     }
                 }
             } finally {
+                if (conexion == c) {
+                    conexion = null;
+                }
                 c.disconnect();
             }
         } catch (SocketTimeoutException e) {
@@ -583,6 +671,9 @@ class BurbujaManos {
         }
         final String fin = texto;
         ui.post(() -> {
+            if (mi != peticion) {
+                return;
+            }
             abrirEnlace(enlaces);
             terminar(aplicarOrdenes(ordenes[0], fin));
         });
@@ -672,6 +763,11 @@ class BurbujaManos {
         if (puesta && !abierta) {
             estiloCirculo();
             aplicar();
+        }
+        if (puesta && abierta) {
+            nuevo = false;
+            mostrarTexto(texto);
+            actualizarTrabajo();
         }
         if (viaPalabra && puesta) {
             viaPalabra = false;
