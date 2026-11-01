@@ -33,7 +33,7 @@
     '.mnBtn:disabled{opacity:.5}';
   document.head.appendChild(css);
 
-  var autoBtn, paso1Btn, burbujaBtn, micBtn, palabraBtn;
+  var autoBtn, paso1Btn, burbujaBtn, micBtn, palabraBtn, bateriaBtn;
 
   function json(r) {
     return r.json().then(function (d) {
@@ -65,6 +65,7 @@
         palabraBtn.textContent = e.palabra ? 'Llamar diciendo \u00abJarvis\u00bb: activado (tocar para apagar)' : 'Llamar diciendo \u00abJarvis\u00bb: apagado (tocar para activar)';
         palabraBtn.dataset.on = e.palabra ? '1' : '';
       }
+      if (bateriaBtn) bateriaBtn.style.display = (e.vinculado && e.servicio && e.bateriaLibre === false) ? 'block' : 'none';
       if (micBtn) micBtn.style.display = (e.vinculado && e.servicio && e.burbuja && !e.mic) ? 'block' : 'none';
       if (!e.vinculado) {
         estadoEl.textContent = 'Sin vincular. Vincula este celular para que Jarvis pueda ayudarte con la pantalla.';
@@ -197,6 +198,18 @@
       }).catch(function () {});
     });
     caja.appendChild(micBtn);
+    bateriaBtn = document.createElement('button');
+    bateriaBtn.type = 'button';
+    bateriaBtn.className = 'mnBtn';
+    bateriaBtn.style.display = 'none';
+    bateriaBtn.textContent = 'Pantalla apagada: permitir sin l\u00edmite de bater\u00eda';
+    bateriaBtn.addEventListener('click', function () {
+      Promise.resolve(M.pedirBateria()).then(function () {
+        setTimeout(pintar, 1500);
+        setTimeout(pintar, 5000);
+      }).catch(function () {});
+    });
+    caja.appendChild(bateriaBtn);
     cont.parentNode.insertBefore(caja, cont.nextSibling);
     pintar();
     return true;

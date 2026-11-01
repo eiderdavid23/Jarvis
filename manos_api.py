@@ -47,6 +47,8 @@ def _validar_base(tipo, args):
     try:
         if tipo == 'capturar':
             return {}, None
+        if tipo in ('encender_pantalla', 'apagar_pantalla'):
+            return {}, None
         if tipo in TIPOS_CLIC:
             x, y = int(a.get('x')), int(a.get('y'))
             norm = bool(a.get('normalizado'))

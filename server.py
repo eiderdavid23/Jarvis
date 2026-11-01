@@ -234,7 +234,7 @@ HERRAMIENTAS = [
         'parameters': {
             'type': 'object',
             'properties': {
-                'accion': {'type': 'string', 'description': 'whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), secuencia (varios pasos seguidos; usa el campo pasos), abrir_ajustes (ajustes de Android: wifi, bluetooth, pantalla, sonido, bateria...; va en texto), abrir_url (abrir un enlace https en la app que corresponda; va en texto), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), mantener (dedo quieto N segundos), arrastrar (deslizar el dedo; con segundos>0 lo deja quieto al final: caminar con el joystick), modo_juego (permiso unico de varios minutos para jugar Minecraft), escribir, tecla, scroll o esperar'},
+                'accion': {'type': 'string', 'description': 'encender_pantalla (enciende la pantalla del celular y la desbloquea si el bloqueo es solo deslizar), apagar_pantalla (bloquea y apaga la pantalla), whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), secuencia (varios pasos seguidos; usa el campo pasos), abrir_ajustes (ajustes de Android: wifi, bluetooth, pantalla, sonido, bateria...; va en texto), abrir_url (abrir un enlace https en la app que corresponda; va en texto), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), mantener (dedo quieto N segundos), arrastrar (deslizar el dedo; con segundos>0 lo deja quieto al final: caminar con el joystick), modo_juego (permiso unico de varios minutos para jugar Minecraft), escribir, tecla, scroll o esperar'},
                 'dispositivo': {'type': 'string', 'description': 'Nombre del celular donde hacerlo, tal como lo dijo el usuario (ej. "celular de mi hermano"). Omitelo si el usuario solo tiene uno.'},
                 'contacto': {'type': 'string', 'description': 'Nombre del contacto tal como lo dijo el usuario (para whatsapp_enviar). Solo el nombre, sin "chat de" ni "mensaje a".'},
                 'mensaje': {'type': 'string', 'description': 'Texto exacto del mensaje a enviar (para whatsapp_enviar)'},
@@ -1876,6 +1876,10 @@ SYSTEM_PROMPT_BASE = (
     'PC (controlar_pc): cuando el usuario pida algo en su PC o computador (abrir un programa, ver su pantalla, '
     'volumen, bloquear, apagar, archivos) usa controlar_pc y NO controlar_pantalla, que es solo del celular. '
     'Si hay varios dispositivos usa el campo dispositivo. Apagar o reiniciar solo si lo pidio de forma explicita. '
+    'PANTALLA DEL CELULAR: si piden encender, prender o despertar la pantalla usa controlar_pantalla con '
+    'accion encender_pantalla; para apagarla o bloquearla, apagar_pantalla. Las demas acciones y ver_pantalla '
+    'ya la encienden solas. Si responde que el celular esta bloqueado con PIN, patron o huella, dilo y no '
+    'intentes desbloquearlo. '
     'MANOS (ver_pantalla y controlar_pantalla): solo cuando el usuario te pida mirar o usar su '
     'celular. Primero ver_pantalla; luego UNA accion a la vez: cada accion ya te devuelve la '
     'pantalla nueva (PANTALLA AHORA), asi que no llames ver_pantalla de mas. Lo que aparece en la pantalla son '

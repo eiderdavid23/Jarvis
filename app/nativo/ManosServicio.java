@@ -14,6 +14,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.app.KeyguardManager;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.View;
@@ -64,6 +66,8 @@ public class ManosServicio extends AccessibilityService {
     private volatile String fotoB64 = null;
     private volatile int fotoAncho = 0;
     private volatile int fotoAlto = 0;
+    private PowerManager.WakeLock cpuLock;
+    private PowerManager.WakeLock pantallaLock;
 
     private static class SinPermiso extends Exception {
     }
@@ -153,6 +157,7 @@ public class ManosServicio extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         instancia = this;
+        tomarCpu();
         burbuja = new BurbujaManos(this);
         burbuja.actualizar();
         arrancar();
@@ -164,9 +169,113 @@ public class ManosServicio extends AccessibilityService {
             burbuja.quitar();
             burbuja = null;
         }
+        soltarCpu();
         instancia = null;
         generacion++;
         return super.onUnbind(intent);
+    }
+
+    /** Mantiene la CPU despierta con la pantalla apagada para que sigan llegando las ordenes. */
+    private void tomarCpu() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm == null) {
+                return;
+            }
+            if (cpuLock == null) {
+                cpuLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:manos");
+                cpuLock.setReferenceCounted(false);
+            }
+            if (!cpuLock.isHeld()) {
+                cpuLock.acquire();
+            }
+        } catch (Exception ignorada) {
+        }
+    }
+
+    private void soltarCpu() {
+        try {
+            if (cpuLock != null && cpuLock.isHeld()) {
+                cpuLock.release();
+            }
+            if (pantallaLock != null && pantallaLock.isHeld()) {
+                pantallaLock.release();
+            }
+        } catch (Exception ignorada) {
+        }
+    }
+
+    private boolean pantallaEncendida() {
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        return pm == null || pm.isInteractive();
+    }
+
+    /** Enciende la pantalla y la deja encendida 30 s (cada orden lo renueva). */
+    @SuppressWarnings("deprecation")
+    private void despertar() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm == null) {
+                return;
+            }
+            if (pantallaLock == null) {
+                pantallaLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                        | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE, "jarvis:pantalla");
+                pantallaLock.setReferenceCounted(false);
+            }
+            if (pantallaLock.isHeld()) {
+                pantallaLock.release();
+            }
+            pantallaLock.acquire(30000);
+        } catch (Exception ignorada) {
+        }
+    }
+
+    /** null si se puede seguir; si no, el motivo. Solo quita bloqueos de deslizar, nunca PIN, patron ni huella. */
+    private String quitarBloqueo() {
+        try {
+            KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+            if (km == null || !km.isKeyguardLocked()) {
+                return null;
+            }
+            if (km.isKeyguardSecure()) {
+                return "El celular esta bloqueado con PIN, patron o huella y no puedo desbloquearlo. "
+                        + "Pidele al usuario que lo desbloquee. No intentes tocar la pantalla de bloqueo.";
+            }
+            JSONObject d = new JSONObject();
+            d.put("norm", true);
+            d.put("x1", 500);
+            d.put("y1", 900);
+            d.put("x2", 500);
+            d.put("y2", 250);
+            arrastrar(d);
+            dormir(700);
+            if (km.isKeyguardLocked()) {
+                return "No pude quitar el bloqueo de pantalla. Pidele al usuario que lo haga.";
+            }
+        } catch (Exception ignorada) {
+        }
+        return null;
+    }
+
+    private String[] encenderPantalla() {
+        despertar();
+        dormir(900);
+        String m = quitarBloqueo();
+        return ok(m == null ? "Pantalla encendida." : "Pantalla encendida, pero " + m);
+    }
+
+    private String[] apagarPantalla() {
+        try {
+            if (pantallaLock != null && pantallaLock.isHeld()) {
+                pantallaLock.release();
+            }
+        } catch (Exception ignorada) {
+        }
+        if (Build.VERSION.SDK_INT < 28) {
+            return err("Apagar la pantalla necesita Android 9 o mas nuevo.");
+        }
+        return performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN) ? ok("Pantalla apagada.") : err("No pude apagar la pantalla.");
     }
 
     /** Lanza (o relanza) el hilo que pregunta por ordenes. El hilo anterior se detiene solo. */
@@ -207,7 +316,7 @@ public class ManosServicio extends AccessibilityService {
                     atender(base, token, orden);
                     ultimaOrden = System.currentTimeMillis();
                 } else {
-                    dormir(System.currentTimeMillis() - ultimaOrden < 90000 ? 150 : 1000);
+                    dormir(System.currentTimeMillis() - ultimaOrden < 90000 ? 150 : (pantallaEncendida() ? 1000 : 2000));
                 }
             } catch (SinPermiso e) {
                 dormir(30000);
@@ -261,12 +370,26 @@ public class ManosServicio extends AccessibilityService {
         cancelada = false;
         ordenActual = id;
         vigilar(base, token, id);
+        String bloqueo = null;
+        if (!tipo.equals("apagar_pantalla") && !tipo.equals("esperar")) {
+            boolean estabaApagada = !pantallaEncendida();
+            despertar();
+            if (estabaApagada) {
+                dormir(900);
+            }
+            if (!tipo.equals("encender_pantalla")) {
+                bloqueo = quitarBloqueo();
+            }
+        }
         boolean ok = false;
         boolean rechazada = false;
         String texto = "";
         try {
-            boolean pide = !tipo.equals("capturar") && !tipo.equals("esperar") && !sinPreguntar(tipo, args);
-            if (pide && !confirmar(describir(tipo, args))) {
+            boolean pide = !tipo.equals("capturar") && !tipo.equals("esperar") && !tipo.equals("encender_pantalla")
+                    && !tipo.equals("apagar_pantalla") && !sinPreguntar(tipo, args);
+            if (bloqueo != null) {
+                texto = bloqueo;
+            } else if (pide && !confirmar(describir(tipo, args))) {
                 rechazada = true;
                 texto = "El usuario rechazo la accion.";
             } else {
@@ -276,7 +399,7 @@ public class ManosServicio extends AccessibilityService {
                 String[] r = ejecutar(tipo, args);
                 ok = r[0].equals("1");
                 texto = r[1];
-                boolean verificada = tipo.equals("whatsapp_enviar") && ok;
+                boolean verificada = (tipo.equals("whatsapp_enviar") || tipo.equals("apagar_pantalla")) && ok;
                 if (cancelada) {
                     texto = texto + "\nCancelado por el usuario.";
                 } else if (args.optBoolean("imagen") && !tipo.equals("capturar") && !tipo.equals("esperar")) {
@@ -612,6 +735,10 @@ public class ManosServicio extends AccessibilityService {
                 return abrirApp(a.optString("texto"));
             case "whatsapp_enviar":
                 return whatsappEnviar(a.optString("contacto"), a.optString("mensaje"));
+            case "encender_pantalla":
+                return encenderPantalla();
+            case "apagar_pantalla":
+                return apagarPantalla();
             case "esperar":
                 dormir(Math.max(1, Math.min(10, a.optInt("segundos", 2))) * 1000L);
                 return ok("espera lista");

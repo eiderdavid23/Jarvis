@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.PowerManager;
 import android.provider.Settings;
 
 import com.getcapacitor.JSObject;
@@ -31,9 +32,27 @@ public class ManosPlugin extends Plugin {
         r.put("burbuja", prefs().getBoolean("burbuja", true));
         r.put("palabra", prefs().getBoolean("palabra", false));
         r.put("vozBurbuja", prefs().getBoolean("vozBurbuja", true));
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        r.put("bateriaLibre", pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
         r.put("mic", getContext().checkSelfPermission(Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED);
         call.resolve(r);
+    }
+
+    /** Pide a Android que Jarvis no tenga limite de bateria (para seguir despierto con la pantalla apagada). */
+    @PluginMethod
+    public void pedirBateria(PluginCall call) {
+        try {
+            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:" + getContext().getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        } catch (Exception e) {
+            Intent i = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        }
+        call.resolve();
     }
 
     @PluginMethod

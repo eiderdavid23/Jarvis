@@ -8,6 +8,8 @@ permisos = [
     'android.permission.MODIFY_AUDIO_SETTINGS',
     'android.permission.FOREGROUND_SERVICE',
     'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+    'android.permission.WAKE_LOCK',
+    'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
 ]
 extra = ''
 for x in permisos:
