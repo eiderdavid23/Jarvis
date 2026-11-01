@@ -49,3 +49,4 @@
 - v1.16 (1 nov 2026), parte 3 de 3 (chat): el chat de la app aplica las ordenes «activa/desactiva X» (herramientas y funciones de la app) y los interruptores de Herramientas se sincronizan con los de la burbuja (gana el cambio mas reciente). Solo web (Vercel), no requiere APK nueva.
 - v1.17 (1 nov 2026): la burbuja ahora se puede abrir mientras Jarvis trabaja y tiene un boton «Detener» que corta la tarea (servidor y manos del celular); la respuesta tardia de una tarea detenida se ignora. Requiere APK nueva.
 - v1.18 (1 nov 2026): la pantalla de inicio ya no dice siempre lo mismo: el saludo, la frase de abajo y las 3 sugerencias cambian segun la hora, el dia de la semana, la fecha y los recordatorios que tengas para hoy; cada chat nuevo trae uno distinto. Solo web (Vercel), no requiere APK nueva.
+- v1.19 (1 nov 2026): la burbuja se cierra sola cuando Jarvis termina de hablar (si se abrió por la palabra «Jarvis» y no la tocaste). Requiere APK nueva.

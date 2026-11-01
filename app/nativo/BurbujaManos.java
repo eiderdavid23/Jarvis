@@ -93,6 +93,7 @@ class BurbujaManos {
     private int fallosPalabra;
     private final Runnable reinicioPalabra = this::sincronizarPalabra;
     private final Runnable cierreAuto = this::cierreAutomatico;
+    private boolean cerrarAlHablar;
     private static final int[] CANALES = {AudioManager.STREAM_NOTIFICATION, AudioManager.STREAM_SYSTEM,
             AudioManager.STREAM_MUSIC};
     private final boolean[] mudos = new boolean[3];
@@ -117,7 +118,7 @@ class BurbujaManos {
         this.wm = (WindowManager) srv.getSystemService(Context.WINDOW_SERVICE);
         this.prefs = srv.getSharedPreferences("manos", Context.MODE_PRIVATE);
         this.d = srv.getResources().getDisplayMetrics().density;
-        this.voz = new BurbujaVoz(srv, this::sincronizarPalabra);
+        this.voz = new BurbujaVoz(srv, this::vozTermino);
         int ancho = srv.getResources().getDisplayMetrics().widthPixels;
         bx = 0;
         by = prefs.getInt("by2", (int) (6 * d));
@@ -463,6 +464,7 @@ class BurbujaManos {
     }
 
     private void cerrarPanel() {
+        cerrarAlHablar = false;
         detenerVoz();
         ocultarTeclado();
         abierta = false;
@@ -753,6 +755,7 @@ class BurbujaManos {
     }
 
     private void terminar(String texto) {
+        cerrarAlHablar = false;
         pensando = false;
         ultimo = texto;
         nuevo = true;
@@ -778,6 +781,7 @@ class BurbujaManos {
             }
             ui.removeCallbacks(cierreAuto);
             ui.postDelayed(cierreAuto, 20000);
+            cerrarAlHablar = puesta && prefs.getBoolean("vozBurbuja", true) && voz.hablando();
         }
         sincronizarPalabra();
     }
@@ -875,6 +879,16 @@ class BurbujaManos {
                 mudos[k] = false;
             }
         }
+    }
+
+    /** La voz termino de hablar: si la barra se abrio sola con la respuesta, se cierra. */
+    private void vozTermino() {
+        if (cerrarAlHablar) {
+            cerrarAlHablar = false;
+            ui.removeCallbacks(cierreAuto);
+            cierreAutomatico();
+        }
+        sincronizarPalabra();
     }
 
     /** Cierra la barra que se abrio sola con la respuesta, si no la tocaste. */
