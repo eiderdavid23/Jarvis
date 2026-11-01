@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 1 nov 2026
-Versión actual: 1.23 (ver CAMBIOS.md)
+Versión actual: 1.24 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -43,6 +43,6 @@ Pedido de David sobre la burbuja y las funciones:
 - [ ] Pantalla apagada en celulares y PC (v1.22 servidor y web, v1.23 APK):
   - [x] Parte 1: ordenes `encender_pantalla` y `apagar_pantalla` en el servidor y boton de bateria en la web (v1.22).
   - [x] Parte 2: la APK mantiene la CPU despierta, enciende y apaga la pantalla (v1.23). Requiere APK nueva.
-  - [ ] Parte 3: la palabra «Jarvis» con pantalla apagada.
+  - [x] Parte 3: la palabra «Jarvis» con pantalla apagada.
   - [ ] Parte 4: `agente_pc.py` (encender el monitor y evitar la suspension).
 - [ ] Probar `agente_pc.py` en un PC real (hecho sin poder probarlo): vincular, abrir programa, capturar, volumen, mover archivo. Herramienta `controlar_pc` en server.py; ordenes `pc_*` en la cola de Manos; el PC se vincula con plataforma 'pc'. El agente pide permiso en pantalla salvo con --control; apagar, reiniciar y mover archivos siempre piden permiso.

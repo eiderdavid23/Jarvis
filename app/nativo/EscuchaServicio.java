@@ -12,11 +12,13 @@ import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.PowerManager;
 
 /** Servicio en primer plano (con aviso fijo) para que Android deje al micro escuchar la palabra "Jarvis". */
 public class EscuchaServicio extends Service {
     private static final String CANAL = "jarvis_escucha";
     private static final int ID = 7231;
+    private PowerManager.WakeLock cpu;
 
     static void iniciar(Context c) {
         try {
@@ -65,11 +67,37 @@ public class EscuchaServicio extends Service {
             } else {
                 startForeground(ID, b.build());
             }
+            tomarCpu();
         } catch (Exception e) {
             stopSelf();
             return START_NOT_STICKY;
         }
         return START_STICKY;
+    }
+
+    private void tomarCpu() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null && cpu == null) {
+                cpu = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:escucha");
+                cpu.setReferenceCounted(false);
+            }
+            if (cpu != null && !cpu.isHeld()) {
+                cpu.acquire();
+            }
+        } catch (Exception ignorada) {
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        try {
+            if (cpu != null && cpu.isHeld()) {
+                cpu.release();
+            }
+        } catch (Exception ignorada) {
+        }
+        super.onDestroy();
     }
 
     @Override

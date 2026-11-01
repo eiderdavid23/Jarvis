@@ -205,6 +205,7 @@ class BurbujaVoz {
                     .setUsage(AudioAttributes.USAGE_ASSISTANT)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build());
             m.setDataSource(f.getAbsolutePath());
+            m.setWakeMode(cx, android.os.PowerManager.PARTIAL_WAKE_LOCK);
             m.setOnCompletionListener(x -> fin.countDown());
             m.setOnErrorListener((x, a, b) -> {
                 fin.countDown();

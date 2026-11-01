@@ -92,6 +92,23 @@ class BurbujaManos {
     private boolean viaPalabra;
     private int fallosPalabra;
     private final Runnable reinicioPalabra = this::sincronizarPalabra;
+    private volatile long ultimaPalabra = 0;
+    /** Si la escucha de la palabra lleva 60 s sin dar señales, la reinicia. */
+    private final Runnable vigiaPalabra = new Runnable() {
+        @Override
+        public void run() {
+            if (srp == null) {
+                return;
+            }
+            if (System.currentTimeMillis() - ultimaPalabra > 60000) {
+                detenerPalabra();
+                restaurarSonido();
+                sincronizarPalabra();
+            } else {
+                ui.postDelayed(this, 20000);
+            }
+        }
+    };
     private final Runnable cierreAuto = this::cierreAutomatico;
     private boolean cerrarAlHablar;
     private static final int[] CANALES = {AudioManager.STREAM_NOTIFICATION, AudioManager.STREAM_SYSTEM,
@@ -946,6 +963,9 @@ class BurbujaManos {
             i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
             i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag());
             i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, srv.getPackageName());
+            ultimaPalabra = System.currentTimeMillis();
+            ui.removeCallbacks(vigiaPalabra);
+            ui.postDelayed(vigiaPalabra, 20000);
             silenciarBip();
             srp.startListening(i);
             soltarEn(900);
@@ -956,6 +976,7 @@ class BurbujaManos {
     }
 
     private void detenerPalabra() {
+        ui.removeCallbacks(vigiaPalabra);
         ui.removeCallbacks(reinicioPalabra);
         if (srp != null) {
             try {
