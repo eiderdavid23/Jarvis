@@ -523,6 +523,7 @@ class BurbujaManos {
     private void llamar(String mensaje) {
         String texto = "";
         final ArrayList<String> enlaces = new ArrayList<>();
+        final JSONArray[] ordenes = new JSONArray[1];
         try {
             String base = prefs.getString("url", "");
             String acceso = prefs.getString("acceso", "");
@@ -541,6 +542,7 @@ class BurbujaManos {
                 c.setDoOutput(true);
                 c.setRequestProperty("Content-Type", "application/json");
                 c.setRequestProperty("Authorization", "Bearer " + acceso);
+                c.setRequestProperty("X-Herramientas-Off", prefs.getString("herr_off", ""));
                 OutputStream o = c.getOutputStream();
                 o.write(b.toString().getBytes(StandardCharsets.UTF_8));
                 o.close();
@@ -550,6 +552,7 @@ class BurbujaManos {
                     texto = "Tu sesi\u00f3n caduc\u00f3. Abre Jarvis un momento y vuelve a intentarlo.";
                 } else {
                     JSONObject j = new JSONObject(cuerpo);
+                    ordenes[0] = j.optJSONArray("comandos");
                     JSONArray ua = j.optJSONArray("urls_abrir");
                     for (int k = 0; ua != null && k < ua.length(); k++) {
                         String u = ua.optString(k, "").trim();
@@ -581,8 +584,65 @@ class BurbujaManos {
         final String fin = texto;
         ui.post(() -> {
             abrirEnlace(enlaces);
-            terminar(fin);
+            terminar(aplicarOrdenes(ordenes[0], fin));
         });
+    }
+
+    /** Aplica las ordenes «activa/desactiva X» que entendio el servidor. Devuelve el texto a mostrar y decir. */
+    private String aplicarOrdenes(JSONArray ordenes, String texto) {
+        if (ordenes == null || ordenes.length() == 0) {
+            return texto;
+        }
+        String aviso = null;
+        boolean cambioHerr = false;
+        ArrayList<String> off = new ArrayList<>();
+        for (String x : prefs.getString("herr_off", "").split(",")) {
+            if (!x.trim().isEmpty()) {
+                off.add(x.trim());
+            }
+        }
+        for (int k = 0; k < ordenes.length(); k++) {
+            JSONObject o = ordenes.optJSONObject(k);
+            if (o == null) {
+                continue;
+            }
+            String id = o.optString("id", "");
+            boolean on = o.optBoolean("activar", true);
+            if (id.equals("escucha")) {
+                if (on && srv.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    aviso = "Falta el permiso del micr\u00f3fono. Dame el permiso en Jarvis: Ajustes \u2192 Manos de Jarvis.";
+                } else {
+                    prefs.edit().putBoolean("palabra", on).apply();
+                    if (on) {
+                        EscuchaServicio.iniciar(srv);
+                    } else {
+                        EscuchaServicio.detener(srv);
+                    }
+                }
+            } else if (id.equals("burbuja")) {
+                prefs.edit().putBoolean("burbuja", on).apply();
+                ui.postDelayed(this::actualizar, on ? 0 : 4000);
+            } else if (id.equals("voz_burbuja")) {
+                prefs.edit().putBoolean("vozBurbuja", on).apply();
+                if (!on) {
+                    voz.parar();
+                }
+            } else if (id.matches("[a-z_]{2,20}")) {
+                off.remove(id);
+                if (!on) {
+                    off.add(id);
+                }
+                cambioHerr = true;
+            }
+        }
+        if (cambioHerr) {
+            StringBuilder sb = new StringBuilder();
+            for (String x : off) {
+                sb.append(sb.length() > 0 ? "," : "").append(x);
+            }
+            prefs.edit().putString("herr_off", sb.toString()).putLong("herr_ts", System.currentTimeMillis()).apply();
+        }
+        return aviso != null ? aviso : texto;
     }
 
     /** Jarvis pidio abrir una pagina: la web lo hace sola, pero la burbuja no es la web, asi que lo hace aqui. */

@@ -30,6 +30,7 @@ public class ManosPlugin extends Plugin {
         r.put("auto", prefs().getBoolean("auto", false));
         r.put("burbuja", prefs().getBoolean("burbuja", true));
         r.put("palabra", prefs().getBoolean("palabra", false));
+        r.put("vozBurbuja", prefs().getBoolean("vozBurbuja", true));
         r.put("mic", getContext().checkSelfPermission(Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED);
         call.resolve(r);
@@ -123,6 +124,32 @@ public class ManosPlugin extends Plugin {
         }
         refrescarBurbuja();
         call.resolve();
+    }
+
+    /** Voz de la burbuja: la enciende o la apaga. */
+    @PluginMethod
+    public void vozBurbuja(PluginCall call) {
+        prefs().edit().putBoolean("vozBurbuja", Boolean.TRUE.equals(call.getBoolean("activa", true))).apply();
+        call.resolve();
+    }
+
+    /** Sincroniza con la pagina los interruptores de herramientas apagadas: gana el cambio mas reciente. */
+    @PluginMethod
+    public void herramientas(PluginCall call) {
+        String off = call.getString("off", "");
+        long ts = 0L;
+        try {
+            ts = Long.parseLong(call.getString("ts", "0"));
+        } catch (Exception ignorada) {
+        }
+        SharedPreferences p = prefs();
+        if (off != null && ts > p.getLong("herr_ts", 0L)) {
+            p.edit().putString("herr_off", off).putLong("herr_ts", ts).apply();
+        }
+        JSObject r = new JSObject();
+        r.put("off", p.getString("herr_off", ""));
+        r.put("ts", String.valueOf(p.getLong("herr_ts", 0L)));
+        call.resolve(r);
     }
 
     @PluginMethod

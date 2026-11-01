@@ -45,3 +45,4 @@
 - v1.7 (31 oct 2026): botón en la barra de arriba, junto a la bocina, para encender o apagar la burbuja y el «Jarvis» de voz sin entrar a Ajustes. Solo web.
 - v1.15 (1 nov 2026): la burbuja ahora también habla: al terminar de responder lee la respuesta en voz alta (voz del servidor y, si falla, la del celular) y mientras habla no escucha «Jarvis». Requiere APK nueva.
 - v1.16 (1 nov 2026): activar y desactivar funciones con la voz o el chat sin gastar IA («Jarvis, desactiva el modo escucha», «activa la memoria y los recordatorios»); el servidor entiende la orden y la app la aplica. Parte 1 de 3 (servidor). Requiere reiniciar el servidor.
+- v1.16 (1 nov 2026), parte 2 de 3 (burbuja): la burbuja manda tus interruptores de herramientas al servidor, aplica las ordenes «activa/desactiva X» (modo escucha, burbuja, voz de la burbuja y herramientas) y confirma con voz. Requiere APK nueva.
