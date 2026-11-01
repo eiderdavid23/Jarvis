@@ -7,6 +7,7 @@
     { id: 'recordatorios', nombre: 'Recordatorios', desc: 'Crear, listar y borrar por chat' },
     { id: 'imagenes', nombre: 'Imágenes', desc: 'Generar imágenes con IA' },
     { id: 'personas', nombre: 'Buscar personas', desc: 'Información pública en la web y redes' },
+    { id: 'web', nombre: 'Buscar en la web', desc: 'Buscar en internet y leer páginas' },
     { id: 'enlaces', nombre: 'Abrir enlaces', desc: 'Abrir sitios en el navegador' },
     { id: 'nexus', nombre: 'Plataformas NEXUS', desc: 'Listar y abrir tus plataformas por nombre' },
     { id: 'archivos', nombre: 'Archivos', desc: 'Leer adjuntos y archivos del proyecto' },
