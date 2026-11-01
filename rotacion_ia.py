@@ -19,7 +19,7 @@ from flask import Blueprint, g, jsonify
 srv = None   # lo asigna server.py (necesita sus herramientas, constantes y generar_gemini/groq)
 bp = Blueprint('rotacion', __name__)
 
-ORDEN = ('gemini', 'groq', 'mistral', 'openrouter')
+ORDEN = ('gemini', 'groq', 'nvidia', 'mistral', 'openrouter')
 MARCA = {'gemini': 'Gemini', 'groq': 'Groq', 'mistral': 'Mistral', 'openrouter': 'OpenRouter'}
 EMPRESA = {'gemini': 'Google', 'groq': 'Groq', 'mistral': 'Mistral', 'openrouter': 'OpenRouter'}
 CABECERA_LLAVE = {'gemini': 'X-Gemini-Key', 'groq': 'X-Groq-Key',
@@ -47,6 +47,18 @@ NOTAS = {
     'openrouter/free': 'Elige solo un modelo gratis disponible',
     'poolside/laguna-s-2.1:free': 'Gratis, para tareas con herramientas',
 }
+
+
+MARCA['nvidia'] = 'NVIDIA'
+EMPRESA['nvidia'] = 'NVIDIA'
+CABECERA_LLAVE['nvidia'] = 'X-Nvidia-Key'
+URL_OPENAI['nvidia'] = 'https://integrate.api.nvidia.com/v1/chat/completions'
+NOMBRES.update({'qwen/qwen3.8-27b': 'Qwen 3.8 27B',
+                'qwen/qwen3-coder-480b-a35b-instruct': 'Qwen3 Coder 480B',
+                'meta/llama-3.3-70b-instruct': 'Llama 3.3 70B'})
+NOTAS.update({'qwen/qwen3.8-27b': 'Cuota propia en Groq',
+              'qwen/qwen3-coder-480b-a35b-instruct': 'Especialista en código (NVIDIA, gratis)',
+              'meta/llama-3.3-70b-instruct': 'General y estable (NVIDIA, gratis)'})
 
 
 class TodosAgotados(Exception):
@@ -84,7 +96,9 @@ def catalogo():
         base = [
             ('gemini', srv.GEMINI_MODEL), ('gemini', srv.GEMINI_MODEL_RESPALDO),
             ('gemini', 'gemini-2.5-flash'), ('gemini', 'gemini-2.5-flash-lite'),
-            ('groq', srv.GROQ_MODEL), ('groq', 'openai/gpt-oss-20b'),
+            ('groq', srv.GROQ_MODEL), ('groq', 'openai/gpt-oss-20b'), ('groq', 'qwen/qwen3.8-27b'),
+            ('nvidia', 'openai/gpt-oss-120b'), ('nvidia', 'qwen/qwen3-coder-480b-a35b-instruct'),
+            ('nvidia', 'meta/llama-3.3-70b-instruct'),
             ('groq', 'meta-llama/llama-4-scout-17b-16e-instruct'),
             ('mistral', os.environ.get('MISTRAL_MODEL', 'mistral-small-latest')), ('mistral', 'open-mistral-nemo'),
             ('openrouter', 'openrouter/free'), ('openrouter', 'poolside/laguna-s-2.1:free'),
@@ -113,7 +127,8 @@ def api_modelos():
 def reunir_llaves(cabeceras, usa_servidor):
     """{'gemini': llave, ...} con las llaves disponibles: navegador, luego cuenta, luego servidor."""
     env = {'gemini': srv.GEMINI_API_KEY, 'groq': srv.GROQ_API_KEY,
-           'mistral': os.environ.get('MISTRAL_API_KEY', ''), 'openrouter': os.environ.get('OPENROUTER_API_KEY', '')}
+           'mistral': os.environ.get('MISTRAL_API_KEY', ''), 'openrouter': os.environ.get('OPENROUTER_API_KEY', ''),
+           'nvidia': os.environ.get('NVIDIA_API_KEY', '')}
     llaves = {p: (cabeceras.get(CABECERA_LLAVE[p], '') or '').strip() for p in ORDEN}
     if not all(llaves.values()):
         try:

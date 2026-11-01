@@ -713,6 +713,21 @@
           </div>
         </div>
 
+        <div class="card">
+          <div class="cardHead">
+            <strong>NVIDIA</strong>
+            <span class="badge" id="badgeLlaveNvidia">Sin conectar</span>
+          </div>
+          <input type="text" id="campoLlaveNvidia" class="campoTexto campoClave" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pega tu llave de NVIDIA (nvapi-...)">
+          <p style="font-size:11px; opacity:0.7; margin:0 0 10px;">Gratis y sin tarjeta (pide verificar el teléfono una vez). Hasta 40 mensajes por minuto, varios modelos de código.</p>
+          <a href="https://build.nvidia.com/settings/api-keys" target="_blank" rel="noopener" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55; text-decoration:none; display:inline-block; margin-bottom:12px;">Obtener llave en NVIDIA Build &rarr;</a>
+          <div class="filaBtns">
+            <button id="btnGuardarLlaveNvidia" class="btnPanel">Guardar</button>
+            <button id="btnVerLlaveNvidia" class="btnPanel secundario" style="color:#00e5ff; border-color:#00e5ff55;">Ver</button>
+            <button id="btnBorrarLlaveNvidia" class="btnPanel secundario">Borrar</button>
+          </div>
+        </div>
+
         <p style="font-size:11px; opacity:0.7;">Tus llaves se guardan cifradas en tu cuenta y se copian a este dispositivo. Cada cuenta usa solo su propia llave.</p>
       </div>
 
@@ -1591,6 +1606,7 @@ async function enviarMensaje(desdeVoz) {
         'X-Groq-Key': llaveGroq,
         'X-Mistral-Key': llaveMistral,
         'X-OpenRouter-Key': localStorage.getItem('jarvisOpenRouterKey') || '',
+        'X-Nvidia-Key': localStorage.getItem('jarvisNvidiaKey') || '',
         'X-Modelo': localStorage.getItem('jarvisModelo') || '',
         'X-Cambio-Auto': localStorage.getItem('jarvisCambioAuto') === '0' ? '0' : '1',
         'X-Pensamiento': nivelPensamiento(),
@@ -2024,6 +2040,7 @@ function actualizarBadgesLlaves() {
   actualizarBadgeLlave(campoLlaveGroq, badgeLlaveGroq, 'jarvisGroqKey');
   actualizarBadgeLlave(campoLlaveMistral, badgeLlaveMistral, 'jarvisMistralKey');
   if (document.getElementById('campoLlaveOpenRouter')) actualizarBadgeLlave(document.getElementById('campoLlaveOpenRouter'), document.getElementById('badgeLlaveOpenRouter'), 'jarvisOpenRouterKey');
+  if (document.getElementById('campoLlaveNvidia')) actualizarBadgeLlave(document.getElementById('campoLlaveNvidia'), document.getElementById('badgeLlaveNvidia'), 'jarvisNvidiaKey');
 }
 actualizarBadgesLlaves();
 
@@ -2100,6 +2117,21 @@ document.getElementById('btnBorrarLlaveOpenRouter').addEventListener('click', ()
 });
 document.getElementById('btnVerLlaveOpenRouter').addEventListener('click', () => {
   document.getElementById('campoLlaveOpenRouter').classList.toggle('campoClave');
+});
+document.getElementById('btnGuardarLlaveNvidia').addEventListener('click', () => {
+  const valor = document.getElementById('campoLlaveNvidia').value.trim();
+  if (!valor) return;
+  localStorage.setItem('jarvisNvidiaKey', valor);
+  actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.guardar('nvidia', valor);
+});
+document.getElementById('btnBorrarLlaveNvidia').addEventListener('click', () => {
+  localStorage.removeItem('jarvisNvidiaKey');
+  actualizarBadgesLlaves();
+  if (window.llavesCuenta) window.llavesCuenta.borrar('nvidia');
+});
+document.getElementById('btnVerLlaveNvidia').addEventListener('click', () => {
+  document.getElementById('campoLlaveNvidia').classList.toggle('campoClave');
 });
 btnUsarMistral.addEventListener('click', () => {
   localStorage.setItem('jarvisProveedor', 'mistral');

@@ -2125,7 +2125,7 @@ def probar_llave():
     data = request.get_json(silent=True) or {}
     proveedor = (data.get('proveedor') or 'gemini').strip().lower()
     llave = (data.get('llave') or '').strip()
-    if proveedor not in ('gemini', 'groq', 'mistral', 'openrouter') or len(llave) < 20 or len(llave) > 200 or any(c.isspace() for c in llave):
+    if proveedor not in ('gemini', 'groq', 'mistral', 'openrouter', 'nvidia') or len(llave) < 20 or len(llave) > 200 or any(c.isspace() for c in llave):
         return jsonify({'ok': False, 'motivo': 'formato'})
     try:
         if proveedor == 'gemini':
@@ -2136,6 +2136,9 @@ def probar_llave():
                              headers={'Authorization': 'Bearer ' + llave}, timeout=15)
         elif proveedor == 'mistral':
             r = requests.get('https://api.mistral.ai/v1/models',
+                             headers={'Authorization': 'Bearer ' + llave}, timeout=15)
+        elif proveedor == 'nvidia':
+            r = requests.get('https://integrate.api.nvidia.com/v1/models',
                              headers={'Authorization': 'Bearer ' + llave}, timeout=15)
         else:
             r = requests.get('https://openrouter.ai/api/v1/auth/key',

@@ -8,7 +8,9 @@
     mistral: { nombre: 'Mistral', url: 'https://console.mistral.ai/api-keys', clave: 'jarvisMistralKey',
                sitio: 'Mistral Console', boton: 'Create new key' },
     openrouter: { nombre: 'OpenRouter', url: 'https://openrouter.ai/keys', clave: 'jarvisOpenRouterKey',
-                  sitio: 'OpenRouter', boton: 'Create Key' }
+                  sitio: 'OpenRouter', boton: 'Create Key' },
+    nvidia: { nombre: 'NVIDIA', url: 'https://build.nvidia.com/settings/api-keys', clave: 'jarvisNvidiaKey',
+              sitio: 'NVIDIA Build', boton: 'Generate API Key' }
   };
   const MOTIVOS = {
     formato: 'Esa llave no parece completa. Copia todo el texto, sin espacios.',
