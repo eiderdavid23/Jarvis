@@ -22,12 +22,44 @@
       return Array.isArray(v) ? v : [];
     } catch (e) { return []; }
   }
-  function guardar(lista) {
-    try { localStorage.setItem(CLAVE, JSON.stringify(lista)); } catch (e) {}
+  var CLAVE_TS = 'jarvisHerramientasTs';
+  function guardar(lista, ts) {
+    try {
+      localStorage.setItem(CLAVE, JSON.stringify(lista));
+      localStorage.setItem(CLAVE_TS, String(ts || Date.now()));
+    } catch (e) {}
+  }
+  function pintarInterruptores() {
+    var apagadas = leer();
+    var cs = document.querySelectorAll('#hrCont input[data-id]');
+    for (var i = 0; i < cs.length; i++) cs[i].checked = apagadas.indexOf(cs[i].dataset.id) === -1;
   }
 
   // index.html la usa para mandar el header X-Herramientas-Off
   window.herramientasOff = function () { return leer().join(','); };
+  // hora del ultimo cambio (para ver si gana la pagina o la burbuja)
+  window.herramientasTs = function () {
+    var t = 0;
+    try { t = Number(localStorage.getItem(CLAVE_TS)) || 0; } catch (e) {}
+    return (!t && leer().length) ? 1 : t;
+  };
+  // orden por voz o chat: devuelve true si cambio algo
+  window.herramientasAplicar = function (id, on) {
+    var lista = leer();
+    if (on === (lista.indexOf(id) === -1)) return false;
+    lista = lista.filter(function (x) { return x !== id; });
+    if (!on) lista.push(id);
+    guardar(lista);
+    pintarInterruptores();
+    window.dispatchEvent(new Event('jarvis-herramientas'));
+    return true;
+  };
+  // lo que manda la burbuja cuando su cambio es mas reciente
+  window.herramientasEstablecer = function (off, ts) {
+    var lista = String(off || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    guardar(lista, Number(ts) || Date.now());
+    pintarInterruptores();
+  };
 
   function construir() {
     var sidebar = document.getElementById('sidebar');
@@ -58,10 +90,12 @@
       var chk = document.createElement('input');
       chk.type = 'checkbox';
       chk.checked = apagadas.indexOf(g.id) === -1;
+      chk.dataset.id = g.id;
       chk.addEventListener('change', function () {
         var lista = leer().filter(function (x) { return x !== g.id; });
         if (!chk.checked) lista.push(g.id);
         guardar(lista);
+        window.dispatchEvent(new Event('jarvis-herramientas'));
       });
       var sw = document.createElement('span');
       sw.className = 'hrSw';

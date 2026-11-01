@@ -26,3 +26,14 @@ David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y 
 
 ---
 
+
+## 2. Registro de tareas (marcar cada una al terminarla)
+
+Pedido de David sobre la burbuja y las funciones:
+
+- [x] La burbuja también habla: lee la respuesta en voz alta (v1.15).
+- [x] Activar/desactivar funciones con la voz o el chat («Jarvis, desactiva el modo escucha»):
+  - [x] Parte 1: el servidor entiende la orden (`funciones_voz.py`).
+  - [x] Parte 2: la burbuja la aplica y confirma con voz.
+  - [x] Parte 3: el chat de la app la aplica (`public/ordenes_voz.js`) y los interruptores de Herramientas se sincronizan con la burbuja.
+- [ ] Poder abrir la burbuja mientras trabaja (hoy se bloquea) y botón Detener dentro de la burbuja. Requiere APK nueva.

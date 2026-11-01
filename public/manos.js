@@ -187,4 +187,5 @@
 
   var APP = (cap.Plugins || {}).App;
   if (APP && APP.addListener) APP.addListener('appStateChange', function (s) { if (s && s.isActive && boton) pintar(); });
+  window.addEventListener('jarvis-ordenes', function () { if (boton) pintar(); });
 })();
