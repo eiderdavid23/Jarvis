@@ -319,6 +319,10 @@ def _elegir(nombre=None):
     if not vivos:
         return None, ('No hay ningun dispositivo conectado' + (f' llamado "{nombre}"' if nombre else '') +
                       '. El usuario debe tener abierta la app de Jarvis en ese celular con las manos activadas.')
+    if not nombre and len(vivos) > 1:
+        nombres = ', '.join('"%s"' % f['nombre'] for f in vivos)
+        return None, ('Hay varios dispositivos conectados (' + nombres + '). Preguntale al usuario en cual quiere '
+                      'hacerlo y vuelve a llamar con el campo dispositivo.')
     return vivos[0], None
 
 

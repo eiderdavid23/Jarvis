@@ -215,6 +215,7 @@ HERRAMIENTAS = [
         'parameters': {
             'type': 'object',
             'properties': {
+                'dispositivo': {'type': 'string', 'description': 'Nombre del celular donde hacerlo, tal como lo dijo el usuario (ej. "celular de mi hermano"). Omitelo si el usuario solo tiene uno.'},
                 'imagen': {'type': 'boolean', 'description': 'true para recibir ademas una captura de la pantalla como imagen (solo con modelos Gemini). Necesaria en juegos.'}
             }
         }
@@ -234,6 +235,7 @@ HERRAMIENTAS = [
             'type': 'object',
             'properties': {
                 'accion': {'type': 'string', 'description': 'whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), secuencia (varios pasos seguidos; usa el campo pasos), abrir_ajustes (ajustes de Android: wifi, bluetooth, pantalla, sonido, bateria...; va en texto), abrir_url (abrir un enlace https en la app que corresponda; va en texto), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), mantener (dedo quieto N segundos), arrastrar (deslizar el dedo; con segundos>0 lo deja quieto al final: caminar con el joystick), modo_juego (permiso unico de varios minutos para jugar Minecraft), escribir, tecla, scroll o esperar'},
+                'dispositivo': {'type': 'string', 'description': 'Nombre del celular donde hacerlo, tal como lo dijo el usuario (ej. "celular de mi hermano"). Omitelo si el usuario solo tiene uno.'},
                 'contacto': {'type': 'string', 'description': 'Nombre del contacto tal como lo dijo el usuario (para whatsapp_enviar). Solo el nombre, sin "chat de" ni "mensaje a".'},
                 'mensaje': {'type': 'string', 'description': 'Texto exacto del mensaje a enviar (para whatsapp_enviar)'},
                 'pasos': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Para secuencia: lista de pasos, cada uno "accion: valor". Acciones: abrir (nombre de app), tocar (nombre del boton), escribir (texto), tecla (atras, inicio, enter...), scroll (abajo o arriba y opcional cantidad), esperar (segundos), url (enlace), ajustes (wifi, bluetooth...). Ejemplo: ["abrir: Spotify", "tocar: Buscar", "escribir: bad bunny", "tecla: enter"]. Maximo 10.'},
@@ -704,10 +706,10 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         return resultado
 
     if nombre == 'ver_pantalla':
-        return manos_api.leer_pantalla(None, bool(argumentos.get('imagen')))
+        return manos_api.leer_pantalla(str(argumentos.get('dispositivo') or '').strip() or None, bool(argumentos.get('imagen')))
 
     if nombre == 'controlar_pantalla':
-        return manos_api.accion(str(argumentos.get('accion') or ''), argumentos)
+        return manos_api.accion(str(argumentos.get('accion') or ''), argumentos, str(argumentos.get('dispositivo') or '').strip() or None)
 
     if nombre == 'encender_linterna':
         ok = encender_linterna()

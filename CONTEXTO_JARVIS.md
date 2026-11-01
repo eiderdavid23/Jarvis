@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 1 nov 2026
-Versión actual: 1.19 (ver CAMBIOS.md)
+Versión actual: 1.20 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -39,3 +39,4 @@ Pedido de David sobre la burbuja y las funciones:
 - [x] Poder abrir la burbuja mientras trabaja y botón Detener dentro de la burbuja (v1.17). Requiere APK nueva.
 - [x] Pantalla de inicio con saludos variados según la hora, el día, la fecha y los recordatorios de hoy, y sugerencias que cambian (v1.18, `public/saludos.js`). Solo web.
 - [x] La burbuja se cierra sola al terminar de hablar (v1.19, `BurbujaManos.java`). Requiere APK nueva.
+- [x] Varios celulares con la misma cuenta (v1.20): nombre propio al vincular y campo `dispositivo` en ver_pantalla y controlar_pantalla.

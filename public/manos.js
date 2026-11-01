@@ -4,7 +4,25 @@
   if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
   var M = (cap.Plugins || {}).Manos || (cap.registerPlugin && cap.registerPlugin('Manos'));
   if (!M) return;
-  var NOMBRE = 'Mi celular';
+  var NOMBRE = nombreGuardado() || 'Mi celular';
+
+  function nombreGuardado() {
+    try { return localStorage.getItem('jarvisManosNombre') || ''; } catch (e) { return ''; }
+  }
+  function guardarNombre(n) {
+    try { localStorage.setItem('jarvisManosNombre', n); } catch (e) {}
+  }
+  function modelo() {
+    var m = /Android[^;]*;\s*([^;)]+?)(?:\s+Build|\))/.exec(navigator.userAgent || '');
+    return m ? m[1].trim() : '';
+  }
+  function pedirNombre() {
+    var sug = nombreGuardado() || modelo() || 'Mi celular';
+    var n = window.prompt('\u00bfC\u00f3mo quieres llamar a este celular? (ej. Celular de mi hermano)', sug);
+    if (n === null) return null;
+    n = n.replace(/\s+/g, ' ').trim().slice(0, 40);
+    return n || sug;
+  }
   var estadoEl, ayudaEl, boton, accion = null;
 
   var css = document.createElement('style');
@@ -72,6 +90,10 @@
   }
 
   function vincular() {
+    var elegido = pedirNombre();
+    if (elegido === null) return;
+    NOMBRE = elegido;
+    guardarNombre(NOMBRE);
     boton.disabled = true;
     fetch('/manos/vincular', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
