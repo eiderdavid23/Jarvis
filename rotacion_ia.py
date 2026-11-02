@@ -353,7 +353,18 @@ def _mensaje_agotados(fallos, solo_gemini):
     return '\n'.join(lineas)
 
 
-def generar(system_prompt, turnos, llaves, nivel='medio', eleccion='auto', cambio_auto=True, solo_gemini=False):
+def generar(*args, **kwargs):
+    """Igual que la cadena de modelos; al terminar, si Jarvis uso el celular, devuelve al usuario a su app."""
+    try:
+        return _generar_cadena(*args, **kwargs)
+    finally:
+        try:
+            srv.manos_api.volver_origen()
+        except Exception as e:
+            print('[MANOS] no pude pedir volver a la app:', e)
+
+
+def _generar_cadena(system_prompt, turnos, llaves, nivel='medio', eleccion='auto', cambio_auto=True, solo_gemini=False):
     """Devuelve (respuesta, acciones, modelo_usado). Lanza TodosAgotados si ninguno responde."""
     lista = cadena(llaves, eleccion, cambio_auto, solo_gemini)
     fallos = []

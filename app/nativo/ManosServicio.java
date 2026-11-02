@@ -63,6 +63,8 @@ public class ManosServicio extends AccessibilityService {
     private volatile long juegoHasta = 0;
     private volatile boolean cancelada = false;
     private volatile String ordenActual = "";
+    private volatile String origenApp = "";
+    private volatile long origenHora = 0;
     private volatile String fotoB64 = null;
     private volatile int fotoAncho = 0;
     private volatile int fotoAlto = 0;
@@ -368,6 +370,19 @@ public class ManosServicio extends AccessibilityService {
         if (args == null) {
             args = new JSONObject();
         }
+        if (tipo.equals("volver_origen")) {
+            String vuelta = volverOrigen();
+            try {
+                JSONObject cuerpoV = new JSONObject();
+                cuerpoV.put("orden_id", id);
+                cuerpoV.put("ok", true);
+                cuerpoV.put("texto", vuelta);
+                http("POST", base + "/manos/d/resultado", token, cuerpoV);
+            } catch (Exception ignorada) {
+            }
+            return;
+        }
+        recordarOrigen(tipo);
         cancelada = false;
         ordenActual = id;
         vigilar(base, token, id);
@@ -432,6 +447,57 @@ public class ManosServicio extends AccessibilityService {
         } catch (Exception ignorada) {
         }
         ordenActual = "";
+    }
+
+    /** Al empezar una tarea en el celular, anota en que app estaba el usuario para devolverlo al terminar. */
+    private void recordarOrigen(String tipo) {
+        if (tipo.equals("capturar") || tipo.equals("esperar") || tipo.equals("encender_pantalla")
+                || tipo.equals("apagar_pantalla")) {
+            return;
+        }
+        long ahora = System.currentTimeMillis();
+        if (ahora - origenHora > 240000) {
+            origenApp = "";
+        }
+        origenHora = ahora;
+        if (!origenApp.isEmpty() || !pantallaEncendida()) {
+            return;
+        }
+        String p = paqueteRaiz();
+        if (p.isEmpty() || p.equals("com.android.systemui")) {
+            return;
+        }
+        origenApp = p;
+    }
+
+    /** Al terminar la tarea, devuelve al usuario a la app donde estaba. */
+    private String volverOrigen() {
+        String o = origenApp;
+        origenApp = "";
+        origenHora = 0;
+        if (o.isEmpty()) {
+            return "No habia una app a la que volver.";
+        }
+        if (!pantallaEncendida()) {
+            return "La pantalla esta apagada: no vuelvo a ninguna app.";
+        }
+        if (paqueteRaiz().equals(o)) {
+            return "Ya estabas en esa app.";
+        }
+        try {
+            Intent casa = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+            android.content.pm.ResolveInfo ri = getPackageManager().resolveActivity(casa,
+                    android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+            if (ri != null && ri.activityInfo != null && o.equals(ri.activityInfo.packageName)) {
+                global(GLOBAL_ACTION_HOME);
+                return "Volvi a la pantalla de inicio.";
+            }
+        } catch (Exception ignorada) {
+        }
+        if (lanzar(o) && esperarApp(o, 2500)) {
+            return "Volvi a la app donde estabas.";
+        }
+        return "No pude volver a la app donde estabas.";
     }
 
     /** Mientras dura una orden, pregunta al servidor si el usuario la cancelo (boton Detener). */

@@ -430,12 +430,29 @@ def accion(tipo, args, nombre=None):
     if r['estado'] != 'hecha':
         return {'ok': False, 'error': r.get('resultado') or 'fallo la accion'}
     salida = {'ok': True, 'dispositivo': disp['nombre'], 'detalle': r.get('resultado') or 'hecho'}
+    if tipo == 'apagar_pantalla':
+        g.manos_volver = None
+    elif tipo not in ('capturar', 'esperar', 'encender_pantalla'):
+        g.manos_volver = disp['id']
     if limpio.get('imagen'):
         img = _imagen_de(disp['id'], desde)
         if img:
             salida['_imagen'] = img
             salida['nota_imagen'] = NOTA_IMAGEN
     return salida
+
+
+def volver_origen():
+    """Al terminar la respuesta, pide al celular que devuelva al usuario a la app donde estaba."""
+    did = g.get('manos_volver')
+    if not did:
+        return
+    g.manos_volver = None
+    try:
+        supa._rest('POST', 'manos_ordenes', cuerpo={'dispositivo_id': did, 'tipo': 'volver_origen', 'args': {},
+                                                    'usuario_id': g.usuario_id}, extra=REP)
+    except Exception as e:
+        print('[MANOS] no pude pedir volver a la app:', e)
 
 
 # --- Control del PC (agente_pc.py) ---------------------------------------------
