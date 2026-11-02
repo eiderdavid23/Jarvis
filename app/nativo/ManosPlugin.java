@@ -37,6 +37,14 @@ public class ManosPlugin extends Plugin {
         r.put("bateriaLibre", pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
         r.put("mic", getContext().checkSelfPermission(Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED);
+        r.put("llamadas", getContext().checkSelfPermission(Manifest.permission.CALL_PHONE)
+                == PackageManager.PERMISSION_GRANTED
+                && getContext().checkSelfPermission(Manifest.permission.READ_CONTACTS)
+                == PackageManager.PERMISSION_GRANTED);
+        r.put("brillo", Settings.System.canWrite(getContext()));
+        android.app.NotificationManager nm = (android.app.NotificationManager)
+                getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        r.put("noMolestar", nm != null && nm.isNotificationPolicyAccessGranted());
         call.resolve(r);
     }
 
@@ -178,6 +186,36 @@ public class ManosPlugin extends Plugin {
                 != PackageManager.PERMISSION_GRANTED && getActivity() != null) {
             getActivity().requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 7231);
         }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void pedirLlamadas(PluginCall call) {
+        if ((getContext().checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED
+                || getContext().checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED)
+                && getActivity() != null) {
+            getActivity().requestPermissions(new String[]{Manifest.permission.CALL_PHONE,
+                    Manifest.permission.READ_CONTACTS}, 7232);
+        }
+        call.resolve();
+    }
+
+    /** Abre la pantalla donde se permite a Jarvis cambiar el brillo. */
+    @PluginMethod
+    public void pedirBrillo(PluginCall call) {
+        Intent i = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS,
+                Uri.parse("package:" + getContext().getPackageName()));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(i);
+        call.resolve();
+    }
+
+    /** Abre la pantalla donde se permite a Jarvis usar No molestar. */
+    @PluginMethod
+    public void pedirNoMolestar(PluginCall call) {
+        Intent i = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(i);
         call.resolve();
     }
 

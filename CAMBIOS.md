@@ -61,3 +61,4 @@
 - v1.28: al pedirle a Jarvis que abra una app, ya no te devuelve a la app donde estabas; se queda en la que abrió. Solo servidor, no requiere APK nueva.
 - v1.29: la busqueda de TV prueba tambien el puerto 6467, ata la busqueda al WiFi aunque no tenga internet, espera mas por cada IP y, si no encuentra nada, dice que rango de IP reviso. Requiere APK nueva.
 - v1.30 (parte 1): linterna, vibrar, bateria y volumen del celular desde la APK, sin Termux (controlar_pantalla acciones linterna, vibrar, bateria y volumen; las herramientas viejas usan Termux y, si falla, la APK). Requiere APK nueva.
+- v1.30 (parte 2): Jarvis puede llamar a un contacto o numero, cambiar el brillo y activar No molestar. En Ajustes > Manos de Jarvis aparecen los botones para dar cada permiso. Requiere APK nueva.

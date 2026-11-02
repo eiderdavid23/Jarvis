@@ -104,6 +104,23 @@ def _validar_base(tipo, args):
             if modo in ('subir', 'bajar'):
                 salida['pasos'] = max(1, min(10, int(a.get('cantidad') or 2)))
             return salida, None
+        if tipo == 'llamar':
+            contacto = ' '.join(str(a.get('contacto') or '').split())[:60]
+            numero = re.sub(r'[^0-9+*#]', '', str(a.get('numero') or ''))[:20]
+            if not contacto and not numero:
+                return None, 'llamar necesita contacto o numero'
+            return {'contacto': contacto, 'numero': numero}, None
+        if tipo == 'brillo':
+            if a.get('nivel') is None:
+                return None, 'brillo necesita nivel de 0 a 100'
+            return {'nivel': max(0, min(100, int(a.get('nivel'))))}, None
+        if tipo == 'no_molestar':
+            m = str(a.get('modo') or '').strip().lower()
+            if m in ('activar', 'encender', 'on', 'true', '1'):
+                return {'modo': 'activar'}, None
+            if m in ('desactivar', 'apagar', 'off', 'false', '0'):
+                return {'modo': 'desactivar'}, None
+            return None, 'no_molestar necesita modo activar o desactivar'
         if tipo == 'tocar_texto':
             texto = ' '.join(str(a.get('texto') or '').split())[:80]
             return ({'texto': texto}, None) if texto else (None, 'falta el nombre del elemento')
@@ -460,7 +477,7 @@ def accion(tipo, args, nombre=None):
     salida = {'ok': True, 'dispositivo': disp['nombre'], 'detalle': r.get('resultado') or 'hecho'}
     if tipo == 'apagar_pantalla':
         g.manos_volver = None
-    elif tipo not in ('capturar', 'esperar', 'encender_pantalla', 'linterna', 'vibrar', 'bateria', 'volumen'):
+    elif tipo not in ('capturar', 'esperar', 'encender_pantalla', 'linterna', 'vibrar', 'bateria', 'volumen', 'brillo', 'no_molestar', 'llamar'):
         g.manos_volver = disp['id']
     if limpio.get('imagen'):
         img = _imagen_de(disp['id'], desde)

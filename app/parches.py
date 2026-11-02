@@ -14,6 +14,10 @@ permisos = [
     'android.permission.CHANGE_WIFI_MULTICAST_STATE',
     'android.permission.ACCESS_NETWORK_STATE',
     'android.permission.VIBRATE',
+    'android.permission.CALL_PHONE',
+    'android.permission.READ_CONTACTS',
+    'android.permission.WRITE_SETTINGS',
+    'android.permission.ACCESS_NOTIFICATION_POLICY',
 ]
 extra = ''
 for x in permisos:

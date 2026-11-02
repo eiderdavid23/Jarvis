@@ -637,6 +637,8 @@ public class ManosServicio extends AccessibilityService {
             case "arrastrar":
                 return "Deslizar el dedo por la pantalla"
                         + (a.optInt("segundos", 0) > 0 ? " y mantenerlo " + a.optInt("segundos") + " s" : "");
+            case "llamar":
+                return "Llamar a \"" + limpiar(a.optString("contacto").isEmpty() ? a.optString("numero") : a.optString("contacto")) + "\"";
             case "modo_juego":
                 return "Dejar que Jarvis toque Minecraft sin preguntar durante " + a.optInt("minutos", 10)
                         + " min (solo en la ventana del juego)";
@@ -767,7 +769,8 @@ public class ManosServicio extends AccessibilityService {
     // ---- Hardware del celular (sin tocar la pantalla) ---------------------------------
 
     private static boolean esHardware(String t) {
-        return t.equals("linterna") || t.equals("vibrar") || t.equals("bateria") || t.equals("volumen");
+        return t.equals("linterna") || t.equals("vibrar") || t.equals("bateria") || t.equals("volumen")
+                || t.equals("brillo") || t.equals("no_molestar");
     }
 
     /** Ordenes que no usan la pantalla: no despierta, no pide permiso en tarjeta y contesta enseguida. */
@@ -780,6 +783,10 @@ public class ManosServicio extends AccessibilityService {
                 r = vibrar(a.optInt("ms", 500));
             } else if (tipo.equals("bateria")) {
                 r = bateria();
+            } else if (tipo.equals("brillo")) {
+                r = brillo(a.optInt("nivel", 50));
+            } else if (tipo.equals("no_molestar")) {
+                r = noMolestar(a.optString("modo"));
             } else {
                 r = volumen(a);
             }
@@ -878,6 +885,108 @@ public class ManosServicio extends AccessibilityService {
         }
     }
 
+    // ---- Brillo, No molestar y llamadas ------------------------------------------------
+
+    private String[] brillo(int nivel) {
+        try {
+            if (!android.provider.Settings.System.canWrite(this)) {
+                return err("falta el permiso para cambiar el brillo: activalo en Ajustes > Manos de Jarvis > Permitir cambiar el brillo");
+            }
+            int pct = Math.max(0, Math.min(100, nivel));
+            int valor = Math.max(1, Math.round(pct * 255 / 100f));
+            android.content.ContentResolver cr = getContentResolver();
+            android.provider.Settings.System.putInt(cr, android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
+                    android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+            android.provider.Settings.System.putInt(cr, android.provider.Settings.System.SCREEN_BRIGHTNESS, valor);
+            return ok("brillo al " + pct + "%");
+        } catch (Exception e) {
+            return err("no pude cambiar el brillo: " + e.getMessage());
+        }
+    }
+
+    private String[] noMolestar(String modo) {
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager)
+                    getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null || !nm.isNotificationPolicyAccessGranted()) {
+                return err("falta el permiso No molestar: activalo en Ajustes > Manos de Jarvis > Permitir No molestar");
+            }
+            boolean activar = modo.equals("activar");
+            nm.setInterruptionFilter(activar ? android.app.NotificationManager.INTERRUPTION_FILTER_PRIORITY
+                    : android.app.NotificationManager.INTERRUPTION_FILTER_ALL);
+            return ok(activar ? "No molestar activado" : "No molestar desactivado");
+        } catch (Exception e) {
+            return err("no pude cambiar No molestar: " + e.getMessage());
+        }
+    }
+
+    /** Llama a un contacto por su nombre (lo busca en la agenda) o a un numero. */
+    private String[] llamar(String contacto, String numero) {
+        try {
+            if (checkSelfPermission(android.Manifest.permission.CALL_PHONE)
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                return err("falta el permiso de llamadas: activalo en Ajustes > Manos de Jarvis > Permitir llamadas y contactos");
+            }
+            String destino = numero == null ? "" : numero.replaceAll("[^0-9+*#]", "");
+            String nombre = contacto == null ? "" : contacto.trim();
+            if (destino.isEmpty()) {
+                if (nombre.isEmpty()) {
+                    return err("falta el contacto o el numero");
+                }
+                if (checkSelfPermission(android.Manifest.permission.READ_CONTACTS)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    return err("falta el permiso de contactos: activalo en Ajustes > Manos de Jarvis > Permitir llamadas y contactos");
+                }
+                String[] c = buscarContacto(nombre);
+                if (c == null) {
+                    return err("no encontre a \"" + nombre + "\" en tus contactos");
+                }
+                nombre = c[0];
+                destino = c[1];
+            }
+            Intent i = new Intent(Intent.ACTION_CALL, android.net.Uri.fromParts("tel", destino, null));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+            return ok("llamando a " + (nombre.isEmpty() ? destino : nombre));
+        } catch (Exception e) {
+            return err("no pude llamar: " + e.getMessage());
+        }
+    }
+
+    /** Busca en la agenda por nombre. Devuelve {nombre, numero} o null. */
+    private String[] buscarContacto(String nombre) {
+        String q = norm(nombre);
+        if (q.isEmpty()) {
+            return null;
+        }
+        String[] mejor = null;
+        int puntos = 0;
+        int largo = Integer.MAX_VALUE;
+        android.database.Cursor cur = getContentResolver().query(
+                android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                new String[]{android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER},
+                null, null, null);
+        try {
+            while (cur != null && cur.moveToNext()) {
+                String etiqueta = String.valueOf(cur.getString(0));
+                String num = cur.getString(1);
+                String n = norm(etiqueta);
+                int pt = n.equals(q) ? 2 : (n.contains(q) ? 1 : 0);
+                if (num != null && pt > 0 && (pt > puntos || (pt == puntos && n.length() < largo))) {
+                    puntos = pt;
+                    largo = n.length();
+                    mejor = new String[]{etiqueta, num};
+                }
+            }
+        } finally {
+            if (cur != null) {
+                cur.close();
+            }
+        }
+        return mejor;
+    }
+
     // ---- Acciones ---------------------------------------------------------------
 
     private String[] ejecutar(String tipo, JSONObject a) throws Exception {
@@ -918,6 +1027,8 @@ public class ManosServicio extends AccessibilityService {
                 return secuencia(a.optJSONArray("pasos"));
             case "abrir_app":
                 return abrirApp(a.optString("texto"));
+            case "llamar":
+                return llamar(a.optString("contacto"), a.optString("numero"));
             case "whatsapp_enviar":
                 return whatsappEnviar(a.optString("contacto"), a.optString("mensaje"));
             case "encender_pantalla":

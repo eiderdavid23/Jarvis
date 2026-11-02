@@ -33,7 +33,7 @@
     '.mnBtn:disabled{opacity:.5}';
   document.head.appendChild(css);
 
-  var autoBtn, paso1Btn, burbujaBtn, micBtn, palabraBtn, bateriaBtn;
+  var autoBtn, paso1Btn, burbujaBtn, micBtn, palabraBtn, bateriaBtn, llamadasBtn, brilloBtn, dndBtn;
 
   function json(r) {
     return r.json().then(function (d) {
@@ -67,6 +67,10 @@
       }
       if (bateriaBtn) bateriaBtn.style.display = (e.vinculado && e.servicio && e.bateriaLibre === false) ? 'block' : 'none';
       if (micBtn) micBtn.style.display = (e.vinculado && e.servicio && e.burbuja && !e.mic) ? 'block' : 'none';
+      var listo = e.vinculado && e.servicio;
+      if (llamadasBtn) llamadasBtn.style.display = (listo && e.llamadas === false) ? 'block' : 'none';
+      if (brilloBtn) brilloBtn.style.display = (listo && e.brillo === false) ? 'block' : 'none';
+      if (dndBtn) dndBtn.style.display = (listo && e.noMolestar === false) ? 'block' : 'none';
       if (!e.vinculado) {
         estadoEl.textContent = 'Sin vincular. Vincula este celular para que Jarvis pueda ayudarte con la pantalla.';
         ayudaEl.textContent = '';
@@ -210,6 +214,24 @@
       }).catch(function () {});
     });
     caja.appendChild(bateriaBtn);
+    function permiso(texto, metodo) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mnBtn';
+      b.style.display = 'none';
+      b.textContent = texto;
+      b.addEventListener('click', function () {
+        Promise.resolve(M[metodo]()).then(function () {
+          setTimeout(pintar, 1500);
+          setTimeout(pintar, 5000);
+        }).catch(function () {});
+      });
+      caja.appendChild(b);
+      return b;
+    }
+    llamadasBtn = permiso('Permitir llamadas y contactos', 'pedirLlamadas');
+    brilloBtn = permiso('Permitir cambiar el brillo', 'pedirBrillo');
+    dndBtn = permiso('Permitir No molestar', 'pedirNoMolestar');
     cont.parentNode.insertBefore(caja, cont.nextSibling);
     pintar();
     return true;
