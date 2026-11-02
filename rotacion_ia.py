@@ -353,13 +353,29 @@ def _mensaje_agotados(fallos, solo_gemini):
     return '\n'.join(lineas)
 
 
+def _pidio_abrir(args, kwargs):
+    """True si el ultimo mensaje del usuario pide abrir una app: ahi se queda, no se le devuelve a la anterior."""
+    try:
+        import unicodedata
+        turnos = kwargs['turnos'] if 'turnos' in kwargs else args[1]
+        for h in reversed(turnos):
+            if h.get('role') == 'user':
+                t = unicodedata.normalize('NFD', str(h.get('texto', '')).lower())
+                t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
+                return bool(re.search(r'\b(abre|abreme|abrime|abrir|entra|entrar|lanza|lanzar)\b', t))
+    except Exception:
+        pass
+    return False
+
+
 def generar(*args, **kwargs):
     """Igual que la cadena de modelos; al terminar, si Jarvis uso el celular, devuelve al usuario a su app."""
     try:
         return _generar_cadena(*args, **kwargs)
     finally:
         try:
-            srv.manos_api.volver_origen()
+            if not _pidio_abrir(args, kwargs):
+                srv.manos_api.volver_origen()
         except Exception as e:
             print('[MANOS] no pude pedir volver a la app:', e)
 
