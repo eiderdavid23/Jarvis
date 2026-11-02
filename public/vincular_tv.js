@@ -63,10 +63,10 @@
   }
 
   function buscar() {
-    vista(el('div', 'tvAyuda', 'Buscando TVs en tu WiFi... (unos 5 segundos)'));
+    vista(el('div', 'tvAyuda', 'Buscando TVs en tu WiFi... (unos 15 segundos)'));
     M.tvBuscar().then(function (r) {
       var tvs = (r && r.tvs) || [];
-      if (!tvs.length) return manual('No encontré ninguna TV. Revisa que esté encendida y en el mismo WiFi, o escribe su IP (Ajustes de la TV > Red).');
+      if (!tvs.length) return manual('No encontré ninguna TV. Revisa que esté encendida y en el mismo WiFi, o escribe su IP (Ajustes de la TV > Red).' + (r && r.rango ? ' Busqué en: ' + r.rango + '.' : ''));
       var partes = [el('div', 'tvAyuda', 'Toca tu TV:')];
       tvs.forEach(function (t) {
         partes.push(boton(t.nombre + ' (' + t.ip + ')', function () { elegir(t.nombre, t.ip); }));

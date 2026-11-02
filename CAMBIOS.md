@@ -59,3 +59,4 @@
 - v1.26 (1 nov 2026): la TV se controla desde la APK, sin Termux: Herramientas > Controlar una TV busca las TVs del WiFi, pide el codigo que sale en la TV y queda vinculada; Jarvis atiende las ordenes (volumen, teclas, apps, encender y apagar) desde el celular. Requiere APK nueva y el mismo WiFi que la TV; el metodo de Termux queda como respaldo en el navegador.
 - v1.27 (2 nov 2026): al terminar una tarea en el celular, Jarvis te devuelve a la app donde estabas (TikTok, etc.): la APK anota la app de origen al empezar y el servidor pide volver al terminar la respuesta (orden volver_origen). Requiere APK nueva.
 - v1.28: al pedirle a Jarvis que abra una app, ya no te devuelve a la app donde estabas; se queda en la que abrió. Solo servidor, no requiere APK nueva.
+- v1.29: la busqueda de TV prueba tambien el puerto 6467, ata la busqueda al WiFi aunque no tenga internet, espera mas por cada IP y, si no encuentra nada, dice que rango de IP reviso. Requiere APK nueva.

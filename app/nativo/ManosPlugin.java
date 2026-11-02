@@ -199,6 +199,7 @@ public class ManosPlugin extends Plugin {
                     }
                     JSObject r = new JSObject();
                     r.put("tvs", lista);
+                    r.put("rango", TvAgente.ultimoRango);
                     call.resolve(r);
                 } catch (Exception e) {
                     call.reject(TvRemoto.mensaje(e));
