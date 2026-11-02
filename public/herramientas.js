@@ -5,6 +5,7 @@
     { id: 'minecraft', nombre: 'Minecraft', desc: 'Ubicar aldeas y estructuras con la semilla' },
     { id: 'memoria', nombre: 'Memoria', desc: 'Recordar datos tuyos entre chats' },
     { id: 'recordatorios', nombre: 'Recordatorios', desc: 'Crear, listar y borrar por chat' },
+    { id: 'tareas', nombre: 'Tareas automáticas', desc: 'Programar acciones a una hora (mensajes, etc.)' },
     { id: 'imagenes', nombre: 'Imágenes', desc: 'Generar imágenes con IA' },
     { id: 'personas', nombre: 'Buscar personas', desc: 'Información pública en la web y redes' },
     { id: 'web', nombre: 'Buscar en la web', desc: 'Buscar en internet y leer páginas' },

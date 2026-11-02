@@ -2,8 +2,8 @@
 
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
-Última actualización: 1 nov 2026
-Versión actual: 1.30 (ver CAMBIOS.md)
+Última actualización: 2 nov 2026
+Versión actual: 1.31 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -48,3 +48,6 @@ Pedido de David sobre la burbuja y las funciones:
 - [ ] Controlar la TV desde la APK sin Termux (pedido el 1 nov 2026, v1.26, requiere APK nueva): `TvRemoto.java` (protocolo Android TV Remote v2: certificado propio, emparejamiento con codigo, teclas, volumen, apps), `TvOrdenes.java` (lista fija de ordenes, igual que agente_tv.py) y `TvAgente.java` (lee la cola con el token de la TV y busca TVs por mDNS). La pantalla de vincular esta en `public/vincular_tv.js` (en el navegador queda el metodo de Termux). Pendiente: probarlo en la TV real (MOKA R3GS) y marcar esta tarea.
 - [ ] Probar `agente_pc.py` en un PC real (hecho sin poder probarlo): vincular, abrir programa, capturar, volumen, mover archivo. Herramienta `controlar_pc` en server.py; ordenes `pc_*` en la cola de Manos; el PC se vincula con plataforma 'pc'. El agente pide permiso en pantalla salvo con --control; apagar, reiniciar y mover archivos siempre piden permiso.
 - [ ] Probar la TV real (MOKA R3GS, Android TV, 10.0.0.43), primero desde la APK (Herramientas > Controlar una TV: buscar, codigo, volumen, abrir YouTube, apagar y encender) y solo si falla, con `agente_tv.py` en Termux. Herramienta `controlar_tv` en server.py; ordenes `tv_*` en la cola de Manos; la TV se vincula con plataforma 'tv'. Requiere `supabase_tv.sql`.
+- [ ] Tareas automaticas (pedido el 2 nov 2026): que Jarvis haga algo solo a una hora («manana a las 8 mandale un WhatsApp a Mama»), aunque el celular este bloqueado, con la pantalla apagada o la app cerrada. Con el celular apagado de verdad NO se puede.
+  - [ ] Parte 1 (v1.31, servidor y web, sin APK nueva): `supabase_tareas.sql`, `tareas_api.py` (herramientas crear_tarea, listar_tareas, cancelar_tarea; reclamar atomico: se ejecuta una sola vez, sin reintentos), `public/tareas.js` (ejecuta con la app abierta) y `public/tareas.html` (modulo Tareas automaticas). Pendiente: probarla de verdad (SQL en Supabase, crear una tarea por chat y ver que se ejecute).
+  - [ ] Parte 2 (v1.32, APK): que el celular las dispare con la app cerrada (alarma exacta + sesion renovada con el refresh token guardado en la APK + `/chat?tarea=1`). Requiere APK nueva. Para mensajes sin que David mire: Manos activas y modo automatico de las Manos.

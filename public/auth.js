@@ -146,7 +146,7 @@
 
   /* /chat pasa por aqui: agrega la sesion y el chat_id actual */
   window.fetch = function (url, opts) {
-    if (url === '/uso' || String(url).indexOf('/recordatorios') === 0 || String(url).indexOf('/chats/') === 0 || String(url).indexOf('/proyectos') === 0 || String(url).indexOf('/llave') === 0 || String(url).indexOf('/memorias') === 0 || String(url).indexOf('/manos') === 0) return api(url, opts);
+    if (url === '/uso' || String(url).indexOf('/recordatorios') === 0 || String(url).indexOf('/chats/') === 0 || String(url).indexOf('/proyectos') === 0 || String(url).indexOf('/llave') === 0 || String(url).indexOf('/memorias') === 0 || String(url).indexOf('/manos') === 0 || String(url).indexOf('/tareas') === 0 || url === '/chat?tarea=1') return api(url, opts);
     if (url === '/chat' && opts && opts.method === 'POST') {
       try {
         const b = JSON.parse(opts.body || '{}');

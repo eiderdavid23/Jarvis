@@ -1656,6 +1656,7 @@ async function enviarMensaje(desdeVoz) {
     } else {
       cargarUso();
       if (data.recordatorios_cambio && window.jarvisRecordatorios) window.jarvisRecordatorios.recargar();
+      if (data.tareas_cambio && window.jarvisTareas) window.jarvisTareas.recargar();
       const { textoLimpio, urls } = procesarAcciones(data.respuesta || '');
       textoFinal = textoLimpio;
       agregarMensaje(textoFinal, 'jarvis');
@@ -2236,6 +2237,7 @@ pintarTema();
 <script src="/nativo.js"></script>
 <script src="/app_android.js"></script>
 <script src="/recordatorios.js"></script>
+<script src="/tareas.js"></script>
 <script src="/herramientas.js"></script>
 <script src="/manos.js"></script>
 <script src="/vincular_pc.js"></script>

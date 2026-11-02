@@ -21,6 +21,7 @@ from comandos_dispositivo import encender_linterna, apagar_linterna, vibrar, est
 import supa
 import minecraft
 import recs_api
+import tareas_api
 import proyectos_api
 import llaves_api
 import memoria_api
@@ -35,6 +36,7 @@ import web_api
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
 app.register_blueprint(recs_api.bp)
+app.register_blueprint(tareas_api.bp)
 app.register_blueprint(proyectos_api.bp)
 app.register_blueprint(llaves_api.bp)
 app.register_blueprint(memoria_api.bp)
@@ -449,6 +451,47 @@ HERRAMIENTAS = [
         }
     },
     {
+        'name': 'crear_tarea',
+        'description': (
+            'Programa una TAREA AUTOMATICA: algo que Jarvis hara solo a una hora (por ejemplo mandar un WhatsApp a '
+            'alguien hoy o manana a tal hora). Usar cuando el usuario pida que hagas algo DESPUES o a cierta hora '
+            '("mandale a Mama un mensaje a las 8", "manana a las 7 enviale..."). Si solo quiere que le avises a el, '
+            'usa crear_recordatorio. NO hagas la accion ahora: solo programala. Calcula fecha_hora a partir de la '
+            'fecha y hora ACTUAL que tienes, en la zona del usuario, formato YYYY-MM-DD HH:MM en 24 horas. Si falta '
+            'la hora, el contacto o el texto exacto del mensaje, preguntaselo ANTES de crearla. La instruccion debe '
+            'ser completa y SIN la hora, por ejemplo: Enviar por WhatsApp a Mama el mensaje: Buenos dias. Despues '
+            'confirma en una frase con el dia y la hora.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'titulo': {'type': 'string', 'description': 'Nombre corto de la tarea (ej: WhatsApp a Mama)'},
+                'instruccion': {'type': 'string', 'description': 'Que debe hacer Jarvis a esa hora, completo y sin la hora'},
+                'fecha_hora': {'type': 'string', 'description': 'Fecha y hora local del usuario, YYYY-MM-DD HH:MM (24 h)'}
+            },
+            'required': ['titulo', 'instruccion', 'fecha_hora']
+        }
+    },
+    {
+        'name': 'listar_tareas',
+        'description': 'Lista las tareas automaticas del usuario (pendientes y ya hechas). Usar cuando pregunte que tareas tiene programadas.',
+        'parameters': {'type': 'object', 'properties': {}}
+    },
+    {
+        'name': 'cancelar_tarea',
+        'description': (
+            'Cancela una tarea automatica pendiente. Pasa unas palabras de su titulo o de lo que hacia (o su id si '
+            'ya la listaste). Si hay varias que coinciden, devuelve candidatas: preguntale al usuario cual.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'texto': {'type': 'string', 'description': 'Palabras de la tarea a cancelar'},
+                'id': {'type': 'string', 'description': 'Id exacto, si lo conoces por listar_tareas'}
+            }
+        }
+    },
+    {
         'name': 'buscar_estructuras_minecraft',
         'description': (
             'Localiza estructuras de Minecraft (aldeas, templos, monumentos oceanicos, mansiones, ciudades '
@@ -835,6 +878,12 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
             acciones_frontend['recordatorios'] = True
         return res
 
+    if nombre in ('crear_tarea', 'listar_tareas', 'cancelar_tarea'):
+        res = tareas_api.herramienta(nombre, argumentos, getattr(g, 'zona_horaria', 'UTC'))
+        if nombre != 'listar_tareas' and res.get('ok'):
+            acciones_frontend['tareas'] = True
+        return res
+
     if nombre == 'leer_archivo':
         ruta = (argumentos.get('ruta') or '').strip()
         if not ruta:
@@ -876,6 +925,7 @@ GRUPOS_HERRAMIENTAS = {
     'minecraft': ('Minecraft', ['buscar_estructuras_minecraft', 'crear_addon_minecraft']),
     'memoria': ('Memoria', ['guardar_recuerdo', 'olvidar_recuerdo']),
     'recordatorios': ('Recordatorios', ['crear_recordatorio', 'listar_recordatorios', 'borrar_recordatorio']),
+    'tareas': ('Tareas automaticas', ['crear_tarea', 'listar_tareas', 'cancelar_tarea']),
     'imagenes': ('Imagenes', ['generar_imagen']),
     'personas': ('Buscar personas', ['buscar_persona']),
     'web': ('Buscar en la web', ['buscar_web', 'leer_pagina']),
@@ -932,6 +982,8 @@ MAX_VUELTAS_HERRAMIENTAS = 16
 
 # --- Guardia v1.8: no dejar que Jarvis diga "ya lo hice" en el celular sin haber usado las manos ---
 HERR_CELULAR = ('ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv', 'abrir_url', 'abrir_plataforma')
+# programar una tarea ("manana a las 8 mandale un WhatsApp") tambien cuenta como haber hecho algo
+HERR_CUMPLEN = HERR_CELULAR + ('crear_tarea', 'listar_tareas', 'cancelar_tarea')
 _APPS = (r'whatsapp|youtube|instagram|tiktok|spotify|telegram|facebook|netflix|chrome|maps|mercado ?libre|'
          r'minecraft|pantalla|celular|tel[eé]fono|app|aplicaci[oó]n|ajustes|configuraci[oó]n|wifi|bluetooth|'
          r'c[aá]mara|galer[ií]a')
@@ -958,7 +1010,7 @@ def exigir_herramienta(acciones):
     try:
         if acciones.get('_reintento') or not g.get('pide_celular'):
             return ''
-        if any(n in HERR_CELULAR for n in acciones.get('_usadas', [])):
+        if any(n in HERR_CUMPLEN for n in acciones.get('_usadas', [])):
             return ''
         if not any(h['name'] in HERR_CELULAR for h in _activas()):
             return ''
@@ -979,7 +1031,7 @@ def sin_pruebas_de_celular(acciones, respuesta):
             return False
     except RuntimeError:
         return False
-    if any(n in HERR_CELULAR for n in acciones.get('_usadas', [])):
+    if any(n in HERR_CUMPLEN for n in acciones.get('_usadas', [])):
         return False
     return bool(RE_AFIRMA.search(respuesta or ''))
 
@@ -2060,8 +2112,10 @@ def texto_capacidades():
         'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. Creas add-ons de Minecraft Bedrock (.mcaddon) con crear_addon_minecraft y los entregas como boton de descarga en el chat. ' + personas + web + telefono +
         '(5) Recordatorios: los creas, listas y borras con las herramientas crear_recordatorio, listar_recordatorios y '
         'borrar_recordatorio; suenan a su hora mientras la app este abierta, no con la app cerrada. '
+        'Tareas automaticas: con crear_tarea programas algo que haras tu solo a una hora (por ejemplo mandar un '
+        'WhatsApp hoy o manana a tal hora); las ves con listar_tareas y las cancelas con cancelar_tarea. '
         '(6) Herramientas: el menu lateral tiene un panel con interruptores para activar o desactivar '
-        'Minecraft, memoria, recordatorios, imagenes, busqueda de personas, busqueda en la web, enlaces, archivos y telefono; '
+        'Minecraft, memoria, recordatorios, tareas automaticas, imagenes, busqueda de personas, busqueda en la web, enlaces, archivos y telefono; '
         'lo que esta apagado no lo puedes usar. '
         '(7) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
         'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
@@ -2446,6 +2500,7 @@ def _chat_interno():
                         'busqueda': acciones.get('busqueda'),
                         'imagenes': acciones.get('imagenes', []),
                         'recordatorios_cambio': bool(acciones.get('recordatorios')),
+                        'tareas_cambio': bool(acciones.get('tareas')),
                         'mapa_mc': acciones.get('mapa_mc'),
                         'addons': acciones.get('addons', []),
                         'modelo_usado': usado['nombre'],

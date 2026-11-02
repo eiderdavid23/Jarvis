@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es" data-tema="oscuro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tareas automáticas</title>
+<script>
+(function () {
+  var p = '';
+  try { p = localStorage.getItem('jarvisTema') || ''; } catch (e) {}
+  var t = (p === 'claro' || p === 'oscuro') ? p : (matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'oscuro');
+  document.documentElement.setAttribute('data-tema', t);
+})();
+</script>
+<style>
+:root { --fondo: #080c13; --panel: #0e1520; --linea: rgba(150,190,212,.18); --texto: #e9f0f4; --suave: #8c9faa; --cian: #3cd9f2; }
+[data-tema="claro"] { --fondo: #f3f5f7; --panel: #fff; --linea: rgba(16,42,58,.16); --texto: #13242d; --suave: #5d727d; --cian: #0a7d98; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 16px; background: var(--fondo); color: var(--texto); font: 15px/1.4 system-ui, sans-serif; }
+h1 { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 22px; margin: 0 0 8px; }
+button { padding: 4px 10px; border-radius: 10px; border: 1px solid var(--linea); background: var(--panel); color: var(--suave); font: inherit; cursor: pointer; }
+.fila { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--linea); border-radius: 10px; background: var(--panel); }
+.cuerpo { flex: 1; min-width: 0; word-break: break-word; }
+.cuerpo small { display: block; color: var(--suave); margin-top: 2px; }
+.est { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--linea); font-size: 12px; color: var(--suave); }
+.est.pendiente, .est.en_curso { color: var(--cian); border-color: var(--cian); }
+.est.fallida { color: #ff7a7a; border-color: #ff7a7a; }
+.msg { color: var(--suave); }
+</style>
+</head>
+<body>
+<h1>Tareas automáticas</h1>
+<p class="msg">Pídeselas a Jarvis por chat o por voz: «mañana a las 8 mándale a Mamá por WhatsApp: buenos días».</p>
+<div id="lista"><p class="msg">Cargando…</p></div>
+<script>
+(function () {
+  'use strict';
+  var ACC = 'jarvisAcceso', REF = 'jarvisRefresco', refrescando = null;
+  var ETIQ = { pendiente: 'Pendiente', en_curso: 'Ejecutando…', hecha: 'Hecha', fallida: 'Falló' };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function caduca(seg) {
+    try {
+      var p = localStorage.getItem(ACC).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(p)).exp * 1000 - Date.now() < seg * 1000;
+    } catch (e) { return false; }
+  }
+  function renovar() {
+    if (!refrescando) {
+      refrescando = fetch('/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: localStorage.getItem(REF) }) })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || !d.access_token) return false;
+          localStorage.setItem(ACC, d.access_token);
+          if (d.refresh_token) localStorage.setItem(REF, d.refresh_token);
+          return true;
+        })
+        .catch(function () { return false; })
+        .then(function (ok) { refrescando = null; return ok; });
+    }
+    return refrescando;
+  }
+  function login() { (window.top || window).location.href = '/'; return new Promise(function () {}); }
+  function api(url, metodo, cuerpo, reintento) {
+    if (!localStorage.getItem(ACC)) return login();
+    var pre = (reintento !== false && caduca(60)) ? renovar() : Promise.resolve(true);
+    return pre.then(function () {
+      var h = { Authorization: 'Bearer ' + localStorage.getItem(ACC) };
+      if (cuerpo !== undefined) h['Content-Type'] = 'application/json';
+      return fetch(url, { method: metodo || 'GET', headers: h, body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined });
+    }).then(function (r) {
+      if (r.status === 401 && reintento !== false) return renovar().then(function (ok) { return ok ? api(url, metodo, cuerpo, false) : login(); });
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.error || 'Error ' + r.status);
+        return d;
+      });
+    });
+  }
+
+  function cuando(c) {
+    return new Date(c).toLocaleString('es', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+  function mensaje(t) {
+    var l = $('lista'); l.textContent = '';
+    var p = document.createElement('p'); p.className = 'msg'; p.textContent = t; l.appendChild(p);
+  }
+  function pintar(items) {
+    var l = $('lista'); l.textContent = '';
+    if (!items.length) return mensaje('Todavía no hay tareas.');
+    items.forEach(function (it) {
+      var fila = document.createElement('div'); fila.className = 'fila';
+      var c = document.createElement('div'); c.className = 'cuerpo';
+      var t = document.createElement('strong'); t.textContent = it.titulo;
+      var e = document.createElement('span'); e.className = 'est ' + it.estado; e.textContent = ETIQ[it.estado] || it.estado;
+      var a = document.createElement('small'); a.textContent = cuando(it.cuando);
+      var i = document.createElement('small'); i.textContent = it.instruccion;
+      c.appendChild(t); c.appendChild(e); c.appendChild(a); c.appendChild(i);
+      if (it.resultado) { var r = document.createElement('small'); r.textContent = it.resultado; c.appendChild(r); }
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = '✕';
+      b.setAttribute('aria-label', it.estado === 'pendiente' ? 'Cancelar' : 'Borrar');
+      b.addEventListener('click', function () { api('/tareas/' + it.id, 'DELETE').then(cargar).catch(function (x) { mensaje(x.message); }); });
+      fila.appendChild(c); fila.appendChild(b); l.appendChild(fila);
+    });
+  }
+  function cargar() { return api('/tareas').then(function (d) { pintar(d.tareas || []); }).catch(function (x) { mensaje(x.message); }); }
+
+  cargar();
+  setInterval(cargar, 20000);
+})();
+</script>
+</body>
+</html>

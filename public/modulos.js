@@ -4,7 +4,9 @@
   'use strict';
   var MODULOS = [
     { id: 'nexus', nombre: 'Plataformas', url: '/nexus.html?modulo=1',
-      icono: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M3 14h7v7H3z', 'M14 14h7v7h-7z'] }
+      icono: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M3 14h7v7H3z', 'M14 14h7v7h-7z'] },
+    { id: 'tareas', nombre: 'Tareas automáticas', url: '/tareas.html?modulo=1',
+      icono: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'M12 7v5l3 2'] }
   ];
   var NS = 'http://www.w3.org/2000/svg';
   var panel = null, marco = null, titulo = null, activo = null;
