@@ -382,6 +382,10 @@ public class ManosServicio extends AccessibilityService {
             }
             return;
         }
+        if (esHardware(tipo)) {
+            hardware(base, token, id, tipo, args);
+            return;
+        }
         recordarOrigen(tipo);
         cancelada = false;
         ordenActual = id;
@@ -758,6 +762,120 @@ public class ManosServicio extends AccessibilityService {
         });
         quitada.await(2, TimeUnit.SECONDS);
         return si[0];
+    }
+
+    // ---- Hardware del celular (sin tocar la pantalla) ---------------------------------
+
+    private static boolean esHardware(String t) {
+        return t.equals("linterna") || t.equals("vibrar") || t.equals("bateria") || t.equals("volumen");
+    }
+
+    /** Ordenes que no usan la pantalla: no despierta, no pide permiso en tarjeta y contesta enseguida. */
+    private void hardware(String base, String token, String id, String tipo, JSONObject a) {
+        String[] r;
+        try {
+            if (tipo.equals("linterna")) {
+                r = linterna(a.optString("modo"));
+            } else if (tipo.equals("vibrar")) {
+                r = vibrar(a.optInt("ms", 500));
+            } else if (tipo.equals("bateria")) {
+                r = bateria();
+            } else {
+                r = volumen(a);
+            }
+        } catch (Exception e) {
+            r = err("fallo: " + e.getMessage());
+        }
+        try {
+            JSONObject cuerpo = new JSONObject();
+            cuerpo.put("orden_id", id);
+            cuerpo.put("ok", r[0].equals("1"));
+            cuerpo.put("texto", r[1]);
+            http("POST", base + "/manos/d/resultado", token, cuerpo);
+        } catch (Exception ignorada) {
+        }
+    }
+
+    private String[] linterna(String modo) {
+        boolean encender = modo.equals("encender");
+        try {
+            android.hardware.camera2.CameraManager cm = (android.hardware.camera2.CameraManager)
+                    getSystemService(Context.CAMERA_SERVICE);
+            for (String cid : cm.getCameraIdList()) {
+                android.hardware.camera2.CameraCharacteristics cc = cm.getCameraCharacteristics(cid);
+                Boolean flash = cc.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE);
+                Integer cara = cc.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING);
+                if (flash != null && flash && cara != null
+                        && cara == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) {
+                    cm.setTorchMode(cid, encender);
+                    return ok(encender ? "linterna encendida" : "linterna apagada");
+                }
+            }
+            return err("este celular no tiene linterna");
+        } catch (Exception e) {
+            return err("no pude usar la linterna: " + e.getMessage());
+        }
+    }
+
+    private String[] vibrar(int ms) {
+        try {
+            android.os.Vibrator v = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            if (v == null || !v.hasVibrator()) {
+                return err("este celular no vibra");
+            }
+            v.vibrate(android.os.VibrationEffect.createOneShot(Math.max(100, Math.min(2000, ms)),
+                    android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+            return ok("vibro " + ms + " ms");
+        } catch (Exception e) {
+            return err("no pude vibrar: " + e.getMessage());
+        }
+    }
+
+    private String[] bateria() {
+        try {
+            Intent i = registerReceiver(null, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (i == null) {
+                return err("no pude leer la bateria");
+            }
+            int nivel = i.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            int escala = i.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100);
+            int estado = i.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+            boolean carga = estado == android.os.BatteryManager.BATTERY_STATUS_CHARGING
+                    || estado == android.os.BatteryManager.BATTERY_STATUS_FULL;
+            int pct = nivel < 0 ? -1 : Math.round(nivel * 100f / Math.max(1, escala));
+            return ok("bateria " + pct + "%, " + (carga ? "cargando" : "sin cargar"));
+        } catch (Exception e) {
+            return err("no pude leer la bateria: " + e.getMessage());
+        }
+    }
+
+    private String[] volumen(JSONObject a) {
+        try {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            String canal = a.optString("canal", "multimedia");
+            int flujo = canal.equals("timbre") ? android.media.AudioManager.STREAM_RING
+                    : (canal.equals("alarma") ? android.media.AudioManager.STREAM_ALARM
+                    : android.media.AudioManager.STREAM_MUSIC);
+            int max = am.getStreamMaxVolume(flujo);
+            int actual = am.getStreamVolume(flujo);
+            String modo = a.optString("modo");
+            int nuevo;
+            if (modo.equals("subir")) {
+                nuevo = Math.min(max, actual + Math.max(1, a.optInt("pasos", 2)));
+            } else if (modo.equals("bajar")) {
+                nuevo = Math.max(0, actual - Math.max(1, a.optInt("pasos", 2)));
+            } else if (modo.equals("silenciar")) {
+                nuevo = 0;
+            } else if (modo.equals("activar_sonido")) {
+                nuevo = actual > 0 ? actual : Math.max(1, max / 2);
+            } else {
+                nuevo = Math.round(Math.max(0, Math.min(100, a.optInt("nivel", 50))) * max / 100f);
+            }
+            am.setStreamVolume(flujo, nuevo, android.media.AudioManager.FLAG_SHOW_UI);
+            return ok("volumen " + canal + " al " + Math.round(nuevo * 100f / Math.max(1, max)) + "%");
+        } catch (Exception e) {
+            return err("no pude cambiar el volumen (el timbre a veces necesita el permiso No molestar): " + e.getMessage());
+        }
     }
 
     // ---- Acciones ---------------------------------------------------------------

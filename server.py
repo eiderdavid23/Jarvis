@@ -234,7 +234,7 @@ HERRAMIENTAS = [
         'parameters': {
             'type': 'object',
             'properties': {
-                'accion': {'type': 'string', 'description': 'encender_pantalla (enciende la pantalla del celular y la desbloquea si el bloqueo es solo deslizar), apagar_pantalla (bloquea y apaga la pantalla), whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), secuencia (varios pasos seguidos; usa el campo pasos), abrir_ajustes (ajustes de Android: wifi, bluetooth, pantalla, sonido, bateria...; va en texto), abrir_url (abrir un enlace https en la app que corresponda; va en texto), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), mantener (dedo quieto N segundos), arrastrar (deslizar el dedo; con segundos>0 lo deja quieto al final: caminar con el joystick), modo_juego (permiso unico de varios minutos para jugar Minecraft), escribir, tecla, scroll o esperar'},
+                'accion': {'type': 'string', 'description': 'encender_pantalla (enciende la pantalla del celular y la desbloquea si el bloqueo es solo deslizar), apagar_pantalla (bloquea y apaga la pantalla), whatsapp_enviar (enviar un mensaje de WhatsApp a un contacto, en un solo paso), secuencia (varios pasos seguidos; usa el campo pasos), abrir_ajustes (ajustes de Android: wifi, bluetooth, pantalla, sonido, bateria...; va en texto), abrir_url (abrir un enlace https en la app que corresponda; va en texto), abrir_app (abrir una app por su nombre), tocar_texto (tocar un boton por su nombre), clic, doble_clic, clic_derecho (pulsacion larga), mantener (dedo quieto N segundos), arrastrar (deslizar el dedo; con segundos>0 lo deja quieto al final: caminar con el joystick), modo_juego (permiso unico de varios minutos para jugar Minecraft), escribir, tecla, scroll, esperar; y del celular SIN tocar la pantalla: linterna (modo encender o apagar), vibrar, bateria (porcentaje y si esta cargando) y volumen (modo subir o bajar con cantidad, silenciar, activar_sonido o poner con nivel de 0 a 100; canal multimedia, timbre o alarma)'},
                 'dispositivo': {'type': 'string', 'description': 'Nombre del celular donde hacerlo, tal como lo dijo el usuario (ej. "celular de mi hermano"). Omitelo si el usuario solo tiene uno.'},
                 'contacto': {'type': 'string', 'description': 'Nombre del contacto tal como lo dijo el usuario (para whatsapp_enviar). Solo el nombre, sin "chat de" ni "mensaje a".'},
                 'mensaje': {'type': 'string', 'description': 'Texto exacto del mensaje a enviar (para whatsapp_enviar)'},
@@ -252,6 +252,9 @@ HERRAMIENTAS = [
                 'y2': {'type': 'integer', 'description': 'Final y del arrastre (para arrastrar)'},
                 'normalizado': {'type': 'boolean', 'description': 'true si x,y (o x1..y2) vienen de la cuadricula 0-1000 de una captura (clic, clic_derecho, mantener, arrastrar)'},
                 'minutos': {'type': 'integer', 'description': 'Minutos de modo juego, de 1 a 30 (para modo_juego); 0 lo desactiva'},
+                'modo': {'type': 'string', 'description': 'linterna: encender o apagar. volumen: subir, bajar, silenciar, activar_sonido o poner'},
+                'nivel': {'type': 'integer', 'description': 'Volumen exacto de 0 a 100 (volumen con modo poner)'},
+                'canal': {'type': 'string', 'description': 'Que volumen: multimedia (por defecto), timbre o alarma'},
                 'imagen': {'type': 'boolean', 'description': 'true para recibir una captura de pantalla despues de la accion (solo Gemini). Util en juegos; no la pidas en cada accion.'}
             },
             'required': ['accion']
@@ -784,22 +787,25 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         return manos_api.accion(str(argumentos.get('accion') or ''), argumentos, str(argumentos.get('dispositivo') or '').strip() or None)
 
     if nombre == 'encender_linterna':
-        ok = encender_linterna()
-        return {'ok': ok}
+        if encender_linterna():
+            return {'ok': True}
+        return manos_api.accion('linterna', {'modo': 'encender'})
 
     if nombre == 'apagar_linterna':
-        ok = apagar_linterna()
-        return {'ok': ok}
+        if apagar_linterna():
+            return {'ok': True}
+        return manos_api.accion('linterna', {'modo': 'apagar'})
 
     if nombre == 'vibrar':
-        ok = vibrar()
-        return {'ok': ok}
+        if vibrar():
+            return {'ok': True}
+        return manos_api.accion('vibrar', {})
 
     if nombre == 'consultar_bateria':
         bateria = estado_bateria()
         if bateria:
             return {'ok': True, 'porcentaje': bateria['porcentaje'], 'cargando': bateria['cargando']}
-        return {'ok': False, 'error': 'no se pudo leer la bateria en este momento'}
+        return manos_api.accion('bateria', {})
 
     if nombre == 'guardar_recuerdo':
         tema = (argumentos.get('tema') or '').strip()

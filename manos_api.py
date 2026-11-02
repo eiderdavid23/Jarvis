@@ -76,6 +76,34 @@ def _validar_base(tipo, args):
         if tipo == 'escribir':
             texto = str(a.get('texto') or '')[:500]
             return ({'texto': texto}, None) if texto else (None, 'falta el texto')
+        if tipo == 'linterna':
+            m = str(a.get('modo') or '').strip().lower()
+            if m in ('encender', 'on', 'prender', 'true', '1'):
+                return {'modo': 'encender'}, None
+            if m in ('apagar', 'off', 'false', '0'):
+                return {'modo': 'apagar'}, None
+            return None, 'la linterna necesita modo encender o apagar'
+        if tipo == 'vibrar':
+            seg = a.get('segundos')
+            ms = 500 if seg is None else int(float(seg) * 1000)
+            return {'ms': max(100, min(2000, ms))}, None
+        if tipo == 'bateria':
+            return {}, None
+        if tipo == 'volumen':
+            modo = str(a.get('modo') or '').strip().lower()
+            if modo not in ('subir', 'bajar', 'silenciar', 'activar_sonido', 'poner'):
+                return None, 'el modo del volumen debe ser subir, bajar, silenciar, activar_sonido o poner'
+            canal = str(a.get('canal') or 'multimedia').strip().lower()
+            if canal not in ('multimedia', 'timbre', 'alarma'):
+                canal = 'multimedia'
+            salida = {'modo': modo, 'canal': canal}
+            if modo == 'poner':
+                if a.get('nivel') is None:
+                    return None, 'poner necesita nivel de 0 a 100'
+                salida['nivel'] = max(0, min(100, int(a.get('nivel'))))
+            if modo in ('subir', 'bajar'):
+                salida['pasos'] = max(1, min(10, int(a.get('cantidad') or 2)))
+            return salida, None
         if tipo == 'tocar_texto':
             texto = ' '.join(str(a.get('texto') or '').split())[:80]
             return ({'texto': texto}, None) if texto else (None, 'falta el nombre del elemento')
@@ -432,7 +460,7 @@ def accion(tipo, args, nombre=None):
     salida = {'ok': True, 'dispositivo': disp['nombre'], 'detalle': r.get('resultado') or 'hecho'}
     if tipo == 'apagar_pantalla':
         g.manos_volver = None
-    elif tipo not in ('capturar', 'esperar', 'encender_pantalla'):
+    elif tipo not in ('capturar', 'esperar', 'encender_pantalla', 'linterna', 'vibrar', 'bateria', 'volumen'):
         g.manos_volver = disp['id']
     if limpio.get('imagen'):
         img = _imagen_de(disp['id'], desde)

@@ -12,7 +12,7 @@
     { id: 'nexus', nombre: 'Plataformas NEXUS', desc: 'Listar y abrir tus plataformas por nombre' },
     { id: 'archivos', nombre: 'Archivos', desc: 'Leer adjuntos y archivos del proyecto' },
     { id: 'manos', nombre: 'Manos', desc: 'Ver y usar la pantalla de tu celular (app Android)' },
-    { id: 'telefono', nombre: 'Teléfono', desc: 'Linterna, vibración y batería (solo Termux)' }
+    { id: 'telefono', nombre: 'Teléfono', desc: 'Linterna, vibración, batería y volumen del celular' }
   ];
   var CLAVE = 'jarvisHerramientasOff';
 
