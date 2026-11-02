@@ -10,14 +10,23 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.json.JSONObject;
@@ -180,8 +189,111 @@ public class TvAgente {
 
     // ---- Buscar TVs en el WiFi (sin escribir la IP) -------------------------------------
 
+    /** Busca por mDNS y, a la vez, probando las direcciones del WiFi. Junta los resultados sin repetir. */
+    static List<String[]> buscar(final Context c) throws Exception {
+        final List<String[]> nsd = Collections.synchronizedList(new ArrayList<String[]>());
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    nsd.addAll(buscarNsd(c));
+                } catch (Exception ignorada) {
+                }
+            }
+        }, "tv-nsd");
+        t.setDaemon(true);
+        t.start();
+        List<String[]> red = escanearRed();
+        t.join(9000);
+        List<String[]> res = new ArrayList<String[]>();
+        synchronized (nsd) {
+            res.addAll(nsd);
+        }
+        for (String[] x : red) {
+            boolean ya = false;
+            for (String[] y : res) {
+                if (y[1].equals(x[1])) {
+                    ya = true;
+                }
+            }
+            if (!ya) {
+                res.add(x);
+            }
+        }
+        return res;
+    }
+
+    /** Prueba las 254 direcciones del WiFi del celular: una Android TV encendida tiene abierto el puerto 6466. */
+    static List<String[]> escanearRed() {
+        final List<String[]> res = Collections.synchronizedList(new ArrayList<String[]>());
+        String propia = null;
+        String otra = null;
+        try {
+            Enumeration<NetworkInterface> todas = NetworkInterface.getNetworkInterfaces();
+            while (todas != null && todas.hasMoreElements()) {
+                NetworkInterface n = todas.nextElement();
+                if (!n.isUp() || n.isLoopback()) {
+                    continue;
+                }
+                Enumeration<InetAddress> dirs = n.getInetAddresses();
+                while (dirs.hasMoreElements()) {
+                    InetAddress d = dirs.nextElement();
+                    if (d instanceof Inet4Address && d.isSiteLocalAddress()) {
+                        if (n.getName().startsWith("wlan") || n.getName().startsWith("eth")) {
+                            if (propia == null) {
+                                propia = d.getHostAddress();
+                            }
+                        } else if (otra == null) {
+                            otra = d.getHostAddress();
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignorada) {
+        }
+        if (propia == null) {
+            propia = otra;
+        }
+        if (propia == null) {
+            return res;
+        }
+        final String base = propia.substring(0, propia.lastIndexOf('.') + 1);
+        final String yo = propia;
+        ExecutorService ex = Executors.newFixedThreadPool(48);
+        for (int i = 1; i < 255; i++) {
+            final String ip = base + i;
+            if (ip.equals(yo)) {
+                continue;
+            }
+            ex.execute(new Runnable() {
+                @Override
+                public void run() {
+                    Socket s = new Socket();
+                    try {
+                        s.connect(new InetSocketAddress(ip, 6466), 700);
+                        res.add(new String[]{"Android TV", ip});
+                    } catch (Exception ignorada) {
+                    } finally {
+                        try {
+                            s.close();
+                        } catch (Exception ignorada) {
+                        }
+                    }
+                }
+            });
+        }
+        ex.shutdown();
+        try {
+            ex.awaitTermination(8, TimeUnit.SECONDS);
+        } catch (InterruptedException ignorada) {
+        }
+        synchronized (res) {
+            return new ArrayList<String[]>(res);
+        }
+    }
+
     /** Devuelve {nombre, ip} de cada Android TV que se anuncie en la red. Tarda unos 5 segundos. */
-    static List<String[]> buscar(Context c) throws Exception {
+    static List<String[]> buscarNsd(Context c) throws Exception {
         NsdManager nsd = (NsdManager) c.getApplicationContext().getSystemService(Context.NSD_SERVICE);
         final List<NsdServiceInfo> halladas = new ArrayList<NsdServiceInfo>();
         NsdManager.DiscoveryListener dl = new NsdManager.DiscoveryListener() {
