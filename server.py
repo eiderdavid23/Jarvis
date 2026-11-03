@@ -460,14 +460,18 @@ HERRAMIENTAS = [
             'fecha y hora ACTUAL que tienes, en la zona del usuario, formato YYYY-MM-DD HH:MM en 24 horas. Si falta '
             'la hora, el contacto o el texto exacto del mensaje, preguntaselo ANTES de crearla. La instruccion debe '
             'ser completa y SIN la hora, por ejemplo: Enviar por WhatsApp a Mama el mensaje: Buenos dias. Despues '
-            'confirma en una frase con el dia y la hora.'
+            'confirma en una frase con el dia y la hora. Si el usuario dice EN CUAL dispositivo hacerlo (celular 2, el '
+            'celular de mi hermano, mi PC, la TV), pon ese nombre en dispositivo: se hara alli y no en el celular '
+            'desde el que habla. Si tiene varios celulares vinculados y no dijo en cual, la herramienta te lo avisara: '
+            'preguntaselo.'
         ),
         'parameters': {
             'type': 'object',
             'properties': {
                 'titulo': {'type': 'string', 'description': 'Nombre corto de la tarea (ej: WhatsApp a Mama)'},
                 'instruccion': {'type': 'string', 'description': 'Que debe hacer Jarvis a esa hora, completo y sin la hora'},
-                'fecha_hora': {'type': 'string', 'description': 'Fecha y hora local del usuario, YYYY-MM-DD HH:MM (24 h)'}
+                'fecha_hora': {'type': 'string', 'description': 'Fecha y hora local del usuario, YYYY-MM-DD HH:MM (24 h)'},
+                'dispositivo': {'type': 'string', 'description': 'Nombre del dispositivo donde hacerlo, tal como lo dijo el usuario (ej. celular 2). Omitelo si solo tiene uno.'}
             },
             'required': ['titulo', 'instruccion', 'fecha_hora']
         }

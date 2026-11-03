@@ -96,6 +96,7 @@ button { padding: 4px 10px; border-radius: 10px; border: 1px solid var(--linea);
       var a = document.createElement('small'); a.textContent = cuando(it.cuando);
       var i = document.createElement('small'); i.textContent = it.instruccion;
       c.appendChild(t); c.appendChild(e); c.appendChild(a); c.appendChild(i);
+      if (it.dispositivo) { var dv = document.createElement('small'); dv.textContent = 'En: ' + it.dispositivo; c.appendChild(dv); }
       if (it.resultado) { var r = document.createElement('small'); r.textContent = it.resultado; c.appendChild(r); }
       var b = document.createElement('button'); b.type = 'button'; b.textContent = '✕';
       b.setAttribute('aria-label', it.estado === 'pendiente' ? 'Cancelar' : 'Borrar');
