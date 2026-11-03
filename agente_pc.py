@@ -473,6 +473,34 @@ def cargar_config(args):
         pass
 
 
+def pedir_vinculo():
+    \"\"\"Primera vez abriendo el programa (doble clic, sin argumentos): pide pegar lo que
+    Jarvis mostro al vincular, en vez de obligar a usar la terminal con --url y --token.\"\"\"
+    print('Este PC todavia no esta vinculado con Jarvis.')
+    print('En Jarvis: Ajustes > Manos de Jarvis > Controlar un PC > Vincular un PC.')
+    print('Pega aqui TODO el texto que te dio Jarvis y presiona Enter:')
+    try:
+        pegado = input('> ').strip()
+    except (EOFError, KeyboardInterrupt):
+        pegado = ''
+    m_url = re.search(r'--url\\s+(\\S+)', pegado)
+    m_tok = re.search(r'--token\\s+(\\S+)', pegado)
+    if m_url and m_tok:
+        CFG['url'] = m_url.group(1).rstrip('/')
+        CFG['token'] = m_tok.group(1)
+    else:
+        if not CFG['url']:
+            CFG['url'] = input('URL de tu Jarvis (ej. https://tu-jarvis.vercel.app): ').strip().rstrip('/')
+        if not CFG['token']:
+            CFG['token'] = input('Token que te dio Jarvis: ').strip()
+    if CFG['url'] and CFG['token']:
+        try:
+            CONFIG.write_text(json.dumps(CFG), encoding='utf-8')
+            os.chmod(CONFIG, 0o600)
+        except Exception:
+            pass
+
+
 def principal():
     ap = argparse.ArgumentParser(description='Agente de Jarvis para PC')
     ap.add_argument('--url')
@@ -482,8 +510,14 @@ def principal():
     ap.add_argument('--sin-control', action='store_true')
     cargar_config(ap.parse_args())
     if not CFG['url'] or not CFG['token']:
-        print('Falta vincular este PC. Usa: python agente_pc.py --url https://TU-JARVIS.vercel.app --token EL_TOKEN')
-        sys.exit(1)
+        if sys.stdin.isatty():
+            pedir_vinculo()
+        if not CFG['url'] or not CFG['token']:
+            print('Falta vincular este PC. Usa: python agente_pc.py --url https://TU-JARVIS.vercel.app --token EL_TOKEN')
+            if not sys.stdin.isatty():
+                sys.exit(1)
+            input('Presiona Enter para salir...')
+            sys.exit(1)
     aviso('Agente de Jarvis listo. Carpeta de archivos: %s | Control autom\u00e1tico: %s' % (
         base(), 's\u00ed' if CFG['control'] else 'no (pide permiso)'))
     ultima = 0

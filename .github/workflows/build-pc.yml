@@ -1,0 +1,73 @@
+name: Compilar JarvisPC
+
+# Compila agente_pc.py como un solo ejecutable para Windows, Mac y Linux
+# y los sube a una Release de GitHub. Se dispara al crear una etiqueta
+# que empiece por "pc-" (ej. pc-v1) o a mano desde la pestaña Actions.
+on:
+  push:
+    tags:
+      - 'pc-*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  compilar:
+    strategy:
+      matrix:
+        incluir:
+          - so: windows-latest
+            nombre: JarvisPC-Windows.exe
+          - so: macos-latest
+            nombre: JarvisPC-Mac
+          - so: ubuntu-latest
+            nombre: JarvisPC-Linux
+    runs-on: ${{ matrix.incluir.so }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install pyinstaller requests mss pillow pyautogui
+
+      - name: Compilar en un solo archivo
+        run: pyinstaller --onefile --name JarvisPC --console agente_pc.py
+
+      - name: Nombrar el archivo de salida
+        shell: bash
+        run: |
+          mkdir -p salida
+          if [ -f dist/JarvisPC.exe ]; then
+            cp dist/JarvisPC.exe salida/${{ matrix.incluir.nombre }}
+          else
+            cp dist/JarvisPC salida/${{ matrix.incluir.nombre }}
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.incluir.nombre }}
+          path: salida/${{ matrix.incluir.nombre }}
+
+  publicar:
+    needs: compilar
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/pc-')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: descargas
+          merge-multiple: true
+
+      - name: Publicar en una Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: descargas/*
+          name: JarvisPC ${{ github.ref_name }}
+          body: |
+            Descarga el archivo de tu sistema operativo y ejecutalo (no hace falta
+            instalar nada mas). La primera vez te pedira el codigo que Jarvis te da
+            en Ajustes > Manos de Jarvis > Controlar un PC.
