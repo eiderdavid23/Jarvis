@@ -474,8 +474,8 @@ def cargar_config(args):
 
 
 def pedir_vinculo():
-    \"\"\"Primera vez abriendo el programa (doble clic, sin argumentos): pide pegar lo que
-    Jarvis mostro al vincular, en vez de obligar a usar la terminal con --url y --token.\"\"\"
+    """Primera vez abriendo el programa (doble clic, sin argumentos): pide pegar lo que
+    Jarvis mostro al vincular, en vez de obligar a usar la terminal con --url y --token."""
     print('Este PC todavia no esta vinculado con Jarvis.')
     print('En Jarvis: Ajustes > Manos de Jarvis > Controlar un PC > Vincular un PC.')
     print('Pega aqui TODO el texto que te dio Jarvis y presiona Enter:')
