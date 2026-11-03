@@ -36,9 +36,22 @@
       'X-Herramientas-Off': (window.herramientasOff ? window.herramientasOff() : '')
     };
   }
+  /* APK: le pasa a la parte nativa las tareas pendientes para que ponga una alarma por tarea. */
+  function sincNativo() {
+    try {
+      var cap = window.Capacitor;
+      if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
+      var M = (cap.Plugins || {}).Manos || (cap.registerPlugin && cap.registerPlugin('Manos'));
+      if (!M || !M.tareas) return;
+      var pend = lista.filter(function (x) { return x.estado === 'pendiente'; }).map(function (x) {
+        return { id: x.id, titulo: x.titulo, cuando: new Date(x.cuando).getTime() };
+      });
+      Promise.resolve(M.tareas({ lista: JSON.stringify(pend) })).catch(function () {});
+    } catch (e) {}
+  }
   function cargar() {
     return api('/tareas').then(function (d) {
-      lista = d.tareas || []; cargado = true; revisar();
+      lista = d.tareas || []; cargado = true; sincNativo(); revisar();
     }).catch(function () {});
   }
   function cartel(t, res) {
@@ -53,6 +66,11 @@
   function ejecutar(t) {
     corriendo = true;
     api('/tareas/' + t.id + '/reclamar', 'POST').then(function (d) {
+      if (Date.now() - new Date(t.cuando).getTime() > 1800000) {
+        var tarde = { ok: false, texto: 'Se pasó la hora por más de 30 minutos (la app o el celular estaban cerrados); no se ejecutó.' };
+        return api('/tareas/' + t.id + '/resultado', 'POST', { ok: false, resultado: tarde.texto })
+          .catch(function () {}).then(function () { cartel(t, tarde); });
+      }
       /* /chat?tarea=1: auth.js le pone la sesion pero NO lo mete en el chat que tengas abierto */
       return fetch('/chat?tarea=1', { method: 'POST', headers: cabeceras(),
         body: JSON.stringify({ mensaje: d.mensaje, zona_horaria: zona() }) })

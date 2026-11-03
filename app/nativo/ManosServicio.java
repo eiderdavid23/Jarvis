@@ -164,6 +164,7 @@ public class ManosServicio extends AccessibilityService {
         burbuja.actualizar();
         arrancar();
         TvAgente.iniciar(this);
+        TareasAuto.programar(this);
     }
 
     @Override

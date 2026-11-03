@@ -74,6 +74,7 @@
     if (!h.get('access_token')) return;
     try {
       localStorage.setItem('jarvisAcceso', h.get('access_token'));
+      localStorage.setItem('jarvisSesionTs', String(Date.now()));
       if (h.get('refresh_token')) localStorage.setItem('jarvisRefresco', h.get('refresh_token'));
     } catch (e) {}
     try { if (NAV && NAV.close) NAV.close(); } catch (e) {}

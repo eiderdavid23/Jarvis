@@ -7,9 +7,10 @@
   var chat = '';
 
   function pasar() {
-    var t = '';
+    var t = '', rf = '', ts = 0;
     try { t = localStorage.getItem('jarvisAcceso') || ''; } catch (e) {}
-    try { Promise.resolve(M.sesion({ acceso: t, chat_id: chat })).catch(function () {}); } catch (e) {}
+    try { rf = localStorage.getItem('jarvisRefresco') || ''; ts = Number(localStorage.getItem('jarvisSesionTs')) || 0; } catch (e) {}
+    try { Promise.resolve(M.sesion({ acceso: t, refresco: rf, ts: ts, chat_id: chat })).catch(function () {}); } catch (e) {}
   }
 
   window.addEventListener('jarvis-sesion', pasar);

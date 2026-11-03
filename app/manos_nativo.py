@@ -8,7 +8,7 @@ RES = 'android/app/src/main/res'
 assert os.path.isdir(PAQ), 'manos: no existe ' + PAQ + ' (cambio el appId o la plantilla de Capacitor)'
 
 for f in ('ManosServicio.java', 'ManosPlugin.java', 'BurbujaManos.java', 'BurbujaUI.java', 'EscuchaServicio.java', 'BurbujaVoz.java',
-            'TvRemoto.java', 'TvOrdenes.java', 'TvAgente.java'):
+            'TvRemoto.java', 'TvOrdenes.java', 'TvAgente.java', 'TareasAuto.java'):
     shutil.copy('nativo/' + f, PAQ + '/' + f)
 os.makedirs(RES + '/xml', exist_ok=True)
 shutil.copy('nativo/manos_accesibilidad.xml', RES + '/xml/manos_accesibilidad.xml')
@@ -49,6 +49,9 @@ SERVICIO = """
             android:name=".EscuchaServicio"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <receiver
+            android:name=".TareasAuto"
+            android:exported="false" />
     """
 assert t.count('</application>') == 1, 'manos: manifiesto inesperado'
 assert 'ManosServicio' not in t, 'manos: el servicio ya estaba declarado'

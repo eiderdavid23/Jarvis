@@ -81,18 +81,39 @@
     if (d.access_token) localStorage.setItem(K.acc, d.access_token);
     if (d.refresh_token) localStorage.setItem(K.ref, d.refresh_token);
     if (d.email) localStorage.setItem(K.mail, d.email);
+    localStorage.setItem('jarvisSesionTs', String(Date.now()));
     try { window.dispatchEvent(new Event('jarvis-sesion')); } catch (e) {}
   }
   function limpiarSesion() {
     Object.values(K).forEach((k) => localStorage.removeItem(k));
   }
+  /* APK: si la parte nativa renovo la sesion con la app cerrada (para ejecutar tareas), el refresh token de
+     aqui ya es viejo: se usa el nuevo ANTES de renovar. Sin la APK no hace nada. */
+  function adoptarNativa() {
+    try {
+      const cap = window.Capacitor;
+      if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return Promise.resolve();
+      const M = (cap.Plugins || {}).Manos || (cap.registerPlugin && cap.registerPlugin('Manos'));
+      if (!M || !M.sesionLeer) return Promise.resolve();
+      const leer = Promise.resolve(M.sesionLeer()).then((s) => {
+        const ts = Number(s && s.ts) || 0;
+        const mio = Number(localStorage.getItem('jarvisSesionTs')) || 0;
+        if (s && s.refresco && ts > mio) {
+          localStorage.setItem(K.ref, s.refresco);
+          if (s.acceso) localStorage.setItem(K.acc, s.acceso);
+          localStorage.setItem('jarvisSesionTs', String(ts));
+        }
+      }).catch(() => {});
+      return Promise.race([leer, new Promise((r) => setTimeout(r, 2500))]);
+    } catch (e) { return Promise.resolve(); }
+  }
   function refrescar() {
     if (refrescando) return refrescando;
-    refrescando = fetchOrig('/auth/refresh', {
+    refrescando = adoptarNativa().then(() => fetchOrig('/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: localStorage.getItem(K.ref) })
-    })
+    }))
       .then((r) => (r.ok ? r.json() : (r.status === 503 ? { _temporal: true } : null)))
       .then((d) => {
         if (d && d.access_token) { guardarSesion(d); return true; }

@@ -165,7 +165,7 @@ def _crear_h(args, zona):
         'usuario_id': g.usuario_id, 'titulo': titulo, 'instruccion': instr,
         'cuando': d.astimezone(timezone.utc).isoformat()})
     return {'ok': True, 'titulo': titulo, 'fecha_hora': d.strftime('%Y-%m-%d %H:%M'),
-            'nota': 'Se ejecutara sola a su hora mientras Jarvis este abierto (en pantalla o en segundo plano).'}
+            'nota': 'Se ejecutara sola a su hora (con la app abierta o, en la APK, aunque este cerrada o el celular bloqueado).'}
 
 
 def _cancelar_h(args, filas, zona):

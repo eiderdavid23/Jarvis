@@ -118,12 +118,22 @@ public class ManosPlugin extends Plugin {
     @PluginMethod
     public void sesion(PluginCall call) {
         String acceso = call.getString("acceso", "");
+        String refresco = call.getString("refresco", "");
         String chat = call.getString("chat_id", "");
-        SharedPreferences.Editor e = prefs().edit();
+        long ts = call.getData().optLong("ts", 0L);
+        SharedPreferences p = prefs();
+        SharedPreferences.Editor e = p.edit();
         if (acceso == null || acceso.isEmpty()) {
-            e.remove("acceso").remove("chat_id");
+            e.remove("acceso").remove("chat_id").remove("refresco").remove("ts_sesion");
         } else {
-            e.putString("acceso", acceso);
+            // si la parte nativa ya renovo la sesion con la app cerrada, no se pisa con una mas vieja
+            if (ts >= p.getLong("ts_sesion", 0L)) {
+                e.putString("acceso", acceso);
+                if (refresco != null && !refresco.isEmpty()) {
+                    e.putString("refresco", refresco);
+                }
+                e.putLong("ts_sesion", ts);
+            }
             if (chat != null && !chat.isEmpty()) {
                 e.putString("chat_id", chat);
             }
@@ -131,6 +141,24 @@ public class ManosPlugin extends Plugin {
         e.apply();
         refrescarBurbuja();
         call.resolve();
+    }
+
+    /** La app manda la lista de tareas automaticas pendientes y se programan sus alarmas. */
+    @PluginMethod
+    public void tareas(PluginCall call) {
+        TareasAuto.guardar(getContext(), call.getString("lista", "[]"));
+        call.resolve();
+    }
+
+    /** La sesion mas reciente de la parte nativa (la renueva al ejecutar tareas con la app cerrada). */
+    @PluginMethod
+    public void sesionLeer(PluginCall call) {
+        SharedPreferences p = prefs();
+        JSObject r = new JSObject();
+        r.put("acceso", p.getString("acceso", ""));
+        r.put("refresco", p.getString("refresco", ""));
+        r.put("ts", p.getLong("ts_sesion", 0L));
+        call.resolve(r);
     }
 
     @PluginMethod
