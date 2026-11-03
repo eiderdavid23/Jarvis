@@ -15,6 +15,7 @@ permissions:
 jobs:
   compilar:
     strategy:
+      fail-fast: false
       matrix:
         incluir:
           - so: windows-latest
@@ -31,11 +32,21 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Instalar Xvfb (solo Linux; pyautogui necesita una pantalla al compilar)
+        if: matrix.incluir.so == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
       - name: Instalar dependencias
         run: pip install pyinstaller requests mss pillow pyautogui
 
       - name: Compilar en un solo archivo
-        run: pyinstaller --onefile --name JarvisPC --console agente_pc.py
+        shell: bash
+        run: |
+          if [ "${{ matrix.incluir.so }}" = "ubuntu-latest" ]; then
+            xvfb-run -a pyinstaller --onefile --name JarvisPC --console agente_pc.py
+          else
+            pyinstaller --onefile --name JarvisPC --console agente_pc.py
+          fi
 
       - name: Nombrar el archivo de salida
         shell: bash
