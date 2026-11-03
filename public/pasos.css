@@ -1,11 +1,17 @@
-/* Pasos en vivo de Jarvis */
+/* Pasos en vivo de Jarvis: el Resumen, estilo Claude */
 .pasosBox { margin-left: 34px; font-size: 15px; color: var(--suave); }
 .pasosCab {
   display: flex; align-items: center; gap: 8px; max-width: 100%;
-  padding: 4px 0; background: none; border: 0; color: inherit; font: inherit; text-align: left;
+  padding: 4px 0; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
 }
 .pasosTit { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pasosBox.trabajando .pasosTit { animation: pasosBrillo 1.6s infinite ease-in-out; }
+.pasosBox.trabajando .pasosTit {
+  background: linear-gradient(90deg, var(--suave) 30%, var(--texto) 50%, var(--suave) 70%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: pasosBarrido 2.2s linear infinite;
+}
 .pasosRueda {
   flex: none; width: 18px; height: 18px;
   background:
@@ -15,21 +21,44 @@
   animation: pasosGiro 1.1s linear infinite;
 }
 .pasosBox:not(.trabajando) .pasosRueda {
-  animation: none; -webkit-mask: none; mask: none; width: 7px; height: 7px;
-  background: var(--suave); opacity: .6;
+  animation: none; width: 7px; height: 7px; margin: 0 5.5px;
+  border-radius: 50%; background: var(--suave); opacity: .6;
 }
 .pasosFlecha { flex: none; transition: transform .2s; opacity: .7; }
 .pasosBox.abierto .pasosFlecha { transform: rotate(90deg); }
-.pasosLista { display: none; list-style: none; margin: 4px 0 2px 5px; padding: 0 0 0 16px; border-left: 1px solid var(--linea); }
-.pasosBox.abierto .pasosLista { display: block; }
-.pasosLista li { position: relative; padding: 4px 0; line-height: 1.4; }
-.pasosLista li::before {
-  content: ''; position: absolute; left: -20px; top: 11px; width: 7px; height: 7px;
-  border-radius: 50%; background: var(--suave); opacity: .5;
+.pasosCuerpo { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .28s ease; }
+.pasosBox.abierto .pasosCuerpo { grid-template-rows: 1fr; }
+.pasosLista {
+  list-style: none; margin: 0; padding: 0; min-height: 0; overflow: hidden;
+  opacity: 0; transition: opacity .25s ease;
 }
-.pasosLista li.activo { color: var(--texto); }
-.pasosLista li.activo::before { background: var(--cian); opacity: 1; }
+.pasosBox.abierto .pasosLista { opacity: 1; }
+.pasosLista li {
+  position: relative; display: flex; gap: 10px; padding: 0 0 12px; line-height: 1.35;
+  animation: pasosEntra .3s ease both;
+}
+.pasosLista li:first-child { margin-top: 6px; }
+.pasosLista li:last-child { padding-bottom: 4px; }
+.pasosLista li::before {
+  content: ''; position: absolute; left: 8px; top: 21px; bottom: 3px;
+  width: 1px; background: var(--linea);
+}
+.pasosLista li:last-child::before { display: none; }
+.pasoIco { flex: none; width: 17px; height: 17px; margin-top: 1px; color: var(--suave); }
+.pasoIco svg { display: block; width: 17px; height: 17px; }
+.pasoTxt { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.pasoTit { color: var(--suave); font-size: 14.5px; }
+.pasoDet { color: var(--suave); opacity: .8; font-size: 13px; overflow-wrap: anywhere; }
+.pasosLista li.activo .pasoTit { color: var(--texto); }
+.pasosLista li.activo .pasoIco { color: var(--cian); animation: pasosLatido 1.4s ease-in-out infinite; }
+.pasosLista li.final .pasoIco { color: var(--verde); }
+.pasosBox.simple .pasosFlecha, .pasosBox.simple .pasosCuerpo { display: none; }
+.pasosBox.simple .pasosCab { cursor: default; }
 @keyframes pasosGiro { to { transform: rotate(360deg); } }
-@keyframes pasosBrillo { 50% { opacity: .5; } }
-.pasosBox.simple .pasosFlecha { display: none; }
-.pasosBox.simple .pasosLista { display: none !important; }
+@keyframes pasosBarrido { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+@keyframes pasosLatido { 50% { opacity: .45; } }
+@keyframes pasosEntra { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .pasosBox *, .pasosBox *::before { animation: none !important; transition: none !important; }
+  .pasosBox.trabajando .pasosTit { -webkit-text-fill-color: currentColor; background: none; color: inherit; }
+}

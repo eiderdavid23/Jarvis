@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 2 nov 2026
-Versión actual: 1.33 (ver CAMBIOS.md)
+Versión actual: 1.34 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -40,6 +40,7 @@ Pedido de David sobre la burbuja y las funciones:
 - [x] Pantalla de inicio con saludos variados según la hora, el día, la fecha y los recordatorios de hoy, y sugerencias que cambian (v1.18, `public/saludos.js`). Solo web.
 - [x] La burbuja se cierra sola al terminar de hablar (v1.19, `BurbujaManos.java`). Requiere APK nueva.
 - [x] Varios celulares con la misma cuenta (v1.20): nombre propio al vincular y campo `dispositivo` en ver_pantalla y controlar_pantalla.
+- [x] Resumen de pasos estilo Claude y respuesta por partes (v1.34, solo web): `public/pasos.js` y `public/pasos.css` (linea de tiempo con iconos), `public/revelar.js` y `public/revelar.css` (la respuesta aparece bloque por bloque; la llama `index.html` con `window.jarvisRevelar`). El streaming real del modelo (palabra por palabra) NO esta hecho: haria falta tocar `rotacion_ia.py` y todos los proveedores.
 - [ ] Pantalla apagada en celulares y PC (v1.22 servidor y web, v1.23 APK):
   - [x] Parte 1: ordenes `encender_pantalla` y `apagar_pantalla` en el servidor y boton de bateria en la web (v1.22).
   - [x] Parte 2: la APK mantiene la CPU despierta, enciende y apaga la pantalla (v1.23). Requiere APK nueva.

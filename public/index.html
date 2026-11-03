@@ -490,6 +490,7 @@
 <link rel="stylesheet" href="/modulos.css">
 <link rel="stylesheet" href="/sidebar_orden.css">
 <link rel="stylesheet" href="/pasos.css">
+<link rel="stylesheet" href="/revelar.css">
 <link rel="stylesheet" href="/guia_llave.css">
 <link rel="stylesheet" href="/ajustes_nuevo.css">
 <link rel="stylesheet" href="/menu_cuenta.css">
@@ -1659,7 +1660,8 @@ async function enviarMensaje(desdeVoz) {
       if (data.tareas_cambio && window.jarvisTareas) window.jarvisTareas.recargar();
       const { textoLimpio, urls } = procesarAcciones(data.respuesta || '');
       textoFinal = textoLimpio;
-      agregarMensaje(textoFinal, 'jarvis');
+      const filaNueva = agregarMensaje(textoFinal, 'jarvis');
+      if (window.jarvisRevelar) window.jarvisRevelar(filaNueva);
       const busq = (data.busqueda && Array.isArray(data.busqueda.resultados) && data.busqueda.resultados.length) ? data.busqueda : null;
       if (busq) mostrarBusqueda(busq);
       mostrarImagenes(data.imagenes);
@@ -2226,6 +2228,7 @@ pintarTema();
 </script>
 <script src="/markdown.js"></script>
 <script src="/pasos.js"></script>
+<script src="/revelar.js"></script>
 <script src="/guia_llave.js"></script>
 <script src="/acciones_msg.js"></script>
 <script src="/menu_chats.js"></script>
