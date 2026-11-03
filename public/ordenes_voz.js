@@ -59,6 +59,8 @@
       var on = c.activar !== false;
       if (c.tipo === 'herramienta') {
         if (window.herramientasAplicar) window.herramientasAplicar(c.id, on);
+      } else if (c.tipo === 'seguridad') {
+        if (window.modoSeguridadAplicar) window.modoSeguridadAplicar(on);
       } else if (c.tipo === 'app') {
         if (!M) { soloApp = true; return; }
         cadena = cadena.then(function () { return aplicarApp(c.id, on); }).catch(function () {});

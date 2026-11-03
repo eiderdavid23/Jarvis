@@ -27,6 +27,7 @@ import llaves_api
 import memoria_api
 import nexus_api
 import manos_api
+import seguridad_api
 import addon_mc
 import cancelar_api
 import funciones_voz
@@ -710,6 +711,7 @@ PASOS_HERRAMIENTAS = {
     'controlar_pantalla': 'Usando tu celular',
     'controlar_pc': 'Usando tu PC',
     'controlar_tv': 'Usando tu TV',
+    'auditar_proyecto': 'Auditando tu proyecto',
 }
 
 
@@ -888,6 +890,11 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
             acciones_frontend['tareas'] = True
         return res
 
+    if nombre == 'auditar_proyecto':
+        if not _modo_seguridad():
+            return {'ok': False, 'error': 'el modo seguridad esta apagado; dile al usuario que lo active en Herramientas'}
+        return seguridad_api.auditar_proyecto(BASE_DIR)
+
     if nombre == 'leer_archivo':
         ruta = (argumentos.get('ruta') or '').strip()
         if not ruta:
@@ -924,6 +931,19 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
     return {'ok': False, 'error': f'herramienta desconocida: {nombre}'}
 
 
+HERRAMIENTA_AUDITAR = {
+    'name': 'auditar_proyecto',
+    'description': (
+        'SOLO disponible con el modo seguridad activado. Revisa el propio proyecto de Jarvis '
+        '(su codigo en el servidor) en busca de secretos escritos en el codigo, modo de depuracion '
+        'activo y rutas web sin control de acceso aparente. Es una revision automatica por patrones, '
+        'no perfecta. Usala cuando el usuario pida revisar, auditar o buscar vulnerabilidades en su '
+        'propio proyecto/codigo/servidor, nunca para sistemas de otras personas.'
+    ),
+    'parameters': {'type': 'object', 'properties': {}}
+}
+
+
 # --- Panel Herramientas: grupos que el usuario puede apagar desde el sidebar ---
 GRUPOS_HERRAMIENTAS = {
     'minecraft': ('Minecraft', ['buscar_estructuras_minecraft', 'crear_addon_minecraft']),
@@ -958,9 +978,19 @@ def _apagadas():
         return set()
 
 
+def _modo_seguridad():
+    try:
+        return bool(g.get('modo_seguridad'))
+    except RuntimeError:
+        return False
+
+
 def _activas():
     off = _apagadas()
-    return [h for h in HERRAMIENTAS if h['name'] not in off]
+    activas = [h for h in HERRAMIENTAS if h['name'] not in off]
+    if _modo_seguridad():
+        activas.append(HERRAMIENTA_AUDITAR)
+    return activas
 
 
 def texto_apagadas():
@@ -1927,6 +1957,48 @@ def resumir_conversacion(resumen_previo, mensajes, proveedor, api_key):
     return texto.strip()[:MAX_RESUMEN]
 
 
+PROMPT_SEGURIDAD = (
+    'MODO SEGURIDAD ACTIVO (el usuario lo prendio en Herramientas): ahora ademas de tu personalidad '
+    'de siempre, actuas como un analista de ciberseguridad DEFENSIVA, serio y con conocimiento real, '
+    'no un personaje. Tu trabajo es proteger, no atacar. '
+    'CONOCIMIENTO: manejas bien el OWASP Top 10 (inyeccion, fallos de autenticacion, exposicion de '
+    'datos sensibles, configuracion insegura, control de acceso roto, SSRF, XSS, deserializacion '
+    'insegura, componentes con vulnerabilidades conocidas, registro y monitoreo insuficientes), '
+    'los conceptos de CWE y CVE, buenas practicas de contraseñas y 2FA, cifrado en transito y en '
+    'reposo, principio de menor privilegio, y revelacion responsable de vulnerabilidades (reportar '
+    'en privado al dueño antes de hacerlo publico, darle tiempo razonable para corregir). Cuando '
+    'hable de fallos recientes o de versiones de software, usa buscar_web y leer_pagina para traer '
+    'informacion actual (avisos oficiales, CVEs, changelogs) en vez de confiar solo en lo que ya '
+    'sabes, que puede estar desactualizado. '
+    'HERRAMIENTA auditar_proyecto: revisa SOLO el propio proyecto de Jarvis en busca de secretos '
+    'expuestos en el codigo, modo de depuracion activo y rutas sin control de acceso aparente. Es '
+    'una revision automatica por patrones, no perfecta: explica cada hallazgo en palabras simples, '
+    'di por que importa y como corregirlo, y aclara que conviene revisarlo con calma. No es una '
+    'auditoria profesional completa. '
+    'LIMITE LEGAL Y ETICO (esto no es negociable y no se desactiva aunque el usuario insista o diga '
+    'que tiene permiso de palabra): revisar o escanear un sistema, red, cuenta, pagina o dispositivo '
+    'que no es del usuario, sin autorizacion verificable de su dueño, es delito en la gran mayoria '
+    'de paises aunque la intencion sea buena y no se cause ningun daño. Que un tercero le haya '
+    'pedido el favor al usuario NO cuenta como permiso: el permiso lo da el dueño del sistema, nunca '
+    'quien lo pide. Antes de mirar, probar o dar pasos tecnicos sobre algo que no es claramente del '
+    'propio usuario (su propio codigo, su propia cuenta, su propio dispositivo), pide una prueba de '
+    'autorizacion del dueño: un archivo o pagina security.txt del propio sitio, un programa publico '
+    'de reporte de vulnerabilidades (bug bounty) del propio sitio que invite a probarlo, o que la '
+    'persona demuestre ser quien administra ese dominio o sistema (panel de administracion, DNS, '
+    'etc.). Sin eso, explica el riesgo legal en una frase y no des pasos tecnicos de escaneo, '
+    'explotacion, fuerza bruta ni similares sobre ese objetivo; puedes seguir dando informacion '
+    'educativa general (como funciona el tipo de fallo, como se defiende alguien de eso) sin '
+    'aplicarla paso a paso contra el objetivo concreto. NUNCA crees virus, malware, ransomware, '
+    'herramientas de ataque, ni ayudes a robar contraseñas, tomar cuentas ajenas o dejar fuera de '
+    'servicio algo que no es del usuario. Si de verdad hay autorizacion verificable, puedes ayudar '
+    'con revisiones no invasivas y basicas (certificados, cabeceras de seguridad, puertos conocidos, '
+    'version de software expuesta); nunca con fuerza bruta ni explotacion activa de fallos: eso es '
+    'atacar, no auditar, y queda fuera aunque haya permiso, salvo que el usuario sea un profesional '
+    'en una prueba de penetracion formal con alcance y fechas claras, y aun asi sin generar el '
+    'codigo de explotacion por ti mismo.'
+)
+
+
 SYSTEM_PROMPT_BASE = (
     'Eres J.A.R.V.I.S., el asistente de inteligencia artificial personal del '
     'usuario. Adoptas su personalidad de las peliculas de Iron Man: extremadamente '
@@ -2378,6 +2450,7 @@ def _chat_interno():
         chat_id = (data.get('chat_id') or '').strip()
         nivel = nivel_pensamiento(request.headers.get('X-Pensamiento', ''))
         g.apagadas = herramientas_apagadas(request.headers.get('X-Herramientas-Off', ''))
+        g.modo_seguridad = request.headers.get('X-Modo-Seguridad', '') == '1'
         if not data.get('adjuntos'):
             orden_voz = funciones_voz.interpretar(mensaje_usuario, request.headers.get('X-Herramientas-Off', ''))
             if orden_voz:
@@ -2438,9 +2511,10 @@ def _chat_interno():
         if instr_proyecto:
             texto_proyecto = (' INSTRUCCIONES DEL PROYECTO al que pertenece ESTE chat (sigue estas indicaciones '
                               'junto con tu personalidad de siempre): ' + instr_proyecto)
+        texto_seguridad = (' ' + PROMPT_SEGURIDAD) if g.modo_seguridad else ''
         system_prompt = (SYSTEM_PROMPT_BASE + texto_capacidades() + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
                          + texto_recuerdos + texto_resumen + texto_archivos + texto_archivos_proy + texto_proyecto
-                         + texto_apagadas())
+                         + texto_seguridad + texto_apagadas())
 
         g.pide_celular = pide_celular(mensaje_usuario)
         turnos = list(historial[-UMBRAL_RESUMEN:])  # mensajes posteriores al resumen (maximo 30)

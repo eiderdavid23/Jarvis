@@ -30,6 +30,9 @@ FUNCIONES = {
     'archivos': ('Archivos', 'm', True, 'herramienta', ['archivos', 'leer archivos', 'lectura de archivos'], False),
     'manos': ('Manos', 'f', True, 'herramienta', ['manos', 'manos de jarvis'], False),
     'telefono': ('Teléfono', 'm', False, 'herramienta', ['telefono'], True),
+    'seguridad': ('Modo seguridad', 'm', False, 'seguridad',
+                  ['modo seguridad', 'seguridad', 'agente de seguridad', 'modo de ciberseguridad',
+                   'ciberseguridad', 'agente de ciberseguridad'], False),
 }
 
 PREFIJOS = {'oye', 'ok', 'okay', 'hola', 'jarvis', 'por', 'favor', 'porfa', 'ahora', 'entonces', 'y', 'ya',
