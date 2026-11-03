@@ -24,7 +24,17 @@
     t.textContent = 'Controlar un PC';
     var ayuda = document.createElement('div');
     ayuda.className = 'pcAyuda';
-    ayuda.textContent = 'Vincula tu PC para que Jarvis abra programas, vea la pantalla, ajuste el volumen o mueva archivos. Necesitas Python en el PC.';
+    ayuda.textContent = 'Vincula tu PC para que Jarvis abra programas, vea la pantalla, ajuste el volumen o mueva archivos.';
+    var descarga = document.createElement('a');
+    descarga.className = 'pcBtn';
+    descarga.style.display = 'block';
+    descarga.style.textAlign = 'center';
+    descarga.style.textDecoration = 'none';
+    descarga.style.boxSizing = 'border-box';
+    descarga.href = 'https://github.com/eiderdavidgarcia23/Jarvis/releases/latest';
+    descarga.target = '_blank';
+    descarga.rel = 'noopener';
+    descarga.textContent = 'Descargar JarvisPC (Windows, Mac o Linux)';
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'pcBtn';
@@ -55,7 +65,7 @@
         cmd.value = 'python agente_pc.py --url ' + location.origin + ' --token ' + d.token;
         cmd.style.display = 'block';
         copiar.style.display = 'block';
-        nota.textContent = 'Copia este comando y ejec\u00fatalo en tu PC, en la carpeta donde est\u00e1 agente_pc.py. Es secreto: no lo compartas. Si lo pierdes, vuelve a vincular.';
+        nota.textContent = 'Si ya descargaste JarvisPC, \u00e1brelo y pega este texto cuando te lo pida. Si prefieres correr agente_pc.py con Python, p\u00e9galo igual como comando. Es secreto: no lo compartas. Si lo pierdes, vuelve a vincular.';
         btn.disabled = false;
       }).catch(function (e) {
         nota.textContent = e.message;
@@ -70,7 +80,7 @@
         copiar.textContent = 'Copiado \u2713';
       } catch (e) {}
     });
-    [t, ayuda, btn, cmd, copiar, nota].forEach(function (e) { caja.appendChild(e); });
+    [t, ayuda, descarga, btn, cmd, copiar, nota].forEach(function (e) { caja.appendChild(e); });
     cont.parentNode.insertBefore(caja, cont.nextSibling);
     return true;
   }
