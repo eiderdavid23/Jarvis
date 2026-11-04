@@ -127,7 +127,8 @@
       if (!l) return;
       let o;
       try { o = JSON.parse(l); } catch (e) { return; }
-      if (o.t === 'paso' && alPaso) { vioPaso = true; alPaso(o.texto); }
+      if (o.t === 'delta' && window.jarvisDelta) { vioPaso = true; window.jarvisDelta(o.texto); }
+      else if (o.t === 'paso' && alPaso) { vioPaso = true; alPaso(o.texto); }
       else if (o.t === 'nivel' && window.jarvisNivelVisual) window.jarvisNivelVisual(o.nivel);
       else if (o.t === 'final') final = o;
     }

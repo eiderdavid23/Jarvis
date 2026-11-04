@@ -384,6 +384,8 @@ def _generar_cadena(system_prompt, turnos, llaves, nivel='medio', eleccion='auto
     """Devuelve (respuesta, acciones, modelo_usado). Lanza TodosAgotados si ninguno responde."""
     lista = cadena(llaves, eleccion, cambio_auto, solo_gemini)
     fallos = []
+    total = ''
+    acciones = {'urls_abrir': [], 'busqueda': None, 'imagenes': []}
     ahora = time.time()
     for i, m in enumerate(lista):
         llave = llaves[m['prov']]
@@ -392,12 +394,14 @@ def _generar_cadena(system_prompt, turnos, llaves, nivel='medio', eleccion='auto
             fallos.append((m, b[0] - ahora, b[1]))
             continue
         try:
+            srv._parcial_set('')
             texto, acciones = _generar_uno(m, system_prompt, turnos, llave, nivel)
             if fallos:
                 print(f'[CADENA] Respondió {m["nombre"]} tras saltar: ' + ', '.join(f[0]['nombre'] for f in fallos))
             else:
                 print(f'[CADENA] Respondió {m["nombre"]}')
-            return texto, acciones, m
+            srv._parcial_set('')
+            return (total + texto).strip(), acciones, m
         except Exception as e:
             c = _clasificar(e)
             if c is None:
@@ -406,10 +410,21 @@ def _generar_cadena(system_prompt, turnos, llaves, nivel='medio', eleccion='auto
             _bloquear(m, llave, seg, motivo)
             fallos.append((m, seg, motivo))
             print(f'[CADENA] {m["nombre"]}: {motivo} (pausa {_cuanto(seg)}). Detalle: {e.__class__.__name__}')
+            parcial = srv._parcial_get()
+            if parcial.strip():
+                total += parcial
+                turnos = list(turnos) + [{'role': 'assistant', 'texto': parcial},
+                                         {'role': 'user', 'texto': srv.PROMPT_RETOMAR}]
             sig = [x for x in lista[i + 1:] if not _bloqueo(x, llaves[x['prov']])]
             if sig:
-                srv._paso(f'{m["nombre"]}: {motivo}. Cambiando a {sig[0]["nombre"]}')
+                if parcial.strip():
+                    srv._paso(f'{m["nombre"]}: {motivo}. Retomo lo escrito con {sig[0]["nombre"]}')
+                else:
+                    srv._paso(f'{m["nombre"]}: {motivo}. Cambiando a {sig[0]["nombre"]}')
         finally:
             g.modelo_gemini = None
             g.modelo_groq = None
+    if total.strip():
+        srv._parcial_set('')
+        return (total.strip() + srv.NOTA_CORTADA), acciones, lista[-1]
     raise TodosAgotados(_mensaje_agotados(fallos, solo_gemini))

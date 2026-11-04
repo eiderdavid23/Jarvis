@@ -775,6 +775,39 @@ _enganchar_hallazgos()
 narrador.indice(list(HERRAMIENTAS) + list(hack_api.HERRAMIENTAS))
 
 
+def _parcial_set(t):
+    try:
+        g.texto_parcial = t or ''
+    except RuntimeError:
+        pass
+
+
+def _parcial_get():
+    try:
+        return g.get('texto_parcial') or ''
+    except RuntimeError:
+        return ''
+
+
+def _delta(texto):
+    """Manda al navegador un trozo de la respuesta mientras el modelo la escribe."""
+    try:
+        cola = getattr(g, 'cola_pasos', None)
+        if cola is not None and texto:
+            cola.put(('delta', texto))
+    except Exception:
+        pass
+
+
+def _contar_stream(prov):
+    try:
+        import time as _t
+        g.setdefault('marcas_llamadas', {}).setdefault(prov, []).append(_t.time())
+        g.setdefault('uso_pendiente', {}).setdefault(prov, [0, 0, 0])[0] += 1
+    except Exception:
+        pass
+
+
 def _paso(texto):
     """Avisa al navegador lo que Jarvis esta haciendo (solo si pidio pasos en vivo)."""
     try:
@@ -1211,6 +1244,11 @@ MAX_CONTINUACIONES = 3   # veces que se le pide seguir si la respuesta se corta 
 PROMPT_CONTINUAR = ('Continua exactamente desde donde te quedaste, sin repetir nada de lo ya escrito, '
                     'sin saludar ni explicar. Si estabas dentro de un bloque de codigo, sigue dentro de ese '
                     'mismo bloque sin abrir otro.')
+PROMPT_RETOMAR = ('Un modelo anterior se corto a mitad. Ese texto ya lo vio el usuario y esta en el '
+                  'turno anterior. Continua EXACTAMENTE desde ahi: no repitas nada, no saludes, no '
+                  'resumas, no menciones el corte. Si ibas dentro de un bloque de codigo, sigue dentro '
+                  'del mismo bloque. Termina lo que faltaba.')
+
 NOTA_CORTADA = '\n\n(La respuesta se corto por ser muy larga, señor. Pidame que continue y sigo desde ahi.)'
 
 
@@ -1862,6 +1900,33 @@ def _quitar_imagenes_viejas(capturas):
     del capturas[:]
 
 
+def _gemini_stream(modelo, cuerpo, api_key):
+    """Recorre el stream de Gemini y devuelve los eventos ya parseados."""
+    url = url_gemini(modelo).replace(':generateContent', ':streamGenerateContent')
+    with requests.post(url, params={'key': api_key, 'alt': 'sse'}, json=cuerpo,
+                       timeout=TIMEOUT_IA, stream=True) as r:
+        if r.status_code != 200:
+            print('[GEMINI] Stream error', r.status_code, r.text[:800])
+            r.raise_for_status()
+        r.encoding = 'utf-8'
+        for crudo in r.iter_lines(decode_unicode=False):
+            if not crudo:
+                continue
+            try:
+                linea = crudo.decode('utf-8', 'replace')
+            except Exception:
+                continue
+            if not linea.startswith('data:'):
+                continue
+            dato = linea[5:].strip()
+            if not dato or dato == '[DONE]':
+                continue
+            try:
+                yield json.loads(dato)
+            except json.JSONDecodeError:
+                continue
+
+
 def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
     contenidos = []
     for h in turnos:
@@ -1876,51 +1941,58 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
 
     acumulado, continuaciones = '', 0
     for _ in range(_vueltas() + MAX_CONTINUACIONES):
-        print(f'[GEMINI] Llamando a {GEMINI_URL} con modelo {GEMINI_MODEL}...')
-        resp = llamar_gemini({
+        cuerpo = {
             'system_instruction': {'parts': [{'text': system_prompt}]},
             'contents': contenidos,
             **({'tools': construir_tools_gemini()} if _activas() else {}),
             'generationConfig': gen_config
-        }, gen_config, api_key)
-        print(f'[GEMINI] Respuesta HTTP: {resp.status_code}')
-        if resp.status_code != 200:
-            print(f'[GEMINI] Cuerpo del error: {resp.text[:2000]}')
-        resp.raise_for_status()
-        data = resp.json()
-
-        cand = (data.get('candidates') or [{}])[0]
-        contenido_modelo = cand.get('content') or {}
-        motivo = cand.get('finishReason', '')
-        if not contenido_modelo.get('parts'):
-            print('[GEMINI] Respuesta sin contenido. finishReason:', motivo)
-            if acumulado.strip():
-                return (acumulado + NOTA_CORTADA).strip(), acciones
-            if motivo == 'MAX_TOKENS':
-                return 'Me quede sin espacio para responder, señor. Suba el nivel de pensamiento o pidamelo por partes.', acciones
-            return 'No logre generar una respuesta, señor. Intente de nuevo.', acciones
-        contenidos.append(contenido_modelo)
-
-        partes = contenido_modelo.get('parts', [])
-        llamadas = [p['functionCall'] for p in partes if 'functionCall' in p]
+        }
+        print(f'[GEMINI] Stream con {_modelo_gemini()}...')
+        _contar_stream('gemini')
+        texto, llamadas, motivo = '', [], ''
+        try:
+            for ev in _gemini_stream(_modelo_gemini(), cuerpo, api_key):
+                cand = (ev.get('candidates') or [{}])[0]
+                for p in ((cand.get('content') or {}).get('parts') or []):
+                    if p.get('text'):
+                        texto += p['text']
+                        _delta(p['text'])
+                        _parcial_set(acumulado + texto)
+                    if 'functionCall' in p:
+                        llamadas.append(p['functionCall'])
+                if cand.get('finishReason'):
+                    motivo = cand['finishReason']
+        except requests.exceptions.HTTPError:
+            if texto and continuaciones < MAX_CONTINUACIONES:
+                continuaciones += 1
+                acumulado += texto
+                contenidos.append({'role': 'model', 'parts': [{'text': texto}]})
+                contenidos.append({'role': 'user', 'parts': [{'text': PROMPT_CONTINUAR}]})
+                continue
+            raise
 
         if not llamadas:
-            aviso_guardia = '' if acumulado else exigir_herramienta(acciones)
+            aviso_guardia = '' if (acumulado or texto) else exigir_herramienta(acciones)
             if aviso_guardia:
+                contenidos.append({'role': 'model', 'parts': [{'text': texto}]})
                 contenidos.append({'role': 'user', 'parts': [{'text': aviso_guardia}]})
                 continue
-            acumulado += ''.join(p.get('text', '') for p in partes)
+            acumulado += texto
             if motivo == 'MAX_TOKENS':
                 if continuaciones < MAX_CONTINUACIONES:
                     continuaciones += 1
-                    print(f'[GEMINI] Respuesta cortada por limite de tokens; pido que continue ({continuaciones}/{MAX_CONTINUACIONES}).')
+                    contenidos.append({'role': 'model', 'parts': [{'text': texto}]})
                     contenidos.append({'role': 'user', 'parts': [{'text': PROMPT_CONTINUAR}]})
                     continue
                 acumulado += NOTA_CORTADA
             return acumulado.strip(), acciones
 
-        partes_respuesta = []
-        partes_imagen = []
+        if texto:
+            acumulado += texto
+        partes_modelo = ([{'text': texto}] if texto else []) + [{'functionCall': c} for c in llamadas]
+        contenidos.append({'role': 'model', 'parts': partes_modelo})
+
+        partes_respuesta, partes_imagen = [], []
         for llamada in llamadas:
             nombre = llamada.get('name', '')
             args = llamada.get('args', {}) or {}
@@ -1930,7 +2002,6 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
             partes_respuesta.append({'functionResponse': {'name': nombre, 'response': resultado}})
             if imagen:
                 partes_imagen.append({'inlineData': {'mimeType': 'image/jpeg', 'data': imagen}})
-
         if partes_imagen:
             _quitar_imagenes_viejas(capturas)
             capturas.extend(partes_imagen)
@@ -2830,13 +2901,15 @@ def chat():
                 continue
             if item[0] == 'nivel':
                 yield json.dumps({'t': 'nivel', 'nivel': item[1]}) + '\n'
+            elif item[0] == 'delta':
+                yield json.dumps({'t': 'delta', 'texto': item[1]}, ensure_ascii=False) + '\n'
             elif item[0] == 'paso':
                 yield json.dumps({'t': 'paso', 'texto': item[1]}, ensure_ascii=False) + '\n'
             else:
                 yield json.dumps({'t': 'final', 'status': item[1], 'data': item[2]}, ensure_ascii=False) + '\n'
                 break
 
-    return Response(emitir(), mimetype='application/x-ndjson',
+    return Response(emitir(), mimetype='application/x-ndjson; charset=utf-8',
                     headers={'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no'})
 
 

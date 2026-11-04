@@ -1664,8 +1664,9 @@ async function enviarMensaje(desdeVoz) {
       if (data.tareas_cambio && window.jarvisTareas) window.jarvisTareas.recargar();
       const { textoLimpio, urls } = procesarAcciones(data.respuesta || '');
       textoFinal = textoLimpio;
-      const filaNueva = agregarMensaje(textoFinal, 'jarvis');
-      if (window.jarvisRevelar) window.jarvisRevelar(filaNueva);
+      const yaPintada = window.jarvisDeltaCerrar && window.jarvisDeltaCerrar(textoFinal);
+      const filaNueva = yaPintada || agregarMensaje(textoFinal, 'jarvis');
+      if (!yaPintada && window.jarvisRevelar) window.jarvisRevelar(filaNueva);
       const busq = (data.busqueda && Array.isArray(data.busqueda.resultados) && data.busqueda.resultados.length) ? data.busqueda : null;
       if (busq) mostrarBusqueda(busq);
       mostrarImagenes(data.imagenes);
@@ -1683,6 +1684,7 @@ async function enviarMensaje(desdeVoz) {
     escribiendo.remove();
     if (panel) panel.terminar();
     actualizarPildora();
+    if (window.jarvisDeltaLimpiar) window.jarvisDeltaLimpiar();
     textoFinal = 'Error de conexion, señor.';
     agregarMensaje(textoFinal, 'jarvis');
     setEstado('reposo', 'En reposo');
@@ -2234,6 +2236,7 @@ pintarTema();
 </script>
 <script src="/markdown.js"></script>
 <script src="/pasos.js"></script>
+<script src="/delta.js"></script>
 <script src="/revelar.js"></script>
 <script src="/guia_llave.js"></script>
 <script src="/acciones_msg.js"></script>
