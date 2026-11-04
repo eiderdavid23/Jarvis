@@ -7,3 +7,4 @@ cryptography
 tzdata
 edge-tts>=7.2.7
 beautifulsoup4
+reportlab

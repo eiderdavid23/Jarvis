@@ -41,6 +41,7 @@ Pedido de David sobre la burbuja y las funciones:
 - [x] La burbuja se cierra sola al terminar de hablar (v1.19, `BurbujaManos.java`). Requiere APK nueva.
 - [x] Varios celulares con la misma cuenta (v1.20): nombre propio al vincular y campo `dispositivo` en ver_pantalla y controlar_pantalla.
 - [x] Resumen de pasos estilo Claude y respuesta por partes (v1.34, solo web): `public/pasos.js` y `public/pasos.css` (linea de tiempo con iconos), `public/revelar.js` y `public/revelar.css` (la respuesta aparece bloque por bloque; la llama `index.html` con `window.jarvisRevelar`). El streaming real del modelo (palabra por palabra) NO esta hecho: haria falta tocar `rotacion_ia.py` y todos los proveedores.
+- [ ] Crear PDF (v1.37, servidor y web, sin APK nueva): `pdf_api.py` (herramienta crear_pdf, bloques que escribe el modelo), `pdf_estilo.py` (diseno unico con reportlab) y `public/pdf_ui.js` (tarjeta de descarga). Pendiente: probar la descarga dentro de la APK; si no baja alli, guardar el PDF unos minutos en Supabase y abrirlo con Browser.open (la tarjeta ya acepta `url`).
 - [ ] Pantalla apagada en celulares y PC (v1.22 servidor y web, v1.23 APK):
   - [x] Parte 1: ordenes `encender_pantalla` y `apagar_pantalla` en el servidor y boton de bateria en la web (v1.22).
   - [x] Parte 2: la APK mantiene la CPU despierta, enciende y apaga la pantalla (v1.23). Requiere APK nueva.

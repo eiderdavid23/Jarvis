@@ -29,6 +29,7 @@ import nexus_api
 import manos_api
 import seguridad_api
 import addon_mc
+import pdf_api
 import cancelar_api
 import funciones_voz
 import rotacion_ia
@@ -524,6 +525,7 @@ HERRAMIENTAS = [
             'required': ['semilla', 'tipos']
         }
     },
+    pdf_api.HERRAMIENTA,
     {
         'name': 'crear_addon_minecraft',
         'description': (
@@ -705,6 +707,7 @@ PASOS_HERRAMIENTAS = {
     'buscar_persona': 'Buscando a {consulta} en la web',
     'buscar_estructuras_minecraft': 'Calculando estructuras en tu semilla',
     'crear_addon_minecraft': 'Armando el add-on',
+    'crear_pdf': 'Armando el PDF',
     'generar_imagen': 'Generando la imagen',
     'leer_archivo': 'Leyendo el archivo',
     'abrir_url': 'Preparando el enlace',
@@ -830,6 +833,12 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         resultado, mapa = minecraft.buscar(argumentos)
         if mapa:
             acciones_frontend['mapa_mc'] = mapa
+        return resultado
+
+    if nombre == 'crear_pdf':
+        resultado, pdf = pdf_api.crear(argumentos, getattr(g, 'zona_horaria', 'UTC'))
+        if pdf:
+            acciones_frontend.setdefault('pdfs', []).append(pdf)
         return resultado
 
     if nombre == 'crear_addon_minecraft':
@@ -973,6 +982,7 @@ GRUPOS_HERRAMIENTAS = {
     'enlaces': ('Abrir enlaces', ['abrir_url']),
     'nexus': ('Plataformas NEXUS', ['listar_plataformas', 'abrir_plataforma']),
     'archivos': ('Archivos', ['leer_archivo']),
+    'pdf': ('Crear PDF', ['crear_pdf']),
     'manos': ('Manos', ['ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv']),
     'telefono': ('Telefono', ['encender_linterna', 'apagar_linterna', 'vibrar', 'consultar_bateria']),
     'hack': ('Hacking web', list(hack_api.NOMBRES)),
@@ -2226,7 +2236,7 @@ def texto_capacidades():
         'las busquedas dentro de un sitio se hacen tras pedir confirmacion. Generas imagenes nuevas '
         'con IA a partir de una descripcion (con Gemini; con Groq solo si hay Cloudflare configurado) y las muestras en el chat; '
         'no se guardan en el historial. Con la semilla de un mundo de Minecraft (Bedrock o Java) localizas '
-        'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. Creas add-ons de Minecraft Bedrock (.mcaddon) con crear_addon_minecraft y los entregas como boton de descarga en el chat. ' + personas + web + telefono + seguridad +
+        'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. Creas add-ons de Minecraft Bedrock (.mcaddon) con crear_addon_minecraft y los entregas como boton de descarga en el chat. Creas PDF con el diseno de Jarvis con la herramienta crear_pdf (informes, resumenes, guias, cartas, tablas, apuntes) y los entregas como tarjeta de descarga en el chat; tu escribes todo el contenido y no lo pegas en el chat. REGLA: si piden un PDF, llama SIEMPRE a crear_pdf en ese mismo turno; nunca digas que lo hiciste sin llamarla. ' + personas + web + telefono + seguridad +
         '(5) Recordatorios: los creas, listas y borras con las herramientas crear_recordatorio, listar_recordatorios y '
         'borrar_recordatorio; suenan a su hora mientras la app este abierta, no con la app cerrada. '
         'Tareas automaticas: con crear_tarea programas algo que haras tu solo a una hora (por ejemplo mandar un '
@@ -2622,6 +2632,7 @@ def _chat_interno():
                         'tareas_cambio': bool(acciones.get('tareas')),
                         'mapa_mc': acciones.get('mapa_mc'),
                         'addons': acciones.get('addons', []),
+                        'pdfs': acciones.get('pdfs', []),
                         'modelo_usado': usado['nombre'],
                         'limites_groq': g.get('limites_groq'),
                         'marcas_llamadas': _marcas_llamadas()})

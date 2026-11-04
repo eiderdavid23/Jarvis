@@ -12,6 +12,7 @@
     { id: 'enlaces', nombre: 'Abrir enlaces', desc: 'Abrir sitios en el navegador' },
     { id: 'nexus', nombre: 'Plataformas NEXUS', desc: 'Listar y abrir tus plataformas por nombre' },
     { id: 'archivos', nombre: 'Archivos', desc: 'Leer adjuntos y archivos del proyecto' },
+    { id: 'pdf', nombre: 'Crear PDF', desc: 'Generar PDF con el diseño de Jarvis' },
     { id: 'manos', nombre: 'Manos', desc: 'Ver y usar la pantalla de tu celular (app Android)' },
     { id: 'telefono', nombre: 'Teléfono', desc: 'Linterna, vibración, batería y volumen del celular' }
   ];
