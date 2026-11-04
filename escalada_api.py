@@ -46,28 +46,32 @@ def forzar_panel(base, rutas=None, limite=30):
     if not u:
         return {'ok': False, 'error': 'URL invalida'}
     raiz = I._base(u) + '/'
-    extra = [x.strip() for x in re.split(r'[,\n]+', str(rutas)) if x.strip()][:40] if rutas else []
+    extra = [x.strip() for x in re.split(r'[,\n]+', str(rutas)) if x.strip()][:60] if rutas else []
     lista = (extra + RUTAS_ROL)[:min(int(limite or 30), MAX_RUTAS_ROL)]
 
     def uno(r):
         x, err = H._pedir(raiz + r)
-        if err or x is None or not _abierta(x):
-            return None
-        y = _sin_sesion(raiz + r)
-        publica = _abierta(y)
-        return {'ruta': r, 'status': x.status_code, 'largo': len(x.content or b''),
-                'titulo': H._titulo(x.text), 'roto': not publica}
+        if err or x is None:
+            return {'ruta': r, 'status': 0, 'abierta': False, 'roto': False, 'largo': 0}
+        abierta = _abierta(x)
+        roto = False
+        if abierta:
+            roto = not _abierta(_sin_sesion(raiz + r))
+        return {'ruta': r, 'status': x.status_code, 'abierta': abierta, 'roto': roto,
+                'largo': len(x.content or b''), 'titulo': H._titulo(x.text)}
 
     with ThreadPoolExecutor(max_workers=MAX_HILOS) as ex:
-        filas = [x for x in ex.map(uno, lista) if x]
-    filas.sort(key=lambda f: not f['roto'])
-    rotas = [f for f in filas if f['roto']]
+        filas = list(ex.map(uno, lista))
+    abiertas = [f for f in filas if f['abierta']]
+    rotas = [f for f in abiertas if f['roto']]
+    cerradas = [f for f in filas if not f['abierta']]
     for f in rotas[:6]:
-        H._anotar('Control de acceso roto', 'alta', raiz + f['ruta'],
-                  'abre con rol aprendiz', f['titulo'])
-    return {'ok': True, 'probadas': len(lista), 'halladas': filas[:40],
+        H._anotar('Control de acceso roto', 'alta', raiz + f['ruta'], 'abre con rol aprendiz',
+                  f.get('titulo', ''))
+    return {'ok': True, 'probadas': len(lista), 'abiertas': abiertas[:40],
             'rotas': [f['ruta'] for f in rotas][:20],
-            'nota': 'rotas=true = solo abre con tu sesion: el rol no se valida. Ya estas viendo de mas.'}
+            'cerradas': [{'ruta': f['ruta'], 'status': f['status']} for f in cerradas][:40],
+            'nota': 'rotas = abre sin validar rol. cerradas = canario para probar_masivo.'}
 
 def decodificar_cookie(nombre=None):
     out = []
