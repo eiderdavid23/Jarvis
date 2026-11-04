@@ -1,7 +1,7 @@
 """Manos de hacking de Jarvis. Solo Python puro: sirve en Vercel y Termux."""
 import base64, hashlib, hmac, json, re, socket, ssl, time
 from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlparse, urljoin, urlencode
+from urllib.parse import urlparse, urljoin, urlencode, quote
 import requests
 from flask import g
 
@@ -156,6 +156,10 @@ def huella_web(url):
     if faltan:
         _anotar('Cabeceras de seguridad ausentes', 'baja', u, ', '.join(faltan))
 
+    faltan = [c for c in CAB_SEG if c not in {k.lower() for k in cab}]
+    if faltan:
+        _anotar('Cabeceras de seguridad ausentes', 'baja', u, ', '.join(faltan))
+
     return {'ok': True, 'url_final': r.url, 'status': r.status_code,
             'servidor': cab.get('Server', ''), 'declarado': cab.get('X-Powered-By', ''),
             'tecnologias': _tec(t, cab), 'titulo': _titulo(t),
@@ -236,6 +240,10 @@ def enumerar_rutas(url, palabra=None, limite=250):
     with ThreadPoolExecutor(max_workers=MAX_HILOS) as ex:
         hall = [x for x in ex.map(uno, rutas) if x]
     hall.sort(key=lambda h: (h['status'] >= 500, h['status'] in (404, 403)))
+    for h in hall:
+        if h['ruta'] in ('.env', '.git/HEAD', '.git/config', 'backup.zip', 'backup.sql', 'db.sql', 'dump.sql'):
+            _anotar('Archivo expuesto: ' + h['ruta'], 'alta', u, 'accesible sin sesion', str(h['status']))
+
     for h in hall:
         if h['ruta'] in ('.env', '.git/HEAD', '.git/config', 'backup.zip', 'backup.sql', 'db.sql', 'dump.sql'):
             _anotar('Archivo expuesto: ' + h['ruta'], 'alta', u, 'accesible sin sesion', str(h['status']))
@@ -336,9 +344,7 @@ def probar_idor(url, desde=None, hasta=None):
             'rango': [a, b], 'filas': filas,
             'nota': 'Los que dan 200 con contenido distinto son de otro usuario: eso es IDOR.'}
 
-NOMBRES = ('huella_web', 'peticion_http', 'enumerar_rutas', 'analizar_js',
-           'decodificar_jwt', 'probar_idor', 'escanear_puertos', 'ver_certificado',
-           'dns_registros', 'probar_sqli', 'abrir_sesion', 'verificar_sesion', 'extraer_sqli', 'subir_archivo', 'probar_xss', 'reporte')
+NOMBRES = ('huella_web', 'peticion_http', 'enumerar_rutas', 'analizar_js', 'decodificar_jwt', 'probar_idor', 'escanear_puertos', 'ver_certificado', 'dns_registros', 'probar_sqli', 'abrir_sesion', 'verificar_sesion', 'extraer_sqli', 'subir_archivo', 'probar_xss', 'reporte')
 
 def herramienta(nombre, args):
     a = args if isinstance(args, dict) else {}
@@ -374,6 +380,12 @@ def herramienta(nombre, args):
             return extraer_sqli(a.get('url'), a.get('parametro'), a.get('dbms'),
                                 a.get('que') or 'tablas', a.get('tabla') or '', a.get('columna') or '',
                                 a.get('desde') or 1, a.get('largo') or 12, a.get('metodo') or 'GET', a.get('cuerpo'))
+        if nombre == 'subir_archivo':
+            return subir_archivo(a.get('url'), a.get('campo'), a.get('nombre'), a.get('contenido'), a.get('tipo'), a.get('campos_extra'))
+        if nombre == 'probar_xss':
+            return probar_xss(a.get('url'), a.get('parametro'), a.get('metodo'), a.get('cuerpo'))
+        if nombre == 'reporte':
+            return reporte(a.get('objetivo'))
         if nombre == 'subir_archivo':
             return subir_archivo(a.get('url'), a.get('campo'), a.get('nombre'),
                                  a.get('contenido'), a.get('tipo'), a.get('campos_extra'))
@@ -431,6 +443,9 @@ HERRAMIENTAS = [
         'tabla': {'type': 'string'}, 'columna': {'type': 'string'},
         'desde': {'type': 'integer'}, 'largo': {'type': 'integer'}},
        ('url', 'parametro', 'dbms')),
+    _e('subir_archivo', 'Sube un archivo de prueba (multipart).', {'url': {'type': 'string'}, 'campo': {'type': 'string'}, 'nombre': {'type': 'string'}, 'contenido': {'type': 'string'}, 'tipo': {'type': 'string'}, 'campos_extra': {'type': 'string'}}, ('url', 'campo')),
+    _e('probar_xss', 'Prueba XSS reflejado en un parametro.', {'url': {'type': 'string'}, 'parametro': {'type': 'string'}, 'metodo': {'type': 'string'}, 'cuerpo': {'type': 'string'}}, ('url', 'parametro')),
+    _e('reporte', 'Arma el reporte markdown con lo hallado.', {'objetivo': {'type': 'string'}}, ()),
     _e('subir_archivo', 'Sube un archivo de prueba al objetivo (multipart).',
        {'url': {'type': 'string'}, 'campo': {'type': 'string'}, 'nombre': {'type': 'string'},
         'contenido': {'type': 'string'}, 'tipo': {'type': 'string'},
@@ -529,6 +544,9 @@ def probar_sqli(url, parametro, metodo='GET', cuerpo=None):
         res['detalle'] = 'no se confirmo inyeccion en ese parametro'
     else:
         res['detalle'] = res.get('detalle') or 'diferencia consistente entre condicion verdadera y falsa'
+    if res['vulnerable']:
+        _anotar('Inyeccion SQL', 'alta', u, res.get('detalle', ''), res.get('dbms', ''))
+
     if res['vulnerable']:
         _anotar('Inyeccion SQL', 'alta', u, res.get('detalle', ''), res.get('dbms', ''))
 
@@ -723,6 +741,9 @@ def probar_xss(url, parametro, metodo='GET', cuerpo=None):
             contextos.append(re.sub(r'\s+', ' ', t[max(0, i - 60):i + 60]))
         elif '&lt;script' in t.lower() or '&lt;svg' in t.lower():
             crudo.append(carga)
+    if sin_codificar:
+        _anotar('XSS reflejado', 'media', u, 'parametro ' + parametro, sin_codificar[0])
+
     if sin_codificar:
         _anotar('XSS reflejado', 'media', u, 'parametro ' + parametro, sin_codificar[0])
 
