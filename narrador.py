@@ -167,6 +167,7 @@ PLANTILLAS = {
     'vibrar': _simple('Vibrando el teléfono'),
     'consultar_bateria': _simple('Consultando la batería'),
     'auditar_proyecto': _simple('Auditando el proyecto'),
+    'anotar_paso': _simple(''),
 }
 
 
