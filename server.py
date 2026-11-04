@@ -37,6 +37,8 @@ import web_api
 import hack_api
 import intruso_api
 import escalada_api
+import pasos_hack
+import narrador
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
@@ -732,13 +734,32 @@ PASOS_HERRAMIENTAS = {
 }
 
 
+def _enganchar_hallazgos():
+    _original = hack_api._anotar
+
+    def _anotar_vivo(tipo, sev, url, detalle, evidencia=''):
+        _original(tipo, sev, url, detalle, evidencia)
+        _paso(pasos_hack.hallazgo(tipo, sev, url, detalle))
+
+    hack_api._anotar = _anotar_vivo
+
+
+_enganchar_hallazgos()
+narrador.indice(list(HERRAMIENTAS) + list(hack_api.HERRAMIENTAS))
+
+
 def _paso(texto):
     """Avisa al navegador lo que Jarvis esta haciendo (solo si pidio pasos en vivo)."""
     try:
         cola = getattr(g, 'cola_pasos', None)
-        if cola is None or not texto or getattr(g, 'ultimo_paso', None) == texto:
+        if cola is None or not texto:
+            return
+        ahora = datetime.now().timestamp()
+        if (getattr(g, 'ultimo_paso', None) == texto
+                and ahora - getattr(g, 'ultimo_paso_ts', 0) < 2):
             return
         g.ultimo_paso = texto
+        g.ultimo_paso_ts = ahora
         cola.put(('paso', texto))
     except Exception:
         pass
@@ -751,6 +772,8 @@ def _paso_final():
 
 
 def _paso_herramienta(nombre, argumentos):
+    if _narracion() and narrador.tiene(nombre):
+        return
     plantilla = PASOS_HERRAMIENTAS.get(nombre)
     if not plantilla:
         return
@@ -770,7 +793,11 @@ def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         return {'ok': False, 'error': 'El usuario pidio cancelar. No ejecutes nada mas: responde solo "Cancelado, señor."'}
     _paso_herramienta(nombre, argumentos)
     acciones_frontend.setdefault('_usadas', []).append(nombre)
-    return _ejecutar_herramienta(nombre, argumentos, acciones_frontend)
+    resultado = _ejecutar_herramienta(nombre, argumentos, acciones_frontend)
+    if _narracion():
+        for _l in narrador.narrar(nombre, argumentos, resultado):
+            _paso(_l)
+    return resultado
 
 
 def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
@@ -1006,6 +1033,13 @@ def _apagadas():
         return set()
 
 
+def _narracion():
+    try:
+        return bool(g.get("narracion", True))
+    except RuntimeError:
+        return True
+
+
 def _modo_seguridad():
     try:
         return bool(g.get('modo_seguridad'))
@@ -1042,6 +1076,14 @@ def construir_tools_groq():
 
 
 MAX_VUELTAS_HERRAMIENTAS = 16
+MAX_VUELTAS_SEGURIDAD = 40
+
+
+def _vueltas():
+    try:
+        return MAX_VUELTAS_SEGURIDAD if g.get("modo_seguridad") else MAX_VUELTAS_HERRAMIENTAS
+    except RuntimeError:
+        return MAX_VUELTAS_HERRAMIENTAS
 
 # --- Guardia v1.8: no dejar que Jarvis diga "ya lo hice" en el celular sin haber usado las manos ---
 HERR_CELULAR = ('ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv', 'abrir_url', 'abrir_plataforma')
@@ -1793,7 +1835,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
     capturas = []
 
     acumulado, continuaciones = '', 0
-    for _ in range(MAX_VUELTAS_HERRAMIENTAS + MAX_CONTINUACIONES):
+    for _ in range(_vueltas() + MAX_CONTINUACIONES):
         print(f'[GEMINI] Llamando a {GEMINI_URL} con modelo {GEMINI_MODEL}...')
         resp = llamar_gemini({
             'system_instruction': {'parts': [{'text': system_prompt}]},
@@ -1869,7 +1911,7 @@ def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
     cfg_groq = {'max_tokens': TOKENS_GROQ[nivel], 'reasoning_effort': NIVEL_EN[nivel]}
 
     acumulado, continuaciones = '', 0
-    for _ in range(MAX_VUELTAS_HERRAMIENTAS + MAX_CONTINUACIONES):
+    for _ in range(_vueltas() + MAX_CONTINUACIONES):
         print(f'[GROQ] Llamando a {GROQ_URL} con modelo {GROQ_MODEL}...')
         resp = llamar_groq({
             'model': g.get('modelo_groq') or GROQ_MODEL,
@@ -2040,6 +2082,14 @@ Si el usuario solo tiene cuenta de rol bajo y quiere entrar igual, el orden es: 
 - Cada intento se confirma contra un canario. Sin confirmacion es "posible", no "logrado".
 - Si el rol se recarga al iniciar sesion, vuelves a entrar despues de cambiar el perfil.
 - Al terminar dices exactamente que ruta quedo abierta y con que dato.
+
+NARRACION EN VIVO: el usuario ve tus pasos mientras trabajas y quiere verlos tecnicos.
+- Despues de cada herramienta, UNA linea corta: que hiciste, que devolvio, que sigue. Nada de parrafos.
+- Cita la ruta, el parametro, el payload o el codigo de estado real. Si algo abre, la ruta exacta; si algo cierra, el codigo.
+- Si una prueba falla, lo dices en una linea y saltas a la siguiente. Nunca repites lo mismo.
+- No preguntas "¿sigo?", "¿quiere que pruebe?" ni "¿me autoriza?". Nunca.
+- El objetivo esta autorizado por escrito: puedes escribir (POST, PUT, crear cuenta), no solo leer.
+- Cierras con el reporte y la evidencia real. El reporte empieza con: objetivo, autorizado por, fecha.
 """
 
 
@@ -2192,7 +2242,16 @@ SYSTEM_PROMPT_BASE = (
     'frase antes que diga que hace y, si hace falta, otra despues con lo que debe pasar. Nunca uses '
     'tablas, titulos ni bloques de codigo para charla normal. En charla eres concisa; en explicaciones '
     'y codigo das todo lo necesario para que quede completo y claro, sin relleno. En respuestas '
-    'tecnicas largas el "Señor," inicial es opcional.'
+    'tecnicas largas el "Señor," inicial es opcional. '
+    'MODO OPERADOR (asi trabajas SIEMPRE, no solo en seguridad): primero la herramienta, despues '
+    'la frase; nunca anuncias algo sin llamarlo en ese mismo turno. Si el trabajo lleva varios pasos '
+    'los encadenas tu: llamas, miras el resultado, sigues, y no pides permiso entre pasos. Despues de '
+    'cada herramienta dejas UNA linea: que hiciste, que devolvio, que sigue, con el dato real (ruta, '
+    'parametro, codigo). Nunca preguntas "¿quiere que lo haga?", "¿sigo?" ni "¿me confirma?": solo '
+    'hay tres excepciones, la tarjeta de permiso del celular o PC cuando el modo automatico esta '
+    'apagado, apagar o reiniciar el PC, y cuando de verdad falta un dato que solo el usuario tiene. '
+    'Si el pedido es charla o una sola pregunta respondes normal, corto y en prosa, sin forzar pasos. '
+    'Si algo falla lo dices en una linea y cambias de enfoque; no repites lo mismo ni lo maquillas.'
 )
 
 
@@ -2502,6 +2561,7 @@ def _chat_interno():
         nivel = nivel_pensamiento(request.headers.get('X-Pensamiento', ''))
         g.apagadas = herramientas_apagadas(request.headers.get('X-Herramientas-Off', ''))
         g.modo_seguridad = request.headers.get('X-Modo-Seguridad', '') == '1'
+        g.narracion = request.headers.get('X-Narracion', '1') != '0'
         if not data.get('adjuntos'):
             orden_voz = funciones_voz.interpretar(mensaje_usuario, request.headers.get('X-Herramientas-Off', ''))
             if orden_voz:

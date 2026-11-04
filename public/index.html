@@ -1636,7 +1636,8 @@ async function enviarMensaje(desdeVoz) {
         'X-Cambio-Auto': localStorage.getItem('jarvisCambioAuto') === '0' ? '0' : '1',
         'X-Pensamiento': nivelPensamiento(),
         'X-Herramientas-Off': (window.herramientasOff ? window.herramientasOff() : ''),
-        'X-Modo-Seguridad': (window.modoSeguridadOn && window.modoSeguridadOn() ? '1' : '0')
+        'X-Modo-Seguridad': (window.modoSeguridadOn && window.modoSeguridadOn() ? '1' : '0'),
+        'X-Narracion': (window.narracionOn && window.narracionOn() ? '1' : '0')
       },
       body: JSON.stringify(adj.length
         ? { mensaje, zona_horaria: zonaHoraria, adjuntos: adj.map((a) => ({ nombre: a.nombre, tipo: a.tipo, datos: a.datos })) }
@@ -2246,6 +2247,7 @@ pintarTema();
 <script src="/tareas.js"></script>
 <script src="/herramientas.js"></script>
 <script src="/seguridad_ui.js"></script>
+<script src="/narracion_ui.js"></script>
 <script src="/manos.js"></script>
 <script src="/vincular_pc.js"></script>
 <script src="/vincular_tv.js"></script>
