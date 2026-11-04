@@ -1,10 +1,10 @@
-/* Interruptor del modo Seguridad: apagado por defecto, el usuario lo prende cuando quiere
-   que Jarvis actue como analista de ciberseguridad y pueda usar auditar_proyecto. */
+/* Interruptor del modo Seguridad: encendido por defecto; el usuario lo apaga si quiere
+   a Jarvis en modo solo conversacion. */
 (function () {
   var CLAVE = 'jarvisModoSeguridad';
 
   function activo() {
-    try { return localStorage.getItem(CLAVE) === '1'; } catch (e) { return false; }
+    try { return localStorage.getItem(CLAVE) !== '0'; } catch (e) { return true; }
   }
   function guardar(on) {
     try { localStorage.setItem(CLAVE, on ? '1' : '0'); } catch (e) {}
@@ -35,7 +35,7 @@
     var b = document.createElement('b');
     b.textContent = 'Modo seguridad';
     var s = document.createElement('small');
-    s.textContent = 'Jarvis como analista de ciberseguridad; revisa tu propio proyecto en busca de fallos. Apagado por defecto.';
+    s.textContent = 'Jarvis como pentester: reconoce, prueba y reporta sobre la web que le pases, ademas de revisar tu proyecto. Encendido por defecto.';
     txt.appendChild(b);
     txt.appendChild(s);
 
