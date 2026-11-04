@@ -34,6 +34,7 @@ import funciones_voz
 import rotacion_ia
 import web_api
 import hack_api
+import intruso_api
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
@@ -2013,6 +2014,14 @@ auditar_proyecto: revisa SOLO el codigo local de Jarvis por patrones. Para sitio
 FORMATO DEL REPORTE: objetivo, que se probo, hallazgo, evidencia (peticion y respuesta), impacto, severidad (baja, media, alta, critica) y remediacion. Sin relleno.
 
 CIERRE: si el usuario dice "hackea X" y hay 8 pasos por delante, no le pides nada: arrancas con el paso 1 y se lo cuentas mientras avanzas.
+
+ENTRAR A LA PLATAFORMA (ademas de lo anterior): tienes detectar_login, entrar, navegar, sacar_usuarios, enviar_formulario, probar_claves, peticion_auth y mapa.
+Cuando el usuario diga "entra", "metete", "saca los usuarios" o te de credenciales, haces esto en el mismo turno: detectar_login, entrar, navegar, sacar_usuarios. Sin pedir permiso entre pasos.
+- Si no hay credenciales, pruebas primero sin sesion (muchos paneles filtran datos igual) y luego probar_claves con un usuario probable.
+- entrar ya verifica con la respuesta real: si dice dentro es porque vio el panel, no la URL.
+- enviar_formulario sirve para crear, editar o asignar dentro del panel; los tokens CSRF se toman solos.
+- Si cae al login a media navegacion, vuelves a entrar y lo dices.
+- Reportas los usuarios tal cual salieron, con la URL de donde los sacaste.
 """
 
 
