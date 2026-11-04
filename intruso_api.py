@@ -9,7 +9,7 @@ import hack_api as H
 
 MAX_PAG, MAX_PROF, MAX_FILAS, MAX_CLAVES, MAX_EST = 30, 3, 60, 40, 40
 _EST = {}
-CAMPOS_USUARIO = ('email', 'correo', 'usuario', 'user', 'username', 'login',
+CAMPOS_USUARIO = ('alias', 'email', 'correo', 'usuario', 'user', 'username', 'login',
                   'documento', 'cedula', 'identificacion', 'nick', 'mail')
 PISTAS_DENTRO = ('cerrar sesion', 'cerrar sesión', 'logout', 'salir', 'mi perfil',
                  'dashboard', 'panel', 'bienvenid', 'mis datos', 'mi cuenta')

