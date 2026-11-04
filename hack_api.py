@@ -3,7 +3,10 @@ import base64, hashlib, hmac, json, re, socket, ssl, time
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, urljoin, urlencode, quote
 import requests
+import urllib3
 from flask import g
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 UA = ('Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36')
@@ -153,10 +156,9 @@ def huella_web(url):
     base = f'{p.scheme}://{p.netloc}'
     robots, _ = _pedir(base + '/robots.txt')
     sectxt, _ = _pedir(base + '/.well-known/security.txt')
+    faltan = [c for c in CAB_SEG if c not in {k.lower() for k in cab}]
     if faltan:
         _anotar('Cabeceras de seguridad ausentes', 'baja', u, ', '.join(faltan))
-
-    faltan = [c for c in CAB_SEG if c not in {k.lower() for k in cab}]
     if faltan:
         _anotar('Cabeceras de seguridad ausentes', 'baja', u, ', '.join(faltan))
 
@@ -386,13 +388,6 @@ def herramienta(nombre, args):
             return probar_xss(a.get('url'), a.get('parametro'), a.get('metodo'), a.get('cuerpo'))
         if nombre == 'reporte':
             return reporte(a.get('objetivo'))
-        if nombre == 'subir_archivo':
-            return subir_archivo(a.get('url'), a.get('campo'), a.get('nombre'),
-                                 a.get('contenido'), a.get('tipo'), a.get('campos_extra'))
-        if nombre == 'probar_xss':
-            return probar_xss(a.get('url'), a.get('parametro'), a.get('metodo'), a.get('cuerpo'))
-        if nombre == 'reporte':
-            return reporte(a.get('objetivo'))
     except Exception as e:
         print('[HACK]', e)
         return {'ok': False, 'error': 'fallo la herramienta: ' + str(e)[:150]}
@@ -446,15 +441,7 @@ HERRAMIENTAS = [
     _e('subir_archivo', 'Sube un archivo de prueba (multipart).', {'url': {'type': 'string'}, 'campo': {'type': 'string'}, 'nombre': {'type': 'string'}, 'contenido': {'type': 'string'}, 'tipo': {'type': 'string'}, 'campos_extra': {'type': 'string'}}, ('url', 'campo')),
     _e('probar_xss', 'Prueba XSS reflejado en un parametro.', {'url': {'type': 'string'}, 'parametro': {'type': 'string'}, 'metodo': {'type': 'string'}, 'cuerpo': {'type': 'string'}}, ('url', 'parametro')),
     _e('reporte', 'Arma el reporte markdown con lo hallado.', {'objetivo': {'type': 'string'}}, ()),
-    _e('subir_archivo', 'Sube un archivo de prueba al objetivo (multipart).',
-       {'url': {'type': 'string'}, 'campo': {'type': 'string'}, 'nombre': {'type': 'string'},
-        'contenido': {'type': 'string'}, 'tipo': {'type': 'string'},
-        'campos_extra': {'type': 'string'}}, ('url', 'campo')),
-    _e('probar_xss', 'Prueba XSS reflejado en un parametro con varias cargas.',
-       {'url': {'type': 'string'}, 'parametro': {'type': 'string'},
-        'metodo': {'type': 'string'}, 'cuerpo': {'type': 'string'}}, ('url', 'parametro')),
-    _e('reporte', 'Arma el reporte markdown con todo lo hallado en esta sesion.',
-       {'objetivo': {'type': 'string'}}, ()),
+
 ]
 
 ERRORES_SQL = {
@@ -657,9 +644,9 @@ def extraer_sqli(url, parametro, dbms, que='tablas', tabla='', columna='',
     u = _norm(url)
     if not u or not parametro:
         return {'ok': False, 'error': 'hacen falta url y parametro'}
-    dbms = next((d for d in CONSULTAS['que'] if d.lower() == str(dbms).lower()), '')
+    dbms = next((d for d in CONSULTAS['tablas'] if d.lower() == str(dbms).lower()), '')
     if not dbms:
-        return {'ok': False, 'error': 'dbms debe ser uno de: ' + ', '.join(CONSULTAS['que'])}
+        return {'ok': False, 'error': 'dbms debe ser uno de: ' + ', '.join(CONSULTAS['tablas'])}
     plantilla = CONSULTAS.get(que, {}).get(dbms)
     if not plantilla:
         return {'ok': False, 'error': 'que debe ser db, tablas, columnas o datos'}
@@ -778,3 +765,21 @@ def reporte(objetivo=''):
     out += ['## Recomendacion general', '',
             'Corregir de arriba a abajo: primero lo critico y alto.', '']
     return {'ok': True, 'markdown': '\n'.join(out), 'total': len(filas)}
+
+def ver_certificado(host):
+    h = _host(_norm(host))
+    if not h:
+        return {'ok': False, 'error': 'host invalido'}
+    return _cert(h)
+
+def dns_registros(dominio):
+    d = _host(_norm(dominio)) or (dominio or '').strip()
+    if not d:
+        return {'ok': False, 'error': 'dominio invalido'}
+    out = {}
+    for tipo in ('A', 'AAAA', 'MX', 'TXT', 'NS', 'CNAME'):
+        v = _doh(d, tipo)
+        if v:
+            out[tipo] = v[:12]
+    return {'ok': True, 'dominio': d, 'registros': out,
+            'nota': 'TXT y MX delatan servicios de correo y verificaciones.'}
