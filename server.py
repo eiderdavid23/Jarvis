@@ -33,6 +33,7 @@ import cancelar_api
 import funciones_voz
 import rotacion_ia
 import web_api
+import hack_api
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
@@ -712,6 +713,12 @@ PASOS_HERRAMIENTAS = {
     'controlar_pc': 'Usando tu PC',
     'controlar_tv': 'Usando tu TV',
     'auditar_proyecto': 'Auditando tu proyecto',
+    'huella_web': 'Sacando la huella del objetivo',
+    'enumerar_rutas': 'Buscando rutas escondidas',
+    'analizar_js': 'Leyendo el JavaScript',
+    'probar_idor': 'Probando IDOR',
+    'peticion_http': 'Haciendo la peticion',
+    'escanear_puertos': 'Escaneando puertos',
 }
 
 
@@ -890,6 +897,9 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
             acciones_frontend['tareas'] = True
         return res
 
+    if nombre in hack_api.NOMBRES:
+        return hack_api.herramienta(nombre, argumentos)
+
     if nombre == 'auditar_proyecto':
         if not _modo_seguridad():
             return {'ok': False, 'error': 'el modo seguridad esta apagado; dile al usuario que lo active en Herramientas'}
@@ -958,6 +968,7 @@ GRUPOS_HERRAMIENTAS = {
     'archivos': ('Archivos', ['leer_archivo']),
     'manos': ('Manos', ['ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv']),
     'telefono': ('Telefono', ['encender_linterna', 'apagar_linterna', 'vibrar', 'consultar_bateria']),
+    'hack': ('Hacking web', list(hack_api.NOMBRES)),
 }
 
 
@@ -990,6 +1001,7 @@ def _activas():
     activas = [h for h in HERRAMIENTAS if h['name'] not in off]
     if _modo_seguridad():
         activas.append(HERRAMIENTA_AUDITAR)
+        activas.extend(hack_api.HERRAMIENTAS)
     return activas
 
 
