@@ -395,6 +395,7 @@ def _generar_cadena(system_prompt, turnos, llaves, nivel='medio', eleccion='auto
             continue
         try:
             srv._parcial_set('')
+            g.diario_pos = 0   # cada modelo empieza de cero: lo que ya se hizo no se repite (ver diario en server.py)
             texto, acciones = _generar_uno(m, system_prompt, turnos, llave, nivel)
             if fallos:
                 print(f'[CADENA] Respondió {m["nombre"]} tras saltar: ' + ', '.join(f[0]['nombre'] for f in fallos))

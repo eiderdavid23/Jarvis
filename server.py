@@ -774,12 +774,85 @@ def _paso_herramienta(nombre, argumentos):
     _paso(plantilla.replace('{consulta}', consulta).replace('{sitio}', sitio))
 
 
+# --- Diario de acciones: si un modelo falla a medias y se cambia al siguiente, lo que ya se hizo
+# (celular, PC, TV, recordatorios...) NO se repite: se reutiliza el resultado de la primera vez. ---
+HERR_CON_EFECTO = ('controlar_pantalla', 'controlar_pc', 'controlar_tv', 'encender_linterna', 'apagar_linterna',
+                   'vibrar', 'guardar_recuerdo', 'olvidar_recuerdo', 'crear_recordatorio', 'borrar_recordatorio',
+                   'crear_tarea', 'cancelar_tarea', 'crear_trabajo')
+ACCIONES_SOLO_LECTURA = ('capturar', 'esperar', 'bateria', 'estado')
+
+
+def _tiene_efecto(nombre, argumentos):
+    if nombre not in HERR_CON_EFECTO:
+        return False
+    if nombre in ('controlar_pantalla', 'controlar_pc', 'controlar_tv'):
+        return str((argumentos or {}).get('accion') or '') not in ACCIONES_SOLO_LECTURA
+    return True
+
+
+def _clave_herramienta(nombre, argumentos):
+    return json.dumps([nombre, argumentos], sort_keys=True, ensure_ascii=False, default=str)
+
+
+def _foto_acciones(nombre, argumentos, acciones_frontend):
+    try:
+        if _tiene_efecto(nombre, argumentos):
+            import copy
+            return copy.deepcopy(acciones_frontend)
+    except Exception:
+        pass
+    return None
+
+
+def _anotar_hecho(nombre, argumentos, resultado, antes, acciones_frontend):
+    """Apunta una accion que salio bien para no repetirla si hay que cambiar de modelo."""
+    try:
+        if antes is None or not isinstance(resultado, dict) or not resultado.get('ok'):
+            return
+        import copy
+        diario = g.setdefault('diario_herr', [])
+        delta = {k: copy.deepcopy(v) for k, v in acciones_frontend.items() if antes.get(k) != v}
+        limpio = {k: copy.deepcopy(v) for k, v in resultado.items() if k not in ('_imagen', 'nota_imagen')}
+        diario.append({'clave': _clave_herramienta(nombre, argumentos), 'resultado': limpio, 'delta': delta})
+        g.diario_pos = len(diario)
+    except Exception:
+        pass
+
+
+def _repetir_hecho(nombre, argumentos, acciones_frontend):
+    """Si el modelo nuevo repite una accion que el anterior ya hizo, devuelve el resultado guardado sin ejecutarla."""
+    try:
+        if not _tiene_efecto(nombre, argumentos):
+            return None
+        import copy
+        diario = g.get('diario_herr') or []
+        pos = g.get('diario_pos', 0)
+        if pos >= len(diario):
+            return None
+        e = diario[pos]
+        if e['clave'] != _clave_herramienta(nombre, argumentos):
+            del diario[pos:]   # el modelo nuevo tomo otro camino: lo anotado de ahi en adelante ya no sirve
+            return None
+        g.diario_pos = pos + 1
+        for k, v in e['delta'].items():
+            acciones_frontend[k] = copy.deepcopy(v)
+        _paso('Eso ya estaba hecho, no lo repito')
+        return copy.deepcopy(e['resultado'])
+    except Exception:
+        return None
+
+
 def ejecutar_herramienta(nombre, argumentos, acciones_frontend):
     if cancelar_api.cancelado(g.get('usuario_id'), g.get('inicio_chat', 0)):
         return {'ok': False, 'error': 'El usuario pidio cancelar. No ejecutes nada mas: responde solo "Cancelado, señor."'}
     _paso_herramienta(nombre, argumentos)
     acciones_frontend.setdefault('_usadas', []).append(nombre)
+    repetido = _repetir_hecho(nombre, argumentos, acciones_frontend)
+    if repetido is not None:
+        return repetido
+    antes = _foto_acciones(nombre, argumentos, acciones_frontend)
     resultado = _ejecutar_herramienta(nombre, argumentos, acciones_frontend)
+    _anotar_hecho(nombre, argumentos, resultado, antes, acciones_frontend)
     if _narracion():
         for _l in narrador.narrar(nombre, argumentos, resultado):
             _paso(_l)
