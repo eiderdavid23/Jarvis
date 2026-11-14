@@ -55,7 +55,10 @@ jobs:
           sudo apt-get install -y patchelf
           mkdir -p /tmp/llama
           cd /tmp/llama
-          gh release download --repo ggml-org/llama.cpp --pattern '*android-arm64*' --clobber
+          TAG=$(gh api "repos/ggml-org/llama.cpp/releases?per_page=40" --jq '[.[] | select(any(.assets[]; .name | endswith("-bin-android-arm64.tar.gz")))][0].tag_name')
+          echo "Version del motor: $TAG"
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then echo "Ningun release reciente trae el motor de Android"; exit 1; fi
+          gh release download "$TAG" --repo ggml-org/llama.cpp --pattern '*-bin-android-arm64.tar.gz' --clobber
           ls -la
           for f in *android-arm64*; do
             case "$f" in
