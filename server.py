@@ -22,6 +22,7 @@ import supa
 import minecraft
 import recs_api
 import tareas_api
+import trabajos_api
 import proyectos_api
 import llaves_api
 import memoria_api
@@ -43,6 +44,7 @@ app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
 app.register_blueprint(recs_api.bp)
 app.register_blueprint(tareas_api.bp)
+app.register_blueprint(trabajos_api.bp)
 app.register_blueprint(proyectos_api.bp)
 app.register_blueprint(llaves_api.bp)
 app.register_blueprint(memoria_api.bp)
