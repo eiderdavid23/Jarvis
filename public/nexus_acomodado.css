@@ -1,0 +1,21 @@
+/* NEXUS23: contenido centrado y mejor acomodado */
+.barra { padding-left: max(16px, calc((100% - 1120px) / 2 + 16px)); padding-right: max(16px, calc((100% - 1120px) / 2 + 16px)); }
+.cuerpo { width: 100%; max-width: 1120px; margin: 0 auto; gap: 8px; padding: 0 8px; }
+.menu { width: 220px; flex: 0 0 220px; margin: 20px 0; padding: 12px; border: 1px solid var(--linea); border-radius: 16px; align-self: flex-start; position: sticky; top: 76px; }
+.principal { flex: 1; min-width: 0; max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+.etq { text-align: center; margin-bottom: 14px; }
+.cifras { gap: 12px; margin-bottom: 28px; }
+.cifra { align-items: center; text-align: center; padding: 16px 12px; }
+.cifra b { font-size: 30px; }
+.resumen > p, .resumen .vacio { text-align: center; }
+.fila-t { justify-content: center; }
+.grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.card { padding: 18px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.card .estado { justify-content: center; }
+.card .acc { justify-content: center; }
+.v-inicio-btn, #btnNueva, #btnGlobal { display: block; margin: 8px auto 0; }
+@media (max-width: 800px) {
+  .cuerpo { padding: 0; display: block; }
+  .menu { position: fixed; top: 0; margin: 0; border-radius: 0; flex: none; align-self: auto; }
+  .principal { padding: 18px 14px 40px; }
+}
