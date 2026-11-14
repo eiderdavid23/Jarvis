@@ -26,6 +26,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.animation.OvershootInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -110,6 +111,25 @@ class BurbujaManos {
         }
     };
     private final Runnable cierreAuto = this::cierreAutomatico;
+    private boolean hablandoAntes;
+    private final Runnable latido = new Runnable() {
+        @Override
+        public void run() {
+            if (!puesta) {
+                return;
+            }
+            boolean h = voz.hablando();
+            if (h != hablandoAntes) {
+                hablandoAntes = h;
+                if (!abierta) {
+                    estiloCirculo();
+                } else if (ondasPanel != null && !escuchando && !pensando) {
+                    ondasPanel.modo(h ? 4 : 0);
+                }
+            }
+            ui.postDelayed(this, 350);
+        }
+    };
     private boolean cerrarAlHablar;
     private static final int[] CANALES = {AudioManager.STREAM_NOTIFICATION, AudioManager.STREAM_SYSTEM,
             AudioManager.STREAM_MUSIC};
@@ -192,9 +212,13 @@ class BurbujaManos {
         mostrarPlegada();
         wm.addView(raiz, lp);
         puesta = true;
+        hablandoAntes = false;
+        ui.removeCallbacks(latido);
+        ui.postDelayed(latido, 350);
     }
 
     private void sacar() {
+        ui.removeCallbacks(latido);
         voz.parar();
         detenerPalabra();
         restaurarSonido();
@@ -270,6 +294,7 @@ class BurbujaManos {
                         x0 = lp.x;
                         y0 = lp.y;
                         arrastro = false;
+                        pildora.animate().scaleX(0.92f).scaleY(0.92f).setDuration(90).start();
                         return true;
                     }
                     case MotionEvent.ACTION_MOVE: {
@@ -289,11 +314,17 @@ class BurbujaManos {
                         return true;
                     }
                     case MotionEvent.ACTION_UP: {
+                        pildora.animate().scaleX(1f).scaleY(1f).setDuration(260)
+                                .setInterpolator(new OvershootInterpolator(3f)).start();
                         if (arrastro) {
                             soltar();
                         } else {
                             abrir();
                         }
+                        return true;
+                    }
+                    case MotionEvent.ACTION_CANCEL: {
+                        pildora.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
                         return true;
                     }
                     default:
@@ -321,16 +352,13 @@ class BurbujaManos {
 
     /** Colores de la pildora: cian normal, verde con respuesta nueva; las ondas corren mas rapido mientras Jarvis piensa. */
     private void estiloCirculo() {
-        int borde = nuevo ? VERDE : CIAN;
-        GradientDrawable f = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{Color.parseColor("#F2081521"), Color.parseColor("#F2050A12")});
-        f.setCornerRadius(PILDORA_H * d / 2f);
-        f.setStroke((int) (1.2f * d), (borde & 0x00FFFFFF) | 0x99000000);
-        pildora.setBackground(f);
+        int borde = pensando ? BurbujaUI.DORADO : (nuevo ? VERDE : CIAN);
+        pildora.setBackground(new BurbujaUI.Vidrio(d, PILDORA_H * d / 2f, borde));
         ondasMini.color(borde);
-        ondasMini.modo(pensando ? 1 : (nuevo ? 3 : 0));
+        ondasMini.modo(pensando ? 1 : (nuevo ? 3 : (voz.hablando() ? 4 : 0)));
         logoMini.borde(nuevo ? VERDE : 0);
-        pildora.setAlpha(pensando ? 0.85f : 1f);
+        logoMini.pensando(pensando);
+        pildora.setAlpha(1f);
     }
 
     // ---- La barra de arriba (escribir, hablar, ver la respuesta) ----------------
@@ -340,11 +368,7 @@ class BurbujaManos {
         panel.setOrientation(LinearLayout.VERTICAL);
         int p = (int) (14 * d);
         panel.setPadding(p, p, p, p);
-        GradientDrawable f = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.parseColor("#F5101C2B"), Color.parseColor("#F5060B14")});
-        f.setCornerRadius(28 * d);
-        f.setStroke((int) (1 * d), Color.parseColor("#3300E5FF"));
-        panel.setBackground(f);
+        panel.setBackground(new BurbujaUI.Vidrio(d, 28 * d, CIAN));
 
         LinearLayout cab = new LinearLayout(cx);
         cab.setOrientation(LinearLayout.HORIZONTAL);
@@ -417,9 +441,9 @@ class BurbujaManos {
         campo.setMaxLines(3);
         campo.setHorizontallyScrolling(false);
         GradientDrawable fc = new GradientDrawable();
-        fc.setColor(Color.parseColor("#14212E"));
+        fc.setColor(Color.parseColor("#1FFFFFFF"));
         fc.setCornerRadius(22 * d);
-        fc.setStroke((int) (1 * d), Color.parseColor("#26FFFFFF"));
+        fc.setStroke((int) (1 * d), Color.parseColor("#33FFFFFF"));
         campo.setBackground(fc);
         campo.setPadding((int) (16 * d), (int) (10 * d), (int) (16 * d), (int) (10 * d));
         campo.setOnEditorActionListener((v, acc, ev) -> {
@@ -429,7 +453,7 @@ class BurbujaManos {
             }
             return false;
         });
-        micBtn = icono(BurbujaUI.Icono.MIC, TEXTO, 10, Color.parseColor("#1A2B36"));
+        micBtn = icono(BurbujaUI.Icono.MIC, TEXTO, 10, Color.parseColor("#26FFFFFF"));
         micBtn.setOnClickListener(v -> escuchar());
         BurbujaUI.Icono enviarBtn = icono(BurbujaUI.Icono.ENVIAR, Color.parseColor("#04121A"), 11, CIAN);
         enviarBtn.setOnClickListener(v -> enviar());
@@ -447,10 +471,11 @@ class BurbujaManos {
         panel.setVisibility(View.GONE);
         pildora.setVisibility(View.VISIBLE);
         estiloCirculo();
-        pildora.setScaleX(0.7f);
-        pildora.setScaleY(0.7f);
-        pildora.animate().scaleX(1f).scaleY(1f).setDuration(170)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+        pildora.setAlpha(0f);
+        pildora.setScaleX(0.6f);
+        pildora.setScaleY(0.6f);
+        pildora.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(340)
+                .setInterpolator(new OvershootInterpolator(1.8f)).start();
     }
 
     private void mostrarPanel() {
@@ -467,13 +492,37 @@ class BurbujaManos {
         panel.setPivotX(srv.getResources().getDisplayMetrics().widthPixels * 0.47f);
         panel.setPivotY(0f);
         panel.setAlpha(0f);
-        panel.setScaleX(0.8f);
-        panel.setScaleY(0.55f);
-        panel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(230)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+        panel.setScaleX(0.34f);
+        panel.setScaleY(0.2f);
+        panel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(420)
+                .setInterpolator(new OvershootInterpolator(0.9f)).start();
+        for (int i = 0; i < panel.getChildCount(); i++) {
+            View hijo = panel.getChildAt(i);
+            hijo.animate().cancel();
+            hijo.setAlpha(0f);
+            hijo.setTranslationY(12 * d);
+            hijo.animate().alpha(1f).translationY(0f).setStartDelay(90L + 55L * i).setDuration(280).start();
+        }
+    }
+
+    /** Vibracion corta de confirmacion. */
+    private void vibrar(long ms) {
+        try {
+            android.os.Vibrator v = (android.os.Vibrator) cx.getSystemService(Context.VIBRATOR_SERVICE);
+            if (v == null || !v.hasVibrator()) {
+                return;
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                v.vibrate(android.os.VibrationEffect.createOneShot(ms, 60));
+            } else {
+                v.vibrate(ms);
+            }
+        } catch (Exception ignorada) {
+        }
     }
 
     private void abrir() {
+        vibrar(12);
         abierta = true;
         nuevo = false;
         mostrarPanel();
@@ -776,6 +825,7 @@ class BurbujaManos {
         pensando = false;
         ultimo = texto;
         nuevo = true;
+        vibrar(25);
         if (puesta && prefs.getBoolean("vozBurbuja", true)) {
             restaurarSonido();
             voz.hablar(prefs.getString("url", ""), prefs.getString("acceso", ""), texto);
@@ -1075,6 +1125,7 @@ class BurbujaManos {
         restaurarSonido();
         escuchando = true;
         micBtn.color(ROJO);
+        micBtn.pulso(true);
         ondasPanel.modo(2);
         mostrarTexto("Te escucho\u2026");
         sr = SpeechRecognizer.createSpeechRecognizer(srv);
@@ -1149,6 +1200,7 @@ class BurbujaManos {
         escuchando = false;
         if (micBtn != null) {
             micBtn.color(TEXTO);
+            micBtn.pulso(false);
             if (ondasPanel != null) {
                 ondasPanel.modo(0);
                 ondasPanel.nivel(0f);
