@@ -1859,7 +1859,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
         }
         print(f'[GEMINI] Stream con {_modelo_gemini()}...')
         _contar_stream('gemini')
-        texto, llamadas, motivo = '', [], ''
+        texto, llamadas, motivo, partes_llamada = '', [], '', []
         sep = '' if seguir else ('\n\n' if acumulado.strip() else '')
         seguir = False
         try:
@@ -1874,6 +1874,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
                         _parcial_set(acumulado + sep + texto)
                     if 'functionCall' in p:
                         llamadas.append(p['functionCall'])
+                        partes_llamada.append(p)
                 if cand.get('finishReason'):
                     motivo = cand['finishReason']
         except requests.exceptions.HTTPError:
@@ -1905,7 +1906,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
 
         if texto:
             acumulado += sep + texto
-        partes_modelo = ([{'text': texto}] if texto else []) + [{'functionCall': c} for c in llamadas]
+        partes_modelo = ([{'text': texto}] if texto else []) + (partes_llamada or [{'functionCall': c} for c in llamadas])
         contenidos.append({'role': 'model', 'parts': partes_modelo})
 
         partes_respuesta, partes_imagen = [], []

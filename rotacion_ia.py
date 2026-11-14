@@ -196,7 +196,7 @@ def _clasificar(e):
             return _espera_429(e.response), 'cuota agotada'
         if c in (401, 403):
             return 600, 'llave rechazada'
-        if c == 404:
+        if c in (404, 410):
             return 3600, 'no disponible'
         if c in (400, 413, 422):
             return 300, 'rechazó la petición'
