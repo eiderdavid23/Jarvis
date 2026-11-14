@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 2 nov 2026
-Versión actual: 1.40 (ver CAMBIOS.md)
+Versión actual: 1.41 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -40,6 +40,10 @@ Pedido de David sobre la burbuja y las funciones:
 - [x] Pantalla de inicio con saludos variados según la hora, el día, la fecha y los recordatorios de hoy, y sugerencias que cambian (v1.18, `public/saludos.js`). Solo web.
 - [x] La burbuja se cierra sola al terminar de hablar (v1.19, `BurbujaManos.java`). Requiere APK nueva.
 - [x] Varios celulares con la misma cuenta (v1.20): nombre propio al vincular y campo `dispositivo` en ver_pantalla y controlar_pantalla.
+- [ ] Modo local sin internet (pedido el 14 nov 2026): que Jarvis pase solo al modelo local cuando se va el internet o la luz, o se elija a mano, y que haga sin API lo simple (encender pantalla, saludos).
+  - [x] Parte 1 (v1.41, solo web): `public/modo_local.js` (el chat usa el modelo local, reglas sin IA y paso automatico) y fila «Modelo local» en el selector. Pendiente: probarla en el celular.
+  - [ ] Parte 2 (APK): la burbuja y las ordenes del celular (pantalla, linterna, volumen, abrir apps) sin internet.
+  - [ ] Parte 3 (APK): pantalla minima dentro de la APK para cuando no hay internet (hoy la app carga desde Vercel).
 - [x] Resumen de pasos estilo Claude y respuesta por partes (v1.34, solo web): `public/pasos.js` y `public/pasos.css` (linea de tiempo con iconos), `public/revelar.js` y `public/revelar.css` (la respuesta aparece bloque por bloque; la llama `index.html` con `window.jarvisRevelar`). El streaming real del modelo (palabra por palabra) NO esta hecho: haria falta tocar `rotacion_ia.py` y todos los proveedores.
 - [x] Crear PDF (v1.37): QUITADO en v1.38 (14 nov 2026). Jarvis ya no crea PDF ni genera imagenes; si se retoma, esta en el historial de git.
 - [ ] Pantalla apagada en celulares y PC (v1.22 servidor y web, v1.23 APK):

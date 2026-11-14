@@ -23,7 +23,8 @@
   }
   function esActual(m) {
     var a = actual();
-    if (m.id === 'auto') return a === 'auto' || !buscarActual();
+    if (m.id === 'local') return a === 'local';
+    if (m.id === 'auto') return a === 'auto' || (a !== 'local' && !buscarActual());
     var b = buscarActual();
     return !!b && b.id === m.id;
   }
@@ -31,7 +32,7 @@
     var s = document.querySelector('#pildora > span');
     if (!s) return;
     var m = buscarActual();
-    s.textContent = actual() === 'auto' || !m ? 'Automático' : m.nombre;
+    s.textContent = actual() === 'local' ? 'Local' : (actual() === 'auto' || !m ? 'Automático' : m.nombre);
   }
   function cargar() {
     if (cat.length) return Promise.resolve();
@@ -88,6 +89,10 @@
     var lista = el('div', 'smLista');
     fila(lista, { id: 'auto', nombre: 'Automático', proveedor: '',
                   nota: 'Prueba los modelos gratis en orden y salta al siguiente cuando uno se agota' });
+    if (window.modoLocal && window.modoLocal.disponible()) {
+      fila(lista, { id: 'local', nombre: 'Modelo local', proveedor: 'Sin internet',
+                    nota: 'Responde desde tu celular, sin API. Necesita un modelo descargado' });
+    }
     cat.filter(function (m) { return m.principal; }).forEach(function (m) { fila(lista, m); });
     if (expandido) cat.filter(function (m) { return !m.principal; }).forEach(function (m) { fila(lista, m); });
     hoja.appendChild(lista);
@@ -106,6 +111,19 @@
       hoja.appendChild(sw);
     }
 
+    if (window.modoLocal && window.modoLocal.disponible()) {
+      var sl = el('button', 'smFila');
+      sl.type = 'button';
+      sl.appendChild(el('span', null, 'Pasar al local si no hay internet'));
+      var rl = el('span', 'smSw' + (window.modoLocal.auto() ? ' on' : ''));
+      sl.appendChild(rl);
+      sl.addEventListener('click', function () {
+        var on = !window.modoLocal.auto();
+        window.modoLocal.ponerAuto(on);
+        rl.classList.toggle('on', on);
+      });
+      hoja.appendChild(sl);
+    }
     var nivel = document.getElementById('pildoraNivel');
     hoja.appendChild(filaAccion('Esfuerzo', nivel ? nivel.textContent : 'Medio', 'Recomendado', function () {
       cerrarHojas();
