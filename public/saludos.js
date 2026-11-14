@@ -90,9 +90,9 @@
   try { window.actualizarSaludo(); } catch (e) {}
 
   // cada vez que se vuelve a la pantalla de inicio (chat nuevo) sale un saludo distinto
-  var estabaInicio = document.body.classList.contains('m-inicio');
+  var estabaInicio = document.body.classList.contains('chat-vacio');
   new MutationObserver(function () {
-    var ahora = document.body.classList.contains('m-inicio');
+    var ahora = document.body.classList.contains('chat-vacio');
     if (ahora && !estabaInicio) { sortear(); try { aplicar(); } catch (e) {} }
     estabaInicio = ahora;
   }).observe(document.body, { attributes: true, attributeFilter: ['class'] });

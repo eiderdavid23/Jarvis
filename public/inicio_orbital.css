@@ -97,3 +97,6 @@ body.m-inicio #oiEstado { opacity: 1; }
 [data-tema="claro"] .oiBtn { background: #fff; color: #0a7c8f; border-color: rgba(10,124,143,.35); }
 [data-tema="claro"] #oiHoja { background: #fff; color: #12303a; }
 [data-tema="claro"] .oiFila, [data-tema="claro"] .oiInput { color: #12303a; background: rgba(10,124,143,.06); }
+
+/* La bolita de arriba abre la orbita al tocarla */
+body.m-chat #orbWrap { cursor: pointer; }

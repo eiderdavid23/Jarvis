@@ -158,9 +158,15 @@
 
     var orb = document.getElementById('orbWrap');
     if (orb) {
+      var eraActivo = false;
+      /* captura: antes del click de index.html, que detiene la voz si estaba hablando */
+      orb.addEventListener('click', function () {
+        eraActivo = (typeof hablando !== 'undefined' && hablando) || (typeof vozActiva !== 'undefined' && vozActiva);
+      }, true);
       orb.addEventListener('click', function () {
         if (api.suprimir) { api.suprimir = 0; return; }
         if (body.classList.contains('m-inicio')) pulsar('voz');
+        else if (body.classList.contains('m-chat') && !eraActivo && typeof cambiarModo === 'function') cambiarModo('inicio');
       });
     }
     medir();

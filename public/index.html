@@ -510,7 +510,7 @@
 <link rel="stylesheet" href="/modo_panel.css">
 <link rel="stylesheet" href="/inicio_orbital.css">
 </head>
-<body class="cargando m-inicio est-reposo">
+<body class="cargando m-chat est-reposo">
 <script src="/splash.js"></script>
 
 <header id="barra">
@@ -919,7 +919,7 @@ medirOrbe();
 requestAnimationFrame(() => requestAnimationFrame(() => body.classList.remove('cargando')));
 
 /* ========== Modos: inicio / chat / voz ========== */
-let modo = 'inicio';
+let modo = 'chat';
 function cambiarModo(nuevo) {
   if (modo === nuevo) return;
   modo = nuevo;
@@ -1729,7 +1729,7 @@ function salirVoz() {
   clearTimeout(reinicioVoz);
   try { recognition.abort(); } catch (e) {}
   detenerHabla();
-  cambiarModo(chatInner.children.length ? 'chat' : 'inicio');
+  cambiarModo('chat');
   setEstado('reposo', 'En reposo');
 }
 
@@ -1818,7 +1818,7 @@ function nuevoChat() {
   chatInner.innerHTML = '';
   vozUsuario.textContent = '';
   vozJarvis.textContent = '';
-  cambiarModo('inicio');
+  cambiarModo('chat');
   setEstado('reposo', 'En reposo');
   actualizarSaludo();
   cerrarSidebar();
