@@ -15,6 +15,16 @@
   }
   function tam(mb) { return mb >= 1024 ? (mb / 1024).toFixed(1) + ' GB' : mb + ' MB'; }
   function msg(e) { return (e && e.message) ? e.message : String(e); }
+  var DESC = {
+    'qwen35-08b': 'Respuestas cortas y r\u00e1pidas. Para celulares de 4 GB; poca profundidad.',
+    'qwen35-2b': 'Equilibrado: charla, res\u00famenes y preguntas sencillas.',
+    'qwen35-4b': 'El m\u00e1s capaz de los tres, pero m\u00e1s lento y calienta el celular.'
+  };
+  function recomendado() {
+    var gb = estado ? estado.ramTotalMb / 1024 : 0, id = '';
+    if (estado) estado.modelos.forEach(function (m) { if (gb >= m.ramMinGb) id = m.id; });
+    return id;
+  }
   function boton(txt, cls, fn, off) {
     var b = el('button', 'lcBtn' + (cls ? ' ' + cls : ''), txt);
     b.type = 'button';
@@ -46,9 +56,12 @@
 
   function tarjeta(m) {
     var c = el('div', 'lcCard');
-    c.appendChild(el('div', 'lcNom', m.nombre));
+    var nom = el('div', 'lcNom', m.nombre);
+    if (m.id === recomendado()) nom.appendChild(el('i', 'lcTag', 'Recomendado para tu RAM'));
+    c.appendChild(nom);
+    if (DESC[m.id]) c.appendChild(el('div', 'lcDesc', DESC[m.id]));
     var enc = estado.activo && estado.modelo === m.id;
-    c.appendChild(el('div', 'lcSub', tam(m.mb) + ' \u00b7 pide ' + m.ramMinGb + ' GB de RAM' + (enc ? ' \u00b7 encendido' : '')));
+    c.appendChild(el('div', 'lcSub', 'Peso: ' + tam(m.mb) + ' \u00b7 RAM recomendada: ' + m.ramMinGb + ' GB o m\u00e1s' + (enc ? ' \u00b7 encendido' : '')));
     var p = progreso[m.id];
     var f = el('div', 'lcFila');
     if (p && !p.listo) {
@@ -80,7 +93,7 @@
     if (!hoja) return;
     hoja.textContent = '';
     hoja.appendChild(el('div', 'hojaAgarre'));
-    hoja.appendChild(el('p', 'hojaTit', 'Modelo local'));
+    hoja.appendChild(el('p', 'hojaTit', 'Modelos IA'));
     if (!estado) { hoja.appendChild(el('p', 'lcNota', 'Cargando...')); return; }
     if (!estado.binario) {
       hoja.appendChild(el('p', 'lcNota', 'Esta APK no trae el motor del modelo local. Instala la APK m\u00e1s reciente.'));
@@ -112,6 +125,8 @@
     refrescar();
     abrirHoja('hojaLocal');
   }
+
+  window.modeloLocal = { abrir: abrir };
 
   L.addListener('descarga', function (ev) {
     if (ev.error) { delete progreso[ev.id]; mensaje = 'Descarga: ' + ev.error; refrescar(); return; }

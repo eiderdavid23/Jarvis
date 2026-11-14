@@ -20,3 +20,8 @@
   margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,.25);
   font-size: 12px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; max-height: 30vh; overflow: auto;
 }
+#hojaLocal .lcTag {
+  margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-style: normal; font-size: 11px; font-weight: 600;
+  background: var(--cian-suave, rgba(53,208,232,.15)); color: var(--cian, #35d0e8); vertical-align: 1px;
+}
+#hojaLocal .lcDesc { margin-top: 6px; font-size: 13px; line-height: 1.4; }
