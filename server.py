@@ -1849,6 +1849,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
     capturas = []
 
     acumulado, continuaciones = '', 0
+    seguir = False
     for _ in range(_vueltas() + MAX_CONTINUACIONES):
         cuerpo = {
             'system_instruction': {'parts': [{'text': system_prompt}]},
@@ -1859,14 +1860,18 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
         print(f'[GEMINI] Stream con {_modelo_gemini()}...')
         _contar_stream('gemini')
         texto, llamadas, motivo = '', [], ''
+        sep = '' if seguir else ('\n\n' if acumulado.strip() else '')
+        seguir = False
         try:
             for ev in _gemini_stream(_modelo_gemini(), cuerpo, api_key):
                 cand = (ev.get('candidates') or [{}])[0]
                 for p in ((cand.get('content') or {}).get('parts') or []):
                     if p.get('text'):
+                        if sep and not texto:
+                            _delta(sep)
                         texto += p['text']
                         _delta(p['text'])
-                        _parcial_set(acumulado + texto)
+                        _parcial_set(acumulado + sep + texto)
                     if 'functionCall' in p:
                         llamadas.append(p['functionCall'])
                 if cand.get('finishReason'):
@@ -1874,7 +1879,8 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
         except requests.exceptions.HTTPError:
             if texto and continuaciones < MAX_CONTINUACIONES:
                 continuaciones += 1
-                acumulado += texto
+                acumulado += (sep if texto.strip() else '') + texto
+                seguir = True
                 contenidos.append({'role': 'model', 'parts': [{'text': texto}]})
                 contenidos.append({'role': 'user', 'parts': [{'text': PROMPT_CONTINUAR}]})
                 continue
@@ -1886,10 +1892,11 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
                 contenidos.append({'role': 'model', 'parts': [{'text': texto}]})
                 contenidos.append({'role': 'user', 'parts': [{'text': aviso_guardia}]})
                 continue
-            acumulado += texto
+            acumulado += (sep if texto.strip() else '') + texto
             if motivo == 'MAX_TOKENS':
                 if continuaciones < MAX_CONTINUACIONES:
                     continuaciones += 1
+                    seguir = True
                     contenidos.append({'role': 'model', 'parts': [{'text': texto}]})
                     contenidos.append({'role': 'user', 'parts': [{'text': PROMPT_CONTINUAR}]})
                     continue
@@ -1897,7 +1904,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
             return acumulado.strip(), acciones
 
         if texto:
-            acumulado += texto
+            acumulado += sep + texto
         partes_modelo = ([{'text': texto}] if texto else []) + [{'functionCall': c} for c in llamadas]
         contenidos.append({'role': 'model', 'parts': partes_modelo})
 
@@ -2184,8 +2191,8 @@ SYSTEM_PROMPT_BASE = (
     'GUIA DE MANOS (sigue este metodo): '
     '0) VELOCIDAD: usa SIEMPRE la accion compuesta cuando exista, es mucho mas rapida que ir '
     'paso a paso. Enviar un WhatsApp = UNA sola llamada: controlar_pantalla con accion '
-    'whatsapp_enviar, contacto y mensaje (sin ver_pantalla antes). ABRIR UNA APP: NUNCA uses abrir_app ni '
-    'el paso abrir de secuencia (abren a ciegas y pueden fallar sin avisar); hazlo como una persona: '
+    'whatsapp_enviar, contacto y mensaje (sin ver_pantalla antes). ABRIR UNA APP: usa SIEMPRE abrir_app (controlar_pantalla con accion abrir_app y el nombre en texto): la abre directo '
+    'y comprueba que quedo al frente. Si responde ok, YA esta abierta: no mires la pantalla ni digas que no la encuentras. Solo si responde error hazlo como una persona: '
     '(a) controlar_pantalla con accion tecla y tecla inicio, (b) ver_pantalla, (c) tocar_texto con el nombre '
     'de la app, y si no la ves haz scroll o abre el cajon de apps, (d) ver_pantalla otra vez y comprueba que '
     'la app abrio de verdad. Solo despues dices que la abriste. Para lo demas, si la accion compuesta '
@@ -2196,7 +2203,7 @@ SYSTEM_PROMPT_BASE = (
     'abrir_ajustes (wifi, bluetooth, pantalla, sonido...); abrir_url solo si el '
     'usuario pide un enlace o una busqueda web; para abrir la app de YouTube, Maps, etc. sigue ABRIR UNA APP. tocar_texto espera hasta 2 segundos '
     'a que el boton aparezca y escribir usa el unico campo visible sin tocarlo antes. '
-    '1) Para abrir una app: tecla inicio, ver_pantalla, tocar_texto con su nombre (si no la ves, scroll o '
+    '1) Para abrir una app: abrir_app con su nombre; solo si falla: tecla inicio, ver_pantalla, tocar_texto con su nombre (si no la ves, scroll o '
     'cajon de apps) y comprueba que abrio. Nunca respondas que lo hiciste sin haber llamado la herramienta. '
     '2) Cada accion te devuelve la pantalla resultante (PANTALLA AHORA): leela y comprueba que '
     'cambio como esperabas antes de seguir; si no cambio, no repitas lo mismo: prueba otra cosa. '

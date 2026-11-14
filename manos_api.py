@@ -479,6 +479,10 @@ def accion(tipo, args, nombre=None):
         g.manos_volver = None
     elif tipo not in ('capturar', 'esperar', 'encender_pantalla', 'linterna', 'vibrar', 'bateria', 'volumen', 'brillo', 'no_molestar', 'llamar'):
         g.manos_volver = disp['id']
+    if tipo in ('abrir_app', 'abrir_url'):
+        g.manos_quedarse = True
+    elif tipo not in ('capturar', 'esperar', 'encender_pantalla', 'linterna', 'vibrar', 'bateria', 'volumen', 'brillo', 'no_molestar', 'llamar', 'apagar_pantalla'):
+        g.manos_quedarse = False
     if limpio.get('imagen'):
         img = _imagen_de(disp['id'], desde)
         if img:
@@ -493,6 +497,9 @@ def volver_origen():
     if not did:
         return
     g.manos_volver = None
+    if g.get('manos_quedarse'):
+        g.manos_quedarse = False
+        return
     try:
         supa._rest('POST', 'manos_ordenes', cuerpo={'dispositivo_id': did, 'tipo': 'volver_origen', 'args': {},
                                                     'usuario_id': g.usuario_id}, extra=REP)
