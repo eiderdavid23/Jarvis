@@ -1,32 +1,21 @@
-/* Cancelar funciones en curso: boton "Detener" mientras Jarvis trabaja. */
+/* Cancelar funciones en curso: mientras Jarvis trabaja, el boton de enviar se convierte en Detener
+   (cuadrado con anillo girando). Pone la clase jv-ocupado en <body>; el diseno vive en chat_pulido.css. */
 (function () {
   var fetchBase = window.fetch;
   var leerBase = window.jarvisLeerChat;
   var ctrl = null;
   var cancelado = false;
-  var boton = null;
-
-  function crear() {
-    if (boton) return boton;
-    var st = document.createElement('style');
-    st.textContent = '#jvDetener{position:fixed;left:50%;transform:translateX(-50%);' +
-      'bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:9000;display:none;' +
-      'padding:9px 20px;border-radius:999px;border:1.5px solid var(--rojo,#ff5a5a);' +
-      'background:var(--panel,#0b111b);color:var(--rojo,#ff5a5a);font:600 14px system-ui,sans-serif;' +
-      'box-shadow:0 4px 18px rgba(0,0,0,.35);cursor:pointer}' +
-      '#jvDetener.v{display:block}';
-    document.head.appendChild(st);
-    boton = document.createElement('button');
-    boton.id = 'jvDetener';
-    boton.type = 'button';
-    boton.textContent = '\u25A0 Detener';
-    boton.addEventListener('click', cancelar);
-    document.body.appendChild(boton);
-    return boton;
-  }
 
   function mostrar(v) {
-    crear().classList.toggle('v', !!v);
+    document.body.classList.toggle('jv-ocupado', !!v);
+    var acc = document.getElementById('btnAccion');
+    if (!acc) return;
+    if (v) {
+      acc.dataset.etiqueta = acc.getAttribute('aria-label') || '';
+      acc.setAttribute('aria-label', 'Detener');
+    } else if (acc.dataset.etiqueta) {
+      acc.setAttribute('aria-label', acc.dataset.etiqueta);
+    }
   }
 
   function respuestaCancelada() {
@@ -42,6 +31,15 @@
     if (typeof window.detenerHabla === 'function') { try { window.detenerHabla(); } catch (e) {} }
     mostrar(false);
   }
+
+  /* En fase de captura: si Jarvis esta trabajando, el toque en el boton cancela y no envia ni abre el modo voz */
+  document.addEventListener('click', function (e) {
+    if (!document.body.classList.contains('jv-ocupado')) return;
+    if (!e.target.closest || !e.target.closest('#btnAccion')) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    cancelar();
+  }, true);
 
   window.fetch = function (url, opts) {
     if (url !== '/chat' || !opts || opts.method !== 'POST') return fetchBase.apply(this, arguments);
