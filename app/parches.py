@@ -69,3 +69,4 @@ open(sp, 'w', encoding='utf-8').write(st)
 print('Barra de estado oscura')
 
 exec(open('manos_nativo.py', encoding='utf-8').read())
+exec(open('llama_nativo.py', encoding='utf-8').read())
