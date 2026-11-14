@@ -23,7 +23,59 @@
     n = n.replace(/\s+/g, ' ').trim().slice(0, 40);
     return n || sug;
   }
-  var estadoEl, ayudaEl, boton, accion = null;
+  var estadoEl, ayudaEl, boton, accion = null, todoBtn;
+  function intentoAcc() {
+    try { return !!localStorage.getItem('mnIntentoAcc'); } catch (x) { return false; }
+  }
+  function marcarIntento() {
+    try { localStorage.setItem('mnIntentoAcc', '1'); } catch (x) {}
+  }
+  var appActiva = true, huboPausa = false;
+  (function () {
+    var A = (cap.Plugins || {}).App;
+    if (A && A.addListener) A.addListener('appStateChange', function (s) {
+      appActiva = !!(s && s.isActive);
+      if (!appActiva) huboPausa = true;
+    });
+  })();
+  /* Espera a que se cumpla cond(estado), o a que los cuadros de permiso se cierren, o 90 s. */
+  function esperar(cond) {
+    return new Promise(function (res) {
+      var t0 = Date.now(), cerrado = 0;
+      huboPausa = false;
+      (function p() {
+        M.estado().then(function (e) {
+          if (huboPausa && appActiva) cerrado++;
+          if (cond(e) || cerrado >= 2 || Date.now() - t0 > 90000) res(e);
+          else setTimeout(p, 700);
+        }).catch(function () { res(); });
+      })();
+    });
+  }
+  function activarTodo() {
+    todoBtn.disabled = true;
+    todoBtn.textContent = 'Activando…';
+    Promise.resolve(M.pedirTodo()).then(function () {
+      return esperar(function (e) { return e.mic && e.llamadas && e.notif !== false; });
+    }).then(function () { return M.estado(); }).then(function (e) {
+      if (e.bateriaLibre === false) {
+        return Promise.resolve(M.pedirBateria()).then(function () {
+          return esperar(function (x) { return x.bateriaLibre; });
+        });
+      }
+    }).then(function () { return M.estado(); }).then(function (e) {
+      if (!e.servicio) {
+        marcarIntento();
+        return M.abrirAccesibilidad();
+      }
+    }).then(function () {
+      todoBtn.disabled = false;
+      pintar();
+    }).catch(function () {
+      todoBtn.disabled = false;
+      pintar();
+    });
+  }
 
   var css = document.createElement('style');
   css.textContent = '.mnCaja{margin:6px 12px 10px;padding:12px;border-radius:12px;border:1px solid rgba(0,229,255,.25);background:rgba(0,229,255,.05)}' +
@@ -45,7 +97,7 @@
   function pintar() {
     M.estado().then(function (e) {
       if (paso1Btn) {
-        paso1Btn.style.display = (e.vinculado && !e.servicio) ? 'block' : 'none';
+        paso1Btn.style.display = (e.vinculado && !e.servicio && e.sdk >= 33 && intentoAcc()) ? 'block' : 'none';
         var hecho = false;
         try { hecho = !!localStorage.getItem('mnPaso1'); } catch (x) {}
         paso1Btn.textContent = hecho ? '1. ✓ Permitir ajustes restringidos (abrir otra vez)' : '1. Permitir ajustes restringidos';
@@ -65,28 +117,33 @@
         palabraBtn.textContent = e.palabra ? 'Llamar diciendo \u00abJarvis\u00bb: activado (tocar para apagar)' : 'Llamar diciendo \u00abJarvis\u00bb: apagado (tocar para activar)';
         palabraBtn.dataset.on = e.palabra ? '1' : '';
       }
-      if (bateriaBtn) bateriaBtn.style.display = (e.vinculado && e.servicio && e.bateriaLibre === false) ? 'block' : 'none';
-      if (micBtn) micBtn.style.display = (e.vinculado && e.servicio && e.burbuja && !e.mic) ? 'block' : 'none';
+      if (bateriaBtn) bateriaBtn.style.display = 'none';
+      if (micBtn) micBtn.style.display = 'none';
       var listo = e.vinculado && e.servicio;
-      if (llamadasBtn) llamadasBtn.style.display = (listo && e.llamadas === false) ? 'block' : 'none';
-      if (brilloBtn) brilloBtn.style.display = (listo && e.brillo === false) ? 'block' : 'none';
-      if (dndBtn) dndBtn.style.display = (listo && e.noMolestar === false) ? 'block' : 'none';
+      if (llamadasBtn) llamadasBtn.style.display = 'none';
+      if (todoBtn) {
+        todoBtn.style.display = (e.vinculado && (!e.servicio || !e.mic || !e.llamadas || e.notif === false || e.bateriaLibre === false)) ? 'block' : 'none';
+        todoBtn.textContent = 'Activar todo';
+      }
+      if (brilloBtn) brilloBtn.style.display = 'none';
+      if (dndBtn) dndBtn.style.display = 'none';
       if (!e.vinculado) {
         estadoEl.textContent = 'Sin vincular. Vincula este celular para que Jarvis pueda ayudarte con la pantalla.';
         ayudaEl.textContent = '';
         boton.textContent = 'Vincular este celular';
         accion = vincular;
       } else if (!e.servicio) {
-        estadoEl.textContent = 'Vinculado. Faltan 2 pasos para activar las manos.';
-        ayudaEl.textContent = 'Paso 1 (solo la primera vez): en la pantalla que se abre toca ⋮ arriba a la derecha y elige «Permitir ajustes restringidos». Si no ves el ⋮, ya está permitido. Luego vuelve y haz el paso 2: busca Jarvis y actívalo.';
+        estadoEl.textContent = 'Vinculado. Toca «Activar todo» y acepta los cuadros.';
+        ayudaEl.textContent = intentoAcc() ? 'Si el interruptor sale gris o no te deja activarlo, toca «Permitir ajustes restringidos» (pasa solo la primera vez en Android 13 o más) y luego «Activar todo» otra vez.' : 'Al final se abre Accesibilidad con Jarvis resaltado: tócalo, activa el interruptor y volverás solo a Jarvis.';
         boton.textContent = '2. Activar accesibilidad';
-        accion = function () { M.abrirAjustes(); };
+        accion = function () { marcarIntento(); M.abrirAccesibilidad(); };
       } else {
         estadoEl.textContent = (e.auto ? 'Manos activas en MODO AUTOMÁTICO: Jarvis actúa sin pedirte permiso.' : 'Manos activas. Jarvis te pedirá permiso antes de tocar o escribir.');
         ayudaEl.textContent = 'Puedes apagarlas cuando quieras en Ajustes > Accesibilidad.';
         boton.textContent = 'Desvincular este celular';
         accion = desvincular;
       }
+      boton.style.display = (e.vinculado && !e.servicio) ? 'none' : 'block';
       boton.disabled = false;
     }).catch(function () {
       estadoEl.textContent = 'No pude leer el estado de las manos.';
@@ -229,6 +286,13 @@
       caja.appendChild(b);
       return b;
     }
+    todoBtn = document.createElement('button');
+    todoBtn.type = 'button';
+    todoBtn.className = 'mnBtn';
+    todoBtn.style.display = 'none';
+    todoBtn.textContent = 'Activar todo';
+    todoBtn.addEventListener('click', activarTodo);
+    caja.insertBefore(todoBtn, ayudaEl.nextSibling);
     llamadasBtn = permiso('Permitir llamadas y contactos', 'pedirLlamadas');
     brilloBtn = permiso('Permitir cambiar el brillo', 'pedirBrillo');
     dndBtn = permiso('Permitir No molestar', 'pedirNoMolestar');

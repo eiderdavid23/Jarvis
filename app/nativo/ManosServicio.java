@@ -159,6 +159,7 @@ public class ManosServicio extends AccessibilityService {
     protected void onServiceConnected() {
         super.onServiceConnected();
         instancia = this;
+        volverSiActivo();
         tomarCpu();
         burbuja = new BurbujaManos(this);
         burbuja.actualizar();
@@ -177,6 +178,34 @@ public class ManosServicio extends AccessibilityService {
         instancia = null;
         generacion++;
         return super.onUnbind(intent);
+    }
+
+    /** Si el usuario acaba de activar la accesibilidad desde Jarvis, lo devuelve solo a la app. */
+    private void volverSiActivo() {
+        try {
+            android.content.SharedPreferences p = getSharedPreferences("manos", Context.MODE_PRIVATE);
+            if (!p.getBoolean("volverAlActivar", false)) return;
+            p.edit().putBoolean("volverAlActivar", false).apply();
+            Intent i = getPackageManager().getLaunchIntentForPackage(getPackageName());
+            if (i != null) {
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(i);
+            }
+        } catch (Exception e) {
+            // si no se puede, el usuario vuelve a mano
+        }
+    }
+
+    /** Abre una pantalla de permisos de Android (solo se usa la primera vez que hace falta). */
+    private void abrirPantallaPermiso(String accion, boolean conPaquete) {
+        try {
+            Intent i = new Intent(accion);
+            if (conPaquete) i.setData(android.net.Uri.parse("package:" + getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            // sin pantalla disponible
+        }
     }
 
     /** Mantiene la CPU despierta con la pantalla apagada para que sigan llegando las ordenes. */
@@ -891,7 +920,8 @@ public class ManosServicio extends AccessibilityService {
     private String[] brillo(int nivel) {
         try {
             if (!android.provider.Settings.System.canWrite(this)) {
-                return err("falta el permiso para cambiar el brillo: activalo en Ajustes > Manos de Jarvis > Permitir cambiar el brillo");
+                abrirPantallaPermiso(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS, true);
+                return err("falta el permiso de brillo: ya abri la pantalla para que lo des (solo esta vez); cuando lo actives repite la orden");
             }
             int pct = Math.max(0, Math.min(100, nivel));
             int valor = Math.max(1, Math.round(pct * 255 / 100f));
@@ -910,7 +940,8 @@ public class ManosServicio extends AccessibilityService {
             android.app.NotificationManager nm = (android.app.NotificationManager)
                     getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null || !nm.isNotificationPolicyAccessGranted()) {
-                return err("falta el permiso No molestar: activalo en Ajustes > Manos de Jarvis > Permitir No molestar");
+                abrirPantallaPermiso(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS, false);
+                return err("falta el permiso No molestar: ya abri la pantalla para que lo des (solo esta vez); cuando lo actives repite la orden");
             }
             boolean activar = modo.equals("activar");
             nm.setInterruptionFilter(activar ? android.app.NotificationManager.INTERRUPTION_FILTER_PRIORITY

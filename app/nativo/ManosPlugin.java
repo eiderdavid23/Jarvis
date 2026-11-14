@@ -44,6 +44,10 @@ public class ManosPlugin extends Plugin {
                 && getContext().checkSelfPermission(Manifest.permission.READ_CONTACTS)
                 == PackageManager.PERMISSION_GRANTED);
         r.put("brillo", Settings.System.canWrite(getContext()));
+        r.put("sdk", android.os.Build.VERSION.SDK_INT);
+        r.put("notif", android.os.Build.VERSION.SDK_INT < 33
+                || getContext().checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                == PackageManager.PERMISSION_GRANTED);
         android.app.NotificationManager nm = (android.app.NotificationManager)
                 getContext().getSystemService(Context.NOTIFICATION_SERVICE);
         r.put("noMolestar", nm != null && nm.isNotificationPolicyAccessGranted());
@@ -266,6 +270,39 @@ public class ManosPlugin extends Plugin {
                 && getActivity() != null) {
             getActivity().requestPermissions(new String[]{Manifest.permission.CALL_PHONE,
                     Manifest.permission.READ_CONTACTS}, 7232);
+        }
+        call.resolve();
+    }
+
+    /** Pide de una vez los permisos de siempre: microfono, llamadas, contactos y notificaciones. */
+    @PluginMethod
+    public void pedirTodo(PluginCall call) {
+        java.util.ArrayList<String> faltan = new java.util.ArrayList<String>();
+        String[] todos = new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.CALL_PHONE,
+                Manifest.permission.READ_CONTACTS, "android.permission.POST_NOTIFICATIONS"};
+        for (String p : todos) {
+            if (p.equals("android.permission.POST_NOTIFICATIONS") && android.os.Build.VERSION.SDK_INT < 33) continue;
+            if (getContext().checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) faltan.add(p);
+        }
+        if (!faltan.isEmpty() && getActivity() != null) {
+            getActivity().requestPermissions(faltan.toArray(new String[0]), 7233);
+        }
+        call.resolve();
+    }
+
+    /** Abre Accesibilidad con Jarvis resaltado (Android no deja abrir la pagina directa a apps normales). */
+    @PluginMethod
+    public void abrirAccesibilidad(PluginCall call) {
+        prefs().edit().putBoolean("volverAlActivar", true).apply();
+        String comp = new android.content.ComponentName(getContext(), ManosServicio.class).flattenToString();
+        {
+            Intent l = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            android.os.Bundle b = new android.os.Bundle();
+            b.putString(":settings:fragment_args_key", comp);
+            l.putExtra(":settings:fragment_args_key", comp);
+            l.putExtra(":settings:show_fragment_args", b);
+            l.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(l);
         }
         call.resolve();
     }
