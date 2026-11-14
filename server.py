@@ -29,7 +29,6 @@ import nexus_api
 import manos_api
 import seguridad_api
 import addon_mc
-import pdf_api
 import cancelar_api
 import funciones_voz
 import rotacion_ia
@@ -387,23 +386,6 @@ HERRAMIENTAS = [
         }
     },
     {
-        'name': 'generar_imagen',
-        'description': (
-            'Genera una imagen NUEVA con IA a partir de una descripcion y la muestra en el chat. '
-            'Usar cuando el usuario pida crear, dibujar, generar o disenar una imagen, foto, '
-            'logo, ilustracion o arte. No usar para buscar imagenes que ya existen. Si el pedido '
-            'es vago, inventa detalles razonables en vez de preguntar. Si el usuario pide una '
-            'imagen, llama a esta herramienta de inmediato, sin avisar antes.'
-        ),
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'descripcion': {'type': 'string', 'description': 'Descripcion detallada de la imagen: sujeto, estilo, colores, ambiente y formato'}
-            },
-            'required': ['descripcion']
-        }
-    },
-    {
         'name': 'leer_archivo',
         'description': (
             'Abre un archivo que el usuario adjunto antes en ESTE chat o que esta guardado en el PROYECTO de este chat (zip, PDF o texto). Usar cuando '
@@ -527,7 +509,6 @@ HERRAMIENTAS = [
             'required': ['semilla', 'tipos']
         }
     },
-    pdf_api.HERRAMIENTA,
     {
         'name': 'crear_addon_minecraft',
         'description': (
@@ -654,90 +635,12 @@ def buscar_persona(consulta, redes=None):
     return resultados, None
 
 
-IMAGEN_MODELO = os.environ.get('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image')
-IMAGEN_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{IMAGEN_MODELO}:generateContent'
-
-
-CF_ACCOUNT_ID = os.environ.get('CF_ACCOUNT_ID', '').strip()
-CF_API_TOKEN = os.environ.get('CF_API_TOKEN', '').strip()
-CF_IMAGEN_MODELO = os.environ.get('CF_IMAGE_MODEL', '@cf/black-forest-labs/flux-1-schnell')
-
-
-def generar_imagen_cloudflare(descripcion):
-    """Devuelve (imagen, error) usando Cloudflare Workers AI."""
-    url = f'https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/{CF_IMAGEN_MODELO}'
-    try:
-        r = requests.post(url, headers={'Authorization': 'Bearer ' + CF_API_TOKEN},
-                          json={'prompt': descripcion[:2000], 'steps': 4}, timeout=50)
-    except requests.exceptions.Timeout:
-        return None, 'La imagen tardo demasiado en generarse.'
-    except requests.exceptions.RequestException:
-        return None, 'No pude conectar con el generador de imagenes.'
-    try:
-        data = r.json()
-    except ValueError:
-        data = {}
-    if r.status_code != 200 or not data.get('success', True):
-        print('[IMAGEN] Cloudflare error', r.status_code, r.text[:500])
-        if r.status_code == 429:
-            return None, 'Se acabo la cuota diaria de imagenes de Cloudflare.'
-        if r.status_code in (401, 403):
-            return None, 'El token de Cloudflare no es valido o no tiene permiso de Workers AI.'
-        errores = data.get('errors') or [{}]
-        return None, f"Cloudflare respondio con error {r.status_code}: {str(errores[0].get('message', ''))[:200]}"
-    imagen = (data.get('result') or {}).get('image')
-    if not imagen:
-        return None, 'El generador no devolvio una imagen (puede que la descripcion fuera bloqueada).'
-    if len(imagen) > 3500000:
-        return None, 'La imagen salio demasiado pesada para enviarla.'
-    return {'mime': 'image/jpeg', 'datos': imagen}, None
-
-
-def generar_imagen(descripcion, api_key):
-    """Devuelve (imagen, error). imagen = {'mime': ..., 'datos': base64}."""
-    if CF_ACCOUNT_ID and CF_API_TOKEN:
-        return generar_imagen_cloudflare(descripcion)
-    cuerpo = {
-        'contents': [{'parts': [{'text': descripcion}]}],
-        'generationConfig': {'responseModalities': ['TEXT', 'IMAGE']}
-    }
-    try:
-        r = requests.post(IMAGEN_URL, params={'key': api_key}, json=cuerpo, timeout=50)
-    except requests.exceptions.Timeout:
-        return None, 'La imagen tardo demasiado en generarse.'
-    except requests.exceptions.RequestException:
-        return None, 'No pude conectar con el generador de imagenes.'
-    if r.status_code != 200:
-        print('[IMAGEN] Error', r.status_code, r.text[:500])
-        if r.status_code == 429:
-            return None, 'Se acabo la cuota de imagenes por ahora.'
-        try:
-            detalle = r.json().get('error', {}).get('message', '')
-        except ValueError:
-            detalle = ''
-        return None, f'El generador de imagenes respondio con error {r.status_code}: {detalle[:200]}'
-    sin_imagen = 'El generador no devolvio una imagen (puede que la descripcion fuera bloqueada).'
-    try:
-        partes = r.json()['candidates'][0]['content'].get('parts', [])
-    except (ValueError, KeyError, IndexError):
-        return None, sin_imagen
-    for p in partes:
-        im = p.get('inlineData') or p.get('inline_data')
-        if im and im.get('data'):
-            if len(im['data']) > 3500000:
-                return None, 'La imagen salio demasiado pesada para enviarla.'
-            return {'mime': im.get('mimeType') or im.get('mime_type') or 'image/png', 'datos': im['data']}, None
-    return None, sin_imagen
-
-
 PASOS_HERRAMIENTAS = {
     'buscar_web': 'Buscando en la web: {consulta}',
     'leer_pagina': 'Leyendo {sitio}',
     'buscar_persona': 'Buscando a {consulta} en la web',
     'buscar_estructuras_minecraft': 'Calculando estructuras en tu semilla',
     'crear_addon_minecraft': 'Armando el add-on',
-    'crear_pdf': 'Armando el PDF',
-    'generar_imagen': 'Generando la imagen',
     'leer_archivo': 'Leyendo el archivo',
     'abrir_url': 'Preparando el enlace',
     'listar_plataformas': 'Revisando tus plataformas',
@@ -901,31 +804,10 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         return {'ok': True, 'resultados': resultados,
                 'mensaje': 'Los resultados ya se muestran al usuario en un panel; el primero se abre solo.'}
 
-    if nombre == 'generar_imagen':
-        descripcion = (argumentos.get('descripcion') or '').strip()
-        if not descripcion:
-            return {'ok': False, 'error': 'falta la descripcion de la imagen'}
-        llave = acciones_frontend.get('_llave')
-        if not llave and not (CF_ACCOUNT_ID and CF_API_TOKEN):
-            return {'ok': False, 'error': 'Con Groq no se pueden generar imagenes; hay que cambiar a Gemini en Ajustes.'}
-        if acciones_frontend.get('imagenes'):
-            return {'ok': False, 'error': 'ya se genero una imagen en este mensaje; que el usuario pida la siguiente aparte.'}
-        imagen, error = generar_imagen(descripcion, llave)
-        if error:
-            return {'ok': False, 'error': error}
-        acciones_frontend['imagenes'].append(imagen)
-        return {'ok': True, 'mensaje': 'La imagen ya se muestra al usuario en el chat. Comenta brevemente, sin describirla en detalle.'}
-
     if nombre == 'buscar_estructuras_minecraft':
         resultado, mapa = minecraft.buscar(argumentos)
         if mapa:
             acciones_frontend['mapa_mc'] = mapa
-        return resultado
-
-    if nombre == 'crear_pdf':
-        resultado, pdf = pdf_api.crear(argumentos, getattr(g, 'zona_horaria', 'UTC'))
-        if pdf:
-            acciones_frontend.setdefault('pdfs', []).append(pdf)
         return resultado
 
     if nombre == 'crear_addon_minecraft':
@@ -1076,13 +958,11 @@ GRUPOS_HERRAMIENTAS = {
     'memoria': ('Memoria', ['guardar_recuerdo', 'olvidar_recuerdo']),
     'recordatorios': ('Recordatorios', ['crear_recordatorio', 'listar_recordatorios', 'borrar_recordatorio']),
     'tareas': ('Tareas automaticas', ['crear_tarea', 'listar_tareas', 'cancelar_tarea']),
-    'imagenes': ('Imagenes', ['generar_imagen']),
     'personas': ('Buscar personas', ['buscar_persona']),
     'web': ('Buscar en la web', ['buscar_web', 'leer_pagina']),
     'enlaces': ('Abrir enlaces', ['abrir_url']),
     'nexus': ('Plataformas NEXUS', ['listar_plataformas', 'abrir_plataforma']),
     'archivos': ('Archivos', ['leer_archivo']),
-    'pdf': ('Crear PDF', ['crear_pdf']),
     'manos': ('Manos', ['ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv']),
     'telefono': ('Telefono', ['encender_linterna', 'apagar_linterna', 'vibrar', 'consultar_bateria']),
     'hack': ('Hacking web', list(hack_api.NOMBRES)),
@@ -2419,23 +2299,20 @@ def texto_capacidades():
         'Groq no), PDF, archivos ZIP (lees su estructura y los archivos de texto, codigo y PDF de dentro, '
         'no las imagenes ni binarios) y archivos de texto o codigo, hasta 5 y unos 3 MB en total; lo que adjuntan queda guardado en ese chat y puedes volver a abrirlo con leer_archivo en los mensajes siguientes. (4) Abrir un sitio o la '
         'busqueda dentro de un sitio (Mercado Libre, Amazon, YouTube...) en una pestana nueva, '
-        'las busquedas dentro de un sitio se hacen tras pedir confirmacion. Generas imagenes nuevas '
-        'con IA a partir de una descripcion (con Gemini; con Groq solo si hay Cloudflare configurado) y las muestras en el chat; '
-        'no se guardan en el historial. Con la semilla de un mundo de Minecraft (Bedrock o Java) localizas '
-        'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. Creas add-ons de Minecraft Bedrock (.mcaddon) con crear_addon_minecraft y los entregas como boton de descarga en el chat. Creas PDF con el diseno de Jarvis con la herramienta crear_pdf (informes, resumenes, guias, cartas, tablas, apuntes) y los entregas como tarjeta de descarga en el chat; tu escribes todo el contenido y no lo pegas en el chat. REGLA: si piden un PDF, llama SIEMPRE a crear_pdf en ese mismo turno; nunca digas que lo hiciste sin llamarla. ' + personas + web + telefono + seguridad +
+        'las busquedas dentro de un sitio se hacen tras pedir confirmacion. Con la semilla de un mundo de Minecraft (Bedrock o Java) localizas '
+        'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. Creas add-ons de Minecraft Bedrock (.mcaddon) con crear_addon_minecraft y los entregas como boton de descarga en el chat. ' + personas + web + telefono + seguridad +
         '(5) Recordatorios: los creas, listas y borras con las herramientas crear_recordatorio, listar_recordatorios y '
         'borrar_recordatorio; suenan a su hora mientras la app este abierta, no con la app cerrada. '
         'Tareas automaticas: con crear_tarea programas algo que haras tu solo a una hora (por ejemplo mandar un '
         'WhatsApp hoy o manana a tal hora); las ves con listar_tareas y las cancelas con cancelar_tarea. '
         '(6) Herramientas: el menu lateral tiene un panel con interruptores para activar o desactivar '
-        'Minecraft, memoria, recordatorios, tareas automaticas, imagenes, busqueda de personas, busqueda en la web, enlaces, archivos y telefono; '
+        'Minecraft, memoria, recordatorios, tareas automaticas, busqueda de personas, busqueda en la web, enlaces, archivos y telefono; '
         'lo que esta apagado no lo puedes usar. '
         '(7) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
         'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
         'tus chats guardados, tampoco leer llamadas o mensajes del telefono, '
-        'ni enviar mensajes. REGLA: si el usuario pide crear, dibujar o generar una imagen, '
-        'llama SIEMPRE a la herramienta generar_imagen en ese mismo turno; nunca digas que la '
-        'estas generando ni que esta lista sin haberla llamado.'
+        'ni enviar mensajes. No puedes crear PDF ni generar imagenes: si te lo piden, '
+        'di que Jarvis ya no hace eso.'
     )
 
 

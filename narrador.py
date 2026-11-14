@@ -84,16 +84,6 @@ def _abrir(a, r):
     return [f'Abriendo {_sitio(a.get("url"))}']
 
 
-def _imagen(a, r):
-    if not r.get('ok'):
-        return [f'Generando imagen: {_corta(a.get("descripcion"), 40)}', f'→ {_corta(r.get("error"))}']
-    return [f'Generando imagen: {_corta(a.get("descripcion"), 40)}', '→ lista']
-
-
-def _pdf(a, r):
-    return [f'Armando PDF: {_corta(a.get("titulo") or "documento", 40)}']
-
-
 def _addon(a, r):
     return [f'Armando add-on: {_corta(a.get("nombre"), 30)} ({len(a.get("archivos") or [])} archivos)']
 
@@ -147,8 +137,6 @@ PLANTILLAS = {
     'buscar_web': _buscar,
     'leer_pagina': _leer,
     'abrir_url': _abrir,
-    'generar_imagen': _imagen,
-    'crear_pdf': _pdf,
     'crear_addon_minecraft': _addon,
     'buscar_estructuras_minecraft': _estructuras,
     'buscar_persona': _persona,

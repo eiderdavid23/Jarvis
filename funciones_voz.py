@@ -18,8 +18,6 @@ FUNCIONES = {
     'recordatorios': ('Recordatorios', 'm', True, 'herramienta', ['recordatorios'], False),
     'tareas': ('Tareas automáticas', 'f', True, 'herramienta',
                ['tareas', 'tareas automaticas', 'agentes', 'agentes automaticos'], False),
-    'imagenes': ('Imágenes', 'f', True, 'herramienta',
-                 ['imagenes', 'generacion de imagenes', 'generar imagenes', 'crear imagenes'], False),
     'personas': ('Búsqueda de personas', 'f', False, 'herramienta',
                  ['buscar personas', 'busqueda de personas', 'buscador de personas'], False),
     'web': ('Búsqueda en la web', 'f', False, 'herramienta',
