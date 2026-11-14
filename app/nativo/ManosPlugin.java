@@ -6,7 +6,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.app.SearchManager;
 import android.os.PowerManager;
+import android.provider.MediaStore;
 import android.provider.Settings;
 
 import com.getcapacitor.JSArray;
@@ -45,6 +47,46 @@ public class ManosPlugin extends Plugin {
         android.app.NotificationManager nm = (android.app.NotificationManager)
                 getContext().getSystemService(Context.NOTIFICATION_SERVICE);
         r.put("noMolestar", nm != null && nm.isNotificationPolicyAccessGranted());
+        call.resolve(r);
+    }
+
+    /** Busca una cancion y la REPRODUCE (no solo abre la busqueda). app: "ytmusic", "spotify" o vacio (la que haya). */
+    @PluginMethod
+    public void reproducirMusica(PluginCall call) {
+        String q = call.getString("q", "").trim();
+        String app = call.getString("app", "");
+        JSObject r = new JSObject();
+        if (q.isEmpty()) {
+            r.put("ok", false);
+            call.resolve(r);
+            return;
+        }
+        String[] paquetes;
+        if ("spotify".equals(app)) {
+            paquetes = new String[]{"com.spotify.music"};
+        } else if ("ytmusic".equals(app)) {
+            paquetes = new String[]{"com.google.android.apps.youtube.music"};
+        } else {
+            paquetes = new String[]{"com.google.android.apps.youtube.music", "com.spotify.music", ""};
+        }
+        for (String p : paquetes) {
+            try {
+                Intent i = new Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH);
+                i.putExtra(SearchManager.QUERY, q);
+                i.putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*");
+                if (!p.isEmpty()) {
+                    i.setPackage(p);
+                }
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+                r.put("ok", true);
+                r.put("app", p);
+                call.resolve(r);
+                return;
+            } catch (Exception ignorada) {
+            }
+        }
+        r.put("ok", false);
         call.resolve(r);
     }
 

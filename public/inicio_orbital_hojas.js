@@ -110,26 +110,34 @@
     ]);
   };
 
-  /* --- Musica: abre la busqueda en la app o el navegador --- */
-  function buscarMusica(base, inp) {
+  /* --- Musica: en la app de Android busca Y REPRODUCE; en el navegador solo abre la busqueda --- */
+  var capM = window.Capacitor;
+  var nativoM = !!(capM && capM.isNativePlatform && capM.isNativePlatform());
+  var MN = nativoM ? ((capM.Plugins || {}).Manos || (capM.registerPlugin && capM.registerPlugin('Manos'))) : null;
+  function buscarMusica(base, app, inp) {
     var q = inp.value.trim();
     if (!q) { inp.focus(); return; }
     cerrarHoja();
-    window.open(base + encodeURIComponent(q), '_blank');
+    var abrir = function () { window.open(base + encodeURIComponent(q), '_blank'); };
+    if (!MN) { abrir(); return; }
+    /* Si la APK es vieja (sin reproducirMusica) o no hay app de musica, cae a abrir la busqueda */
+    Promise.resolve().then(function () { return MN.reproducirMusica({ q: q, app: app }); })
+      .then(function (r) { if (!r || r.ok === false) abrir(); })
+      .catch(abrir);
   }
   acc.musica = function () {
     var inp = el('input', 'oiInput');
     inp.type = 'text'; inp.placeholder = '¿Qué quieres escuchar?'; inp.autocomplete = 'off';
-    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') buscarMusica(YT, inp); });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') buscarMusica(YT, 'ytmusic', inp); });
     abrirHoja('Música', [
       inp,
-      fila('YouTube Music', 'Busca y abre el resultado', function () { buscarMusica(YT, inp); }),
-      fila('Spotify', 'Busca y abre el resultado', function () { buscarMusica(SP, inp); }),
+      fila('YouTube Music', nativoM ? 'Busca y reproduce' : 'Busca y abre el resultado', function () { buscarMusica(YT, 'ytmusic', inp); }),
+      fila('Spotify', nativoM ? 'Busca y reproduce' : 'Busca y abre el resultado', function () { buscarMusica(SP, 'spotify', inp); }),
       fila('Pídele a Jarvis', 'Que te recomiende música', function () {
         var q = inp.value.trim();
         alChat('Recomiéndame música' + (q ? ' de ' + q : ''), true);
       }),
-      el('p', 'oiNota', 'Jarvis abre la búsqueda en la app o en el navegador; no controla la reproducción.')
+      el('p', 'oiNota', nativoM ? 'Jarvis busca y reproduce la primera coincidencia en la app que elijas.' : 'En el navegador solo se abre la búsqueda; para que reproduzca hace falta la app de Android.')
     ]);
   };
 
