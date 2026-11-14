@@ -169,3 +169,26 @@ def borrar(tid):
     except supa.SupaError as e:
         return _fallo(e)
     return jsonify({'ok': True})
+
+
+# ---------- Herramienta de Jarvis (la usa la IA desde el chat) ----------
+
+def herramienta(nombre, args):
+    if nombre != 'crear_trabajo':
+        return {'ok': False, 'error': 'herramienta desconocida'}
+    try:
+        instr = _limpio(args.get('instruccion'), 1500)
+        titulo = _limpio(args.get('titulo'), 120) or instr[:60]
+        if not instr:
+            return {'ok': False, 'error': 'falta lo que hay que hacer; preguntaselo al usuario'}
+        import tareas_api
+        disp, error = tareas_api._resolver_dispositivo(_limpio(args.get('dispositivo'), 80))
+        if error:
+            return error
+        supa._rest('POST', TABLA, {}, {
+            'usuario_id': g.usuario_id, 'titulo': titulo, 'instruccion': instr, 'dispositivo': disp})
+        return {'ok': True, 'titulo': titulo, 'dispositivo': disp or 'el que este conectado',
+                'nota': 'Quedo en cola y empieza en unos segundos, en segundo plano, mientras la pestana de Jarvis siga abierta. El avance se ve en el modulo Trabajos en segundo plano.'}
+    except supa.SupaError as e:
+        print('[TRABAJOS]', e)
+        return {'ok': False, 'error': 'no pude crear el trabajo: ' + str(e)}

@@ -487,6 +487,27 @@ HERRAMIENTAS = [
         }
     },
     {
+        'name': 'crear_trabajo',
+        'description': (
+            'Deja un TRABAJO EN SEGUNDO PLANO: una tarea larga o de varios pasos que Jarvis hara AHORA mismo por su '
+            'cuenta mientras el usuario hace otra cosa (investigar y resumir, revisar varias paginas, preparar algo, '
+            'hacer una secuencia de acciones en el celular o el PC). Usar cuando el usuario diga "hazlo en segundo '
+            'plano", "dejalo trabajando", "avisame cuando termines" o la tarea sea claramente larga. NO es para hacer '
+            'algo a una hora futura (para eso crear_tarea) ni para algo corto que puedes responder ahora. La '
+            'instruccion debe ser completa y autonoma, porque durante el trabajo Jarvis no podra hacer preguntas. '
+            'Despues confirma en una frase que quedo trabajando y que el avance se ve en el modulo Trabajos en segundo plano.'
+        ),
+        'parameters': {
+            'type': 'object',
+            'properties': {
+                'titulo': {'type': 'string', 'description': 'Nombre corto del trabajo'},
+                'instruccion': {'type': 'string', 'description': 'Que debe hacer Jarvis, completo y sin dudas pendientes'},
+                'dispositivo': {'type': 'string', 'description': 'Dispositivo donde hacerlo, si el usuario lo dijo. Si el trabajo no usa ningun dispositivo, pon ninguno.'}
+            },
+            'required': ['titulo', 'instruccion']
+        }
+    },
+    {
         'name': 'buscar_estructuras_minecraft',
         'description': (
             'Localiza estructuras de Minecraft (aldeas, templos, monumentos oceanicos, mansiones, ciudades '
@@ -884,6 +905,12 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
             acciones_frontend['tareas'] = True
         return res
 
+    if nombre == 'crear_trabajo':
+        res = trabajos_api.herramienta(nombre, argumentos)
+        if res.get('ok'):
+            acciones_frontend['trabajos'] = True
+        return res
+
     if nombre == 'anotar_paso':
         _paso(str(argumentos.get('texto') or '').strip()[:90])
         return {'ok': True}
@@ -959,7 +986,7 @@ GRUPOS_HERRAMIENTAS = {
     'minecraft': ('Minecraft', ['buscar_estructuras_minecraft', 'crear_addon_minecraft']),
     'memoria': ('Memoria', ['guardar_recuerdo', 'olvidar_recuerdo']),
     'recordatorios': ('Recordatorios', ['crear_recordatorio', 'listar_recordatorios', 'borrar_recordatorio']),
-    'tareas': ('Tareas automaticas', ['crear_tarea', 'listar_tareas', 'cancelar_tarea']),
+    'tareas': ('Tareas automaticas', ['crear_tarea', 'listar_tareas', 'cancelar_tarea', 'crear_trabajo']),
     'personas': ('Buscar personas', ['buscar_persona']),
     'web': ('Buscar en la web', ['buscar_web', 'leer_pagina']),
     'enlaces': ('Abrir enlaces', ['abrir_url']),
@@ -1043,7 +1070,7 @@ def _vueltas():
 # --- Guardia v1.8: no dejar que Jarvis diga "ya lo hice" en el celular sin haber usado las manos ---
 HERR_CELULAR = ('ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv', 'abrir_url', 'abrir_plataforma')
 # programar una tarea ("manana a las 8 mandale un WhatsApp") tambien cuenta como haber hecho algo
-HERR_CUMPLEN = HERR_CELULAR + ('crear_tarea', 'listar_tareas', 'cancelar_tarea')
+HERR_CUMPLEN = HERR_CELULAR + ('crear_tarea', 'listar_tareas', 'cancelar_tarea', 'crear_trabajo')
 _APPS = (r'whatsapp|youtube|instagram|tiktok|spotify|telegram|facebook|netflix|chrome|maps|mercado ?libre|'
          r'minecraft|pantalla|celular|tel[eé]fono|app|aplicaci[oó]n|ajustes|configuraci[oó]n|wifi|bluetooth|'
          r'c[aá]mara|galer[ií]a')
@@ -2306,7 +2333,7 @@ def texto_capacidades():
         '(5) Recordatorios: los creas, listas y borras con las herramientas crear_recordatorio, listar_recordatorios y '
         'borrar_recordatorio; suenan a su hora mientras la app este abierta, no con la app cerrada. '
         'Tareas automaticas: con crear_tarea programas algo que haras tu solo a una hora (por ejemplo mandar un '
-        'WhatsApp hoy o manana a tal hora); las ves con listar_tareas y las cancelas con cancelar_tarea. '
+        'WhatsApp hoy o manana a tal hora); las ves con listar_tareas y las cancelas con cancelar_tarea. Trabajos en segundo plano: con crear_trabajo dejas una tarea larga trabajando ahora mismo mientras el usuario hace otra cosa. '
         '(6) Herramientas: el menu lateral tiene un panel con interruptores para activar o desactivar '
         'Minecraft, memoria, recordatorios, tareas automaticas, busqueda de personas, busqueda en la web, enlaces, archivos y telefono; '
         'lo que esta apagado no lo puedes usar. '
@@ -2696,6 +2723,7 @@ def _chat_interno():
                         'imagenes': acciones.get('imagenes', []),
                         'recordatorios_cambio': bool(acciones.get('recordatorios')),
                         'tareas_cambio': bool(acciones.get('tareas')),
+                        'trabajos_cambio': bool(acciones.get('trabajos')),
                         'mapa_mc': acciones.get('mapa_mc'),
                         'addons': acciones.get('addons', []),
                         'pdfs': acciones.get('pdfs', []),

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es" data-tema="oscuro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Trabajos en segundo plano</title>
+<script>
+(function () {
+  var p = '';
+  try { p = localStorage.getItem('jarvisTema') || ''; } catch (e) {}
+  var t = (p === 'claro' || p === 'oscuro') ? p : (matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'oscuro');
+  document.documentElement.setAttribute('data-tema', t);
+})();
+</script>
+<style>
+:root { --fondo: #080c13; --panel: #0e1520; --linea: rgba(150,190,212,.18); --texto: #e9f0f4; --suave: #8c9faa; --cian: #3cd9f2; }
+[data-tema="claro"] { --fondo: #f3f5f7; --panel: #fff; --linea: rgba(16,42,58,.16); --texto: #13242d; --suave: #5d727d; --cian: #0a7d98; }
+* { box-sizing: border-box; }
+body { margin: 0 auto; padding: 16px; max-width: 760px; background: var(--fondo); color: var(--texto); font: 15px/1.4 system-ui, sans-serif; }
+h1 { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 22px; margin: 0 0 8px; }
+button { padding: 4px 10px; border-radius: 10px; border: 1px solid var(--linea); background: var(--panel); color: var(--suave); font: inherit; cursor: pointer; }
+button.prim { background: var(--cian); color: #04131a; border: 0; font-weight: 600; padding: 9px 16px; }
+textarea { width: 100%; min-height: 84px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--linea); background: var(--panel); color: var(--texto); font: inherit; resize: vertical; margin-bottom: 8px; }
+.nuevo { margin: 12px 0 18px; }
+.fila { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--linea); border-radius: 10px; background: var(--panel); }
+.cuerpo { flex: 1; min-width: 0; word-break: break-word; }
+.cuerpo small { display: block; color: var(--suave); margin-top: 2px; }
+.pasos { margin: 6px 0 0; padding-left: 16px; color: var(--suave); font-size: 13px; }
+.resultado { margin-top: 6px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--linea); font-size: 14px; white-space: pre-wrap; }
+.est { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--linea); font-size: 12px; color: var(--suave); }
+.est.pendiente, .est.en_curso { color: var(--cian); border-color: var(--cian); }
+.est.fallido { color: #ff7a7a; border-color: #ff7a7a; }
+.msg { color: var(--suave); }
+</style>
+</head>
+<body>
+<h1>Trabajos en segundo plano</h1>
+<p class="msg">Déjale una tarea larga y sigue con lo tuyo. Jarvis la hace por etapas mientras esta pestaña de Jarvis siga abierta (puede estar oculta). También puedes decirle por chat: «hazlo en segundo plano».</p>
+<div class="nuevo">
+  <textarea id="instr" maxlength="1500" placeholder="Ej: Busca los 5 mejores celulares de 2026 por menos de 1 millón y hazme un resumen con pros y contras."></textarea>
+  <button id="dejar" class="prim" type="button">Dejar trabajo</button>
+</div>
+<div id="lista"><p class="msg">Cargando…</p></div>
+<script>
+(function () {
+  'use strict';
+  var ACC = 'jarvisAcceso', REF = 'jarvisRefresco', refrescando = null;
+  var ETIQ = { pendiente: 'En cola', en_curso: 'Trabajando…', hecho: 'Hecho', fallido: 'Falló', cancelado: 'Cancelado' };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function caduca(seg) {
+    try {
+      var p = localStorage.getItem(ACC).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(p)).exp * 1000 - Date.now() < seg * 1000;
+    } catch (e) { return false; }
+  }
+  function renovar() {
+    if (!refrescando) {
+      refrescando = fetch('/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: localStorage.getItem(REF) }) })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || !d.access_token) return false;
+          localStorage.setItem(ACC, d.access_token);
+          if (d.refresh_token) localStorage.setItem(REF, d.refresh_token);
+          return true;
+        })
+        .catch(function () { return false; })
+        .then(function (ok) { refrescando = null; return ok; });
+    }
+    return refrescando;
+  }
+  function login() { (window.top || window).location.href = '/'; return new Promise(function () {}); }
+  function api(url, metodo, cuerpo, reintento) {
+    if (!localStorage.getItem(ACC)) return login();
+    var pre = (reintento !== false && caduca(60)) ? renovar() : Promise.resolve(true);
+    return pre.then(function () {
+      var h = { Authorization: 'Bearer ' + localStorage.getItem(ACC) };
+      if (cuerpo !== undefined) h['Content-Type'] = 'application/json';
+      return fetch(url, { method: metodo || 'GET', headers: h, body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined });
+    }).then(function (r) {
+      if (r.status === 401 && reintento !== false) return renovar().then(function (ok) { return ok ? api(url, metodo, cuerpo, false) : login(); });
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.error || 'Error ' + r.status);
+        return d;
+      });
+    });
+  }
+
+  function mensaje(t) {
+    var l = $('lista'); l.textContent = '';
+    var p = document.createElement('p'); p.className = 'msg'; p.textContent = t; l.appendChild(p);
+  }
+  function pintar(items) {
+    var l = $('lista'); l.textContent = '';
+    if (!items.length) return mensaje('Todavía no hay trabajos.');
+    items.forEach(function (it) {
+      var fila = document.createElement('div'); fila.className = 'fila';
+      var c = document.createElement('div'); c.className = 'cuerpo';
+      var t = document.createElement('strong'); t.textContent = it.titulo;
+      var e = document.createElement('span'); e.className = 'est ' + it.estado; e.textContent = ETIQ[it.estado] || it.estado;
+      c.appendChild(t); c.appendChild(e);
+      var i = document.createElement('small'); i.textContent = it.instruccion; c.appendChild(i);
+      if (it.dispositivo) { var dv = document.createElement('small'); dv.textContent = 'En: ' + it.dispositivo; c.appendChild(dv); }
+      var pasos = (it.pasos || []).slice(-5);
+      if (pasos.length) {
+        var ol = document.createElement('ul'); ol.className = 'pasos';
+        pasos.forEach(function (p) { var li = document.createElement('li'); li.textContent = p.texto; ol.appendChild(li); });
+        c.appendChild(ol);
+      }
+      if (it.resultado) { var r = document.createElement('div'); r.className = 'resultado'; r.textContent = it.resultado; c.appendChild(r); }
+      var activo = it.estado === 'pendiente' || it.estado === 'en_curso';
+      var b = document.createElement('button'); b.type = 'button';
+      b.textContent = activo ? 'Cancelar' : '✕';
+      b.setAttribute('aria-label', activo ? 'Cancelar' : 'Borrar');
+      b.addEventListener('click', function () {
+        (activo ? api('/trabajos/' + it.id + '/cancelar', 'POST') : api('/trabajos/' + it.id, 'DELETE'))
+          .then(cargar).catch(function (x) { mensaje(x.message); });
+      });
+      fila.appendChild(c); fila.appendChild(b); l.appendChild(fila);
+    });
+  }
+  function cargar() { return api('/trabajos').then(function (d) { pintar(d.trabajos || []); }).catch(function (x) { mensaje(x.message); }); }
+
+  $('dejar').addEventListener('click', function () {
+    var txt = $('instr').value.trim();
+    if (!txt) return;
+    $('dejar').disabled = true;
+    api('/trabajos', 'POST', { instruccion: txt }).then(function () {
+      $('instr').value = '';
+      try { if (window.parent && window.parent.jarvisTrabajos) window.parent.jarvisTrabajos.recargar(); } catch (e) {}
+      return cargar();
+    }).catch(function (x) { mensaje(x.message); }).then(function () { $('dejar').disabled = false; });
+  });
+
+  cargar();
+  setInterval(cargar, 5000);
+})();
+</script>
+</body>
+</html>

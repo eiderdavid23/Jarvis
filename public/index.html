@@ -1663,6 +1663,7 @@ async function enviarMensaje(desdeVoz) {
       cargarUso();
       if (data.recordatorios_cambio && window.jarvisRecordatorios) window.jarvisRecordatorios.recargar();
       if (data.tareas_cambio && window.jarvisTareas) window.jarvisTareas.recargar();
+      if (data.trabajos_cambio && window.jarvisTrabajos) window.jarvisTrabajos.recargar();
       const { textoLimpio, urls } = procesarAcciones(data.respuesta || '');
       textoFinal = textoLimpio;
       const yaPintada = window.jarvisDeltaCerrar && window.jarvisDeltaCerrar(textoFinal);
@@ -2251,6 +2252,7 @@ pintarTema();
 <script src="/app_android.js"></script>
 <script src="/recordatorios.js"></script>
 <script src="/tareas.js"></script>
+<script src="/trabajos.js"></script>
 <script src="/herramientas.js"></script>
 <script src="/seguridad_ui.js"></script>
 <script src="/narracion_ui.js"></script>
