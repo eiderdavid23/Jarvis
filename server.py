@@ -1102,10 +1102,38 @@ def _modo_seguridad():
         return False
 
 
+RE_HERR_HACK = re.compile(r'hack|pentest|vulnerab|sqli|inyecci|xss|ssrf|cors|jwt|cookie|puerto|subdominio|dns|certificad|login|sesi[oó]n|idor|escane|auditor|seguridad|rompe[rl]? hash|hash|payload|panel|api|token|admin', re.I)
+RE_HERR_MC = re.compile(r'minecraft|aldea|semilla|addon|mod\b|bioma|estructura', re.I)
+RE_HERR_PC = re.compile(r'\bpc\b|computador|compu|laptop|port[aá]til|escritorio', re.I)
+RE_HERR_TV = re.compile(r'\btv\b|tele\b|televisor|televisi[oó]n|chromecast|netflix|youtube', re.I)
+HERR_MC = ('buscar_estructuras_minecraft', 'crear_addon_minecraft')
+
+
+def _hay_contexto():
+    try:
+        return g.get('contexto_herr') is not None
+    except RuntimeError:
+        return False
+
+
+def _herr_pesada_sobra(nombre, ctx):
+    if nombre in HERR_MC:
+        return not RE_HERR_MC.search(ctx)
+    if nombre == 'controlar_pc':
+        return not RE_HERR_PC.search(ctx)
+    if nombre == 'controlar_tv':
+        return not RE_HERR_TV.search(ctx)
+    return False
+
+
 def _activas():
     off = _apagadas()
     activas = [h for h in HERRAMIENTAS if h['name'] not in off]
-    activas.extend(hack_api.HERRAMIENTAS)
+    ctx = g.get('contexto_herr') if _hay_contexto() else None
+    if ctx is not None:   # v1.44: solo mandar las herramientas que el mensaje puede necesitar
+        activas = [h for h in activas if not _herr_pesada_sobra(h['name'], ctx)]
+    if _modo_seguridad() or ctx is None or RE_HERR_HACK.search(ctx):
+        activas.extend(hack_api.HERRAMIENTAS)
     if _modo_seguridad():
         activas.append(HERRAMIENTA_AUDITAR)
     return activas
@@ -1204,7 +1232,7 @@ MAX_ADJUNTOS = 5
 MAX_TOTAL_ADJUNTOS = 3300000   # caracteres base64 sumados (Vercel limita el cuerpo a ~4.5 MB)
 MAX_TEXTO_ADJUNTO = 20000      # caracteres que se leen de cada archivo de texto o PDF
 MAX_PAGINAS_PDF = 40
-TIMEOUT_IA = int(os.environ.get('TIMEOUT_IA', '85'))
+TIMEOUT_IA = int(os.environ.get('TIMEOUT_IA', '30'))
 TIMEOUT_RESPALDO = int(os.environ.get('TIMEOUT_RESPALDO', '60'))
 
 IMAGENES_OK = {'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'}
@@ -2754,6 +2782,7 @@ def _chat_interno():
         if partes_gemini:
             turno_actual['partes_gemini'] = partes_gemini
         turnos.append(turno_actual)
+        g.contexto_herr = ' '.join(t.get('texto', '') for t in turnos[-5:])[-3000:]
 
         g.mensaje_largo = len(mensaje_usuario or '') > 1500
         g.temperatura = _temperatura(mensaje_usuario)
