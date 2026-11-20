@@ -50,3 +50,10 @@ body {
   --cian-medio: rgba(79, 216, 255, 0.4);
   --cian-brillo: rgba(79, 216, 255, 0.55);
 }
+
+/* Reducir animaciones (Ajustes > Preferencias) */
+html.quieta *, html.quieta *::before, html.quieta *::after { animation: none !important; transition: none !important; }
+
+.pantalla__titulo { color: var(--cian); }
+.tarjeta { background: var(--vidrio); border: 1px solid var(--borde); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.tarjeta small { color: var(--texto-suave); }

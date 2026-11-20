@@ -1,0 +1,3 @@
+.tar__lista { display: flex; flex-direction: column; gap: 10px; }
+.tar__vacio { text-align: center; padding: 12px; }
+.tar__resultado { white-space: pre-wrap; }

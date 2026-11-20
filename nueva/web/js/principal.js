@@ -1,6 +1,8 @@
 // Arranque: decide que pantalla se ve segun haya sesion y a donde se navegue.
 import { sesion } from './nucleo/sesion.js';
 import { montar } from './nucleo/montar.js';
+import './nucleo/preferencias.js';
+import './nucleo/tareas_auto.js';
 import { escucharRetornoApp } from './nucleo/google.js';
 
 const app = document.getElementById('app');

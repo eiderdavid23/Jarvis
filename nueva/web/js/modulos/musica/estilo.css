@@ -1,0 +1,17 @@
+#mus-barra { width: 100%; accent-color: var(--cian); }
+.mus__controles { justify-content: center; gap: 14px; }
+.mus__controles .boton { min-width: 64px; }
+.mus__agregar { text-align: center; }
+.mus__lista { display: flex; flex-direction: column; gap: 6px; }
+.mus__pista {
+  padding: 12px 14px;
+  border-radius: var(--radio-chico);
+  border: 1px solid var(--borde);
+  background: var(--vidrio);
+  color: var(--texto);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mus__pista.activa { border-color: var(--cian); color: var(--cian); }

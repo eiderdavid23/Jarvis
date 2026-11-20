@@ -148,3 +148,6 @@
   letter-spacing: 0.12em;
   color: var(--texto-suave);
 }
+
+.nucleo[data-estado="ESCUCHANDO"] { animation-duration: 0.9s; }
+.nucleo[data-estado="HABLANDO"] { animation-duration: 1.4s; }

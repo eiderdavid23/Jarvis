@@ -1,0 +1,23 @@
+<section class="pantalla">
+  <header class="pantalla__barra">
+    <button class="boton boton--icono" type="button" data-ir="inicio">Inicio</button>
+    <h1 class="pantalla__titulo">MÚSICA</h1>
+    <span></span>
+  </header>
+  <div class="pantalla__cuerpo">
+    <div class="tarjeta">
+      <b id="mus-titulo">Sin canción</b>
+      <small id="mus-info">Agregue canciones de su celular</small>
+      <input id="mus-barra" type="range" min="0" max="100" value="0">
+      <div class="fila mus__controles">
+        <button id="mus-ant" class="boton" type="button">⏮</button>
+        <button id="mus-play" class="boton boton--primario" type="button">▶</button>
+        <button id="mus-sig" class="boton" type="button">⏭</button>
+      </div>
+    </div>
+    <label class="boton mus__agregar">Agregar canciones
+      <input id="mus-archivos" type="file" accept="audio/*" multiple hidden>
+    </label>
+    <div id="mus-lista" class="mus__lista"></div>
+  </div>
+</section>

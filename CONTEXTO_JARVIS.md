@@ -59,3 +59,13 @@ Pedido de David sobre la burbuja y las funciones:
   - [ ] Parte 2 (v1.32, APK): que el celular las dispare con la app cerrada (alarma exacta + sesion renovada con el refresh token guardado en la APK + `/chat?tarea=1`). Requiere APK nueva. Codigo entregado el 2 nov 2026 (`app/nativo/TareasAuto.java` + plugin + `auth.js`); pendiente: compilar la APK y probarla. Si la APK renueva la sesion con la app cerrada, el refresh token de la web queda viejo: `auth.js` lo adopta desde la parte nativa antes de renovar. Si se pasa la hora por mas de 30 minutos no se ejecuta (queda fallida). Para mensajes sin que David mire: Manos activas y modo automatico de las Manos.
   - [ ] Parte 3 (v1.33, servidor y web, sin APK nueva): elegir en que dispositivo se hace una tarea («manana a las 8, en el celular 2, mandale un WhatsApp a Mama»). Columna `dispositivo` en `tareas_auto` (`supabase_tareas2.sql`); `crear_tarea` valida el nombre contra las Manos y, si hay varios celulares y no se dijo cual, pregunta. A la hora, el mensaje a `/chat` lleva el dispositivo y la orden va a ESE celular, aunque la alarma suene en otro. Pendiente: probarla.
 - [x] Respuestas más rápidas (pedido el 20 nov 2026, v1.44, solo servidor): no se mandan las herramientas de seguridad, Minecraft, PC y TV salvo que el mensaje hable de eso; tiempo máximo por modelo 30 s (antes 85). Pendiente medir en uso real. Ideas siguientes: streaming real, guardar y resumir sin hacer esperar la respuesta.
+
+---
+
+## 3. Reescritura `nueva/` (en curso, 20 nov 2026)
+
+- Misma cuenta de Supabase y mismas variables de entorno que la versión vieja (`SUPABASE_URL`, `SUPABASE_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`).
+- Cada pantalla es un módulo en `nueva/web/js/modulos/<nombre>/` con `vista.html`, `estilo.css` y `logica.js`. Para ir a otra: `data-ir="nombre"`. El servidor registra cada módulo en `nueva/servidor/app.py`.
+- Colores solo en `nueva/web/css/tema_yarvex.css`; las preferencias (tema, animaciones) en `nucleo/preferencias.js`.
+- Satélites hechos: Chat, Música, Tareas (Automatizaciones), Ajustes, Manos. Voz: el núcleo conversa, pero el micrófono web no existe dentro de la APK (WebView): ahí se usa la burbuja nativa.
+- Pendiente: Gestos, Conectores, portar `manos_api.py` (órdenes de tocar la pantalla) y cambiar Vercel a `nueva`.

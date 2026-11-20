@@ -1,0 +1,4 @@
+.man__fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.man__ok { color: var(--cian); }
+.man__no { color: var(--texto-suave); }
+.man__fila input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--cian); }

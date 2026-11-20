@@ -1,0 +1,18 @@
+<section class="pantalla">
+  <header class="pantalla__barra">
+    <button class="boton boton--icono" type="button" data-ir="inicio">Inicio</button>
+    <h1 class="pantalla__titulo">TAREAS</h1>
+    <span></span>
+  </header>
+  <div class="pantalla__cuerpo">
+    <form id="tar-form" class="tarjeta">
+      <input id="tar-titulo" class="campo" maxlength="120" placeholder="Título" required>
+      <textarea id="tar-instruccion" class="campo" rows="3" maxlength="800" placeholder="¿Qué debe hacer Jarvis?" required></textarea>
+      <input id="tar-cuando" class="campo" type="datetime-local" required>
+      <button class="boton boton--primario" type="submit">Programar</button>
+      <p id="tar-mensaje" class="mensaje"></p>
+      <small>A la hora, Jarvis responde la instrucción y guarda la respuesta aquí. Se ejecuta con la app abierta.</small>
+    </form>
+    <div id="tar-lista" class="tar__lista"></div>
+  </div>
+</section>
