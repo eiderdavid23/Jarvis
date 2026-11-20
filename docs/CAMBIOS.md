@@ -101,3 +101,10 @@
 - `musica/logica.js` exporta `control` y `volumen`. El satelite Gestos del inicio ya abre el modulo.
 - `app/parches.py` agrega el permiso CAMERA: requiere APK nueva.
 - Pendiente probar en el celular.
+
+## 20 nov 2026 - Doble aplauso y musica de bienvenida
+- `nucleo/aplauso.js`: detector puro de doble aplauso (golpe corto y fuerte; ignora voz y musica) + lectura del microfono con AnalyserNode. Probado con senales simuladas.
+- `nucleo/bienvenida.js`: la cancion se guarda en IndexedDB (no se pierde al cerrar), suena baja mientras Jarvis dice el saludo y se apaga sola a los 25 s con fundido.
+- `nucleo/encendido.js`: enciende/apaga la escucha segun la preferencia `aplauso` y la sesion. `principal.js` lo importa.
+- Ajustes: seccion «Música de bienvenida» (elegir, saludo, probar, detener, quitar) e interruptor «Encender con doble aplauso» en Preferencias.
+- Solo funciona con la app abierta. Pendiente probar el microfono dentro de la APK (el WebView puede no darlo).
