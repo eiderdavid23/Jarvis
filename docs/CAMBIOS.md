@@ -78,3 +78,8 @@
 - v1.44 (20 nov 2026): respuestas mas rapidas: ya no se mandan al modelo las 35 herramientas de seguridad ni las de Minecraft, PC y TV salvo que el mensaje (o los ultimos) hablen de eso, y el tiempo maximo por modelo baja de 85 s a 30 s para saltar mas rapido al siguiente. Solo servidor (reiniciar). Si en Vercel existe la variable TIMEOUT_IA, cambiarla a 30.
 
 - v2.0-nueva (20 nov 2026): reescritura en `nueva/` con el diseño Yarvex, por módulos (cada pantalla vive en `nueva/web/js/modulos/<nombre>/`). Hecho: acceso, chat, inicio orbital con voz (solo navegador), Ajustes (cuenta, 4 temas, reducir animaciones, llaves Gemini y Groq), Música (canciones del celular), Tareas (se ejecutan con la app abierta) y Manos (permisos y burbuja, solo APK). Pendiente: Gestos, Conectores y portar `manos_api.py` al servidor nuevo. Vercel sigue sirviendo la versión vieja hasta cambiar Root Directory a `nueva`.
+
+## 20 nov 2026 - nueva/ pasa a la raiz
+- `nueva/` ahora es la raiz del repo (server.py, servidor/, web/, requirements.txt) para que Vercel la tome sin cambiar Root Directory.
+- El proyecto anterior queda intacto en `v1/` como respaldo (no se despliega).
+- Docs en `docs/`. `app/` y `.github/` siguen en la raiz; `apk.yml` toma el icono de `web/icon.svg`; `build-pc.yml` compila `v1/agente_pc.py`.

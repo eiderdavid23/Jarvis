@@ -43,9 +43,9 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.incluir.so }}" = "ubuntu-latest" ]; then
-            xvfb-run -a pyinstaller --onefile --name JarvisPC --console agente_pc.py
+            xvfb-run -a pyinstaller --onefile --name JarvisPC --console v1/agente_pc.py
           else
-            pyinstaller --onefile --name JarvisPC --console agente_pc.py
+            pyinstaller --onefile --name JarvisPC --console v1/agente_pc.py
           fi
 
       - name: Nombrar el archivo de salida
