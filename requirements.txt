@@ -1,9 +1,0 @@
-flask
-python-dotenv
-requests
-pypdf
-gunicorn
-cryptography
-tzdata
-edge-tts>=7.2.7
-beautifulsoup4
