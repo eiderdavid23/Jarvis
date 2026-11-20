@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="manos_descripcion">Jarvis usa este permiso para ver tu pantalla y tocar, escribir o hacer scroll solo cuando tú se lo pides. Antes de actuar te pide confirmación. Puedes apagarlo aquí en cualquier momento.</string>
+</resources>

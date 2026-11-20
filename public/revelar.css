@@ -1,0 +1,10 @@
+/* Respuesta por partes: cada bloque aparece con una entrada suave */
+.rvOculto { display: none !important; }
+.rvEntra { animation: rvEntra .38s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes rvEntra {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rvEntra { animation: none; }
+}

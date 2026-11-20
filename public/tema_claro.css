@@ -1,0 +1,35 @@
+/* Tema claro en blanco y negro (como Claude). El azul solo va en el botón de enviar / modo voz. */
+:root[data-tema="claro"] {
+  --fondo: #ffffff; --panel: #ffffff; --panel2: #f6f6f6;
+  --linea: rgba(0,0,0,.14); --cian: #1a1a1a; --texto: #1a1a1a; --suave: #6b6b6b;
+  --acento: #0b7fa6;
+  --md-enlace: #0b6fa0; --md-fuerte: #000000; --md-codigo: rgba(0,0,0,.06);
+  --md-borde: rgba(0,0,0,.14); --md-cita: rgba(0,0,0,.28);
+}
+:root[data-tema="claro"], :root[data-tema="claro"] body { background: #ffffff; }
+[data-tema="claro"] .btnIcono:active, [data-tema="claro"] .sbItem:active { background: rgba(0,0,0,.07); }
+[data-tema="claro"] .chip { background: rgba(0,0,0,.04); }
+[data-tema="claro"] .chip:active { background: rgba(0,0,0,.1); }
+[data-tema="claro"] .fila.user .burbuja { background: #f0f0f0; border-color: rgba(0,0,0,.05); }
+[data-tema="claro"] #inputArea { box-shadow: 0 4px 20px rgba(0,0,0,.09); }
+[data-tema="claro"] #inputArea:focus-within { border-color: rgba(0,0,0,.4); }
+[data-tema="claro"] #texto::placeholder, [data-tema="claro"] #pieVoz small, [data-tema="claro"] .sbSeccion { color: #8a8a8a; }
+[data-tema="claro"] #btnAccion { background: var(--acento); color: #fff; }
+[data-tema="claro"] #sidebar { background: #f7f7f7; }
+[data-tema="claro"] #panelAjustes { background: #ffffff; border-color: var(--linea); box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+[data-tema="claro"] #btnCerrarPanel { background: #f2f2f2; border-color: var(--linea); }
+[data-tema="claro"] .tabAjuste { color: #555; }
+[data-tema="claro"] .vistaAjuste p { color: #555; }
+[data-tema="claro"] .card { background: #f7f7f7; border-color: var(--linea); }
+[data-tema="claro"] .badge { color: #666; border-color: var(--linea); }
+[data-tema="claro"] .campoTexto::placeholder { color: #999; }
+[data-tema="claro"] .filaSwitch input { accent-color: #1a1a1a; }
+[data-tema="claro"] [style*="border-color:#00e5ff55"] { border-color: rgba(0,0,0,.3) !important; }
+[data-tema="claro"] .chatItem.activo { background: rgba(0,0,0,.07); }
+[data-tema="claro"] .auBg::before { background-image: linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px); }
+[data-tema="claro"] .auBlob { opacity: .07; }
+[data-tema="claro"] .auCard { background: rgba(255,255,255,.92); box-shadow: 0 24px 70px rgba(0,0,0,.14); }
+[data-tema="claro"] .auGo { box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+[data-tema="claro"] .auGo:hover { box-shadow: 0 8px 26px rgba(0,0,0,.26); }
+[data-tema="claro"] .hoja { box-shadow: 0 -10px 40px rgba(0,0,0,.16); }
+[data-tema="claro"] #toastAdj { box-shadow: 0 8px 30px rgba(0,0,0,.16); }

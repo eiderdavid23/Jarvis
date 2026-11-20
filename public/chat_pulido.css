@@ -1,0 +1,26 @@
+/* Pulido del chat (v1.40): estado vacio con saludo y sugerencias, y boton Detener dentro del boton de enviar. */
+
+/* --- Chat nuevo sin mensajes: saludo y sugerencias en vez de pantalla en blanco --- */
+body.m-chat.chat-vacio #bienvenida {
+  opacity: 1; pointer-events: auto;
+  transform: translateY(30vh);
+}
+body.m-chat.chat-vacio #bienvenida .chip { cursor: pointer; }
+
+/* --- Detener: el boton de enviar pasa a cuadrado con un anillo que gira --- */
+body.jv-ocupado #btnAccion .icoOnda,
+body.jv-ocupado #btnAccion .icoEnviar { opacity: 0 !important; transform: scale(.4) !important; }
+body.jv-ocupado #btnAccion::after {
+  content: ''; position: absolute; width: 12px; height: 12px; border-radius: 3px;
+  background: currentColor; animation: jvLate 1.4s ease-in-out infinite;
+}
+body.jv-ocupado #btnAccion::before {
+  content: ''; position: absolute; inset: 3px; border-radius: 50%;
+  border: 2px solid transparent; border-top-color: currentColor; border-right-color: currentColor;
+  opacity: .55; animation: jvGira 1s linear infinite;
+}
+@keyframes jvGira { to { transform: rotate(360deg); } }
+@keyframes jvLate { 0%, 100% { transform: scale(1); } 50% { transform: scale(.82); } }
+@media (prefers-reduced-motion: reduce) {
+  body.jv-ocupado #btnAccion::before, body.jv-ocupado #btnAccion::after { animation: none; }
+}

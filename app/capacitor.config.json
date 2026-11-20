@@ -1,0 +1,11 @@
+{
+  "appId": "com.david.jarvis",
+  "appName": "Jarvis",
+  "webDir": "www",
+  "server": {
+    "url": "https://jarvis-mu-ebon-12.vercel.app"
+  },
+  "android": {
+    "backgroundColor": "#05070d"
+  }
+}

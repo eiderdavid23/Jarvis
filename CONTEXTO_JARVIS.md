@@ -2,50 +2,13 @@
 
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
-Última actualización: 20 nov 2026
-Versión actual: 0.1 (proyecto reiniciado desde cero)
+Última actualización: 2 nov 2026
+Versión actual: 1.41 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
 
-## 1. Qué se va a hacer
-
-Un **asistente de voz para Android** (referencia: https://villacisjushep02-ship-it.github.io/yarvex-web/), que hable con David, entienda lo que dice y haga cosas en el celular por él.
-
-**Decisión clave:** la inteligencia viene de la **API de Gemini (Google) con una llave de API**. **No hay modelo local por ahora.** La idea del «cerebro local sin internet» que tiene la página de referencia queda fuera de esta etapa; si se quiere después, se agrega como una etapa aparte.
-
-### Qué toma del proyecto de referencia (la página)
-- Mandar mensajes por voz (dictar y enviar por WhatsApp).
-- Leer notificaciones, priorizando mensajes, y ofrecer leerlas en voz alta y responder.
-- Ver la pantalla para ubicar botones y contactos cuando una orden simple no alcanza.
-- Sugerir rutinas según hábitos, no solo esperar órdenes.
-- Privacidad: las conversaciones se quedan en el teléfono; la cuenta guarda solo ajustes y apodos de contactos.
-
-### Qué NO entra por ahora
-- Modelo local / modo sin internet.
-- Planes, pagos, prueba gratis, página de descarga.
-- Todo lo del Jarvis anterior (módulos, TV, PC, Minecraft, gastos, tareas automáticas, PDF, etc.). Si algo se necesita, se vuelve a agregar de a una pieza.
-
-### Estado
-- [ ] Proyecto limpio: dejar en el repo solo lo necesario para la nueva versión.
-- [x] Definir la primera etapa (ver decisiones tomadas).
-- [ ] Conectar Gemini con la llave en `.env`.
-- [ ] Primera respuesta de la IA funcionando.
-
-### Decisiones tomadas (20 nov 2026)
-1. Primera etapa: chat y acciones en el celular, todo junto.
-2. El servidor va en Vercel.
-3. El nombre es Jarvis.
-4. Modelo: el gratis que sirva para todo, `gemini-3.8-flash` (nivel gratuito). Va en `.env` como `GEMINI_MODEL` para cambiarlo sin tocar código.
-
-### Limitaciones reales (no olvidar)
-- Vercel no guarda archivos ni corre procesos largos: el servidor solo atiende peticiones. Lo que deba guardarse va en una base de datos aparte.
-- Las acciones en el celular (WhatsApp, notificaciones, ver pantalla) no se pueden hacer desde la web ni desde Termux: hace falta una APK con permisos de accesibilidad. Se construye por etapas.
-- El nivel gratuito de Gemini tiene límite de peticiones por minuto y por día, y Google puede usar lo que se le envía para mejorar sus productos. Eso choca con la promesa de privacidad: decidir más adelante si se avisa al usuario o se pasa a pago.
-
----
-
-## 2. Reglas estrictas de trabajo
+## 1. Reglas estrictas de trabajo
 
 David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y usa GitHub. Todo debe servirle así.
 
@@ -59,4 +22,39 @@ David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y 
 8. **Antes de cada deploy**: `git status` para confirmar que todo está subido (ya falló una vez porque `requirements.txt` no se había subido).
 9. **Si algo se corrigió en `.env` y sigue fallando igual**: sospechar primero que el servidor no se reinició (Flask lee el `.env` solo al arrancar).
 10. **Cambios grandes en un archivo**: se escribe como archivo nuevo (ej. `public/nuevo.html`) por partes con `cat >>`, con el conteo acumulado de `wc -l` en cada parte. Solo cuando coincide se reemplaza el original, guardando antes una copia fuera del repo (`cp public/index.html ~/index_anterior.html`).
-11. **Llaves y secretos**: nunca se piden ni se aceptan en el chat. La llave de Gemini se crea en Google AI Studio y va solo en `.env` (`GEMINI_API_KEY`) y en Vercel si se despliega ahí. Si David pega una por error, se le pide rotarla de inmediato.
+11. **Llaves y secretos**: nunca se piden ni se aceptan en el chat. Si hace falta una llave nueva, se indica dónde crearla y que va solo en `.env` y en Vercel. Si David pega una por error, se le pide rotarla de inmediato.
+
+---
+
+
+## 2. Registro de tareas (marcar cada una al terminarla)
+
+Pedido de David sobre la burbuja y las funciones:
+
+- [x] La burbuja también habla: lee la respuesta en voz alta (v1.15).
+- [x] Activar/desactivar funciones con la voz o el chat («Jarvis, desactiva el modo escucha»):
+  - [x] Parte 1: el servidor entiende la orden (`funciones_voz.py`).
+  - [x] Parte 2: la burbuja la aplica y confirma con voz.
+  - [x] Parte 3: el chat de la app la aplica (`public/ordenes_voz.js`) y los interruptores de Herramientas se sincronizan con la burbuja.
+- [x] Poder abrir la burbuja mientras trabaja y botón Detener dentro de la burbuja (v1.17). Requiere APK nueva.
+- [x] Pantalla de inicio con saludos variados según la hora, el día, la fecha y los recordatorios de hoy, y sugerencias que cambian (v1.18, `public/saludos.js`). Solo web.
+- [x] La burbuja se cierra sola al terminar de hablar (v1.19, `BurbujaManos.java`). Requiere APK nueva.
+- [x] Varios celulares con la misma cuenta (v1.20): nombre propio al vincular y campo `dispositivo` en ver_pantalla y controlar_pantalla.
+- [ ] Modo local sin internet (pedido el 14 nov 2026): que Jarvis pase solo al modelo local cuando se va el internet o la luz, o se elija a mano, y que haga sin API lo simple (encender pantalla, saludos).
+  - [x] Parte 1 (v1.41, solo web): `public/modo_local.js` (el chat usa el modelo local, reglas sin IA y paso automatico) y fila «Modelo local» en el selector. Pendiente: probarla en el celular.
+  - [ ] Parte 2 (APK): la burbuja y las ordenes del celular (pantalla, linterna, volumen, abrir apps) sin internet.
+  - [ ] Parte 3 (APK): pantalla minima dentro de la APK para cuando no hay internet (hoy la app carga desde Vercel).
+- [x] Resumen de pasos estilo Claude y respuesta por partes (v1.34, solo web): `public/pasos.js` y `public/pasos.css` (linea de tiempo con iconos), `public/revelar.js` y `public/revelar.css` (la respuesta aparece bloque por bloque; la llama `index.html` con `window.jarvisRevelar`). El streaming real del modelo (palabra por palabra) NO esta hecho: haria falta tocar `rotacion_ia.py` y todos los proveedores.
+- [x] Crear PDF (v1.37): QUITADO en v1.38 (14 nov 2026). Jarvis ya no crea PDF ni genera imagenes; si se retoma, esta en el historial de git.
+- [ ] Pantalla apagada en celulares y PC (v1.22 servidor y web, v1.23 APK):
+  - [x] Parte 1: ordenes `encender_pantalla` y `apagar_pantalla` en el servidor y boton de bateria en la web (v1.22).
+  - [x] Parte 2: la APK mantiene la CPU despierta, enciende y apaga la pantalla (v1.23). Requiere APK nueva.
+  - [x] Parte 3: la palabra «Jarvis» con pantalla apagada.
+  - [ ] Parte 4 (PAUSADA, David la dejo para despues): `agente_pc.py` (encender el monitor y evitar la suspension). No retomarla hasta que David lo pida.
+- [ ] Controlar la TV desde la APK sin Termux (pedido el 1 nov 2026, v1.26, requiere APK nueva): `TvRemoto.java` (protocolo Android TV Remote v2: certificado propio, emparejamiento con codigo, teclas, volumen, apps), `TvOrdenes.java` (lista fija de ordenes, igual que agente_tv.py) y `TvAgente.java` (lee la cola con el token de la TV y busca TVs por mDNS). La pantalla de vincular esta en `public/vincular_tv.js` (en el navegador queda el metodo de Termux). Pendiente: probarlo en la TV real (MOKA R3GS) y marcar esta tarea.
+- [ ] Probar `agente_pc.py` en un PC real (hecho sin poder probarlo): vincular, abrir programa, capturar, volumen, mover archivo. Herramienta `controlar_pc` en server.py; ordenes `pc_*` en la cola de Manos; el PC se vincula con plataforma 'pc'. El agente pide permiso en pantalla salvo con --control; apagar, reiniciar y mover archivos siempre piden permiso.
+- [ ] Probar la TV real (MOKA R3GS, Android TV, 10.0.0.43), primero desde la APK (Herramientas > Controlar una TV: buscar, codigo, volumen, abrir YouTube, apagar y encender) y solo si falla, con `agente_tv.py` en Termux. Herramienta `controlar_tv` en server.py; ordenes `tv_*` en la cola de Manos; la TV se vincula con plataforma 'tv'. Requiere `supabase_tv.sql`.
+- [ ] Tareas automaticas (pedido el 2 nov 2026): que Jarvis haga algo solo a una hora («manana a las 8 mandale un WhatsApp a Mama»), aunque el celular este bloqueado, con la pantalla apagada o la app cerrada. Con el celular apagado de verdad NO se puede.
+  - [x] Parte 1 (v1.31, servidor y web, sin APK nueva): `supabase_tareas.sql`, `tareas_api.py` (herramientas crear_tarea, listar_tareas, cancelar_tarea; reclamar atomico: se ejecuta una sola vez, sin reintentos), `public/tareas.js` (ejecuta con la app abierta) y `public/tareas.html` (modulo Tareas automaticas). Probada el 2 nov 2026: funciona.
+  - [ ] Parte 2 (v1.32, APK): que el celular las dispare con la app cerrada (alarma exacta + sesion renovada con el refresh token guardado en la APK + `/chat?tarea=1`). Requiere APK nueva. Codigo entregado el 2 nov 2026 (`app/nativo/TareasAuto.java` + plugin + `auth.js`); pendiente: compilar la APK y probarla. Si la APK renueva la sesion con la app cerrada, el refresh token de la web queda viejo: `auth.js` lo adopta desde la parte nativa antes de renovar. Si se pasa la hora por mas de 30 minutos no se ejecuta (queda fallida). Para mensajes sin que David mire: Manos activas y modo automatico de las Manos.
+  - [ ] Parte 3 (v1.33, servidor y web, sin APK nueva): elegir en que dispositivo se hace una tarea («manana a las 8, en el celular 2, mandale un WhatsApp a Mama»). Columna `dispositivo` en `tareas_auto` (`supabase_tareas2.sql`); `crear_tarea` valida el nombre contra las Manos y, si hay varios celulares y no se dijo cual, pregunta. A la hora, el mensaje a `/chat` lleva el dispositivo y la orden va a ESE celular, aunque la alarma suene en otro. Pendiente: probarla.

@@ -1,0 +1,27 @@
+/* Hoja "Modelo local" (solo APK). Quitar su <link> no rompe nada. */
+#hojaLocal { max-height: 88vh; overflow-y: auto; }
+#hojaLocal .lcNota { margin: 8px 4px 4px; font-size: 12px; line-height: 1.4; color: var(--suave, #8a94a6); }
+#hojaLocal .lcCard {
+  margin-top: 10px; padding: 14px 16px; border: 1px solid var(--linea2, rgba(255,255,255,.12));
+  border-radius: 16px; background: var(--panel2, #1d2430); color: var(--texto, #eef2f8);
+}
+#hojaLocal .lcNom { font-size: 15px; font-weight: 600; }
+#hojaLocal .lcSub { margin-top: 2px; font-size: 12px; color: var(--suave, #8a94a6); }
+#hojaLocal .lcFila { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+#hojaLocal .lcBtn {
+  padding: 8px 14px; border: 1px solid var(--linea2, rgba(255,255,255,.12)); border-radius: 999px;
+  background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer;
+}
+#hojaLocal .lcBtn.p { background: var(--cian, #35d0e8); color: var(--sobre-cian, #04141a); border-color: transparent; }
+#hojaLocal .lcBtn:disabled { opacity: .45; }
+#hojaLocal .lcBarra { height: 6px; margin-top: 10px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+#hojaLocal .lcBarra > i { display: block; height: 100%; background: var(--cian, #35d0e8); transition: width .3s ease; }
+#hojaLocal .lcPre {
+  margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,.25);
+  font-size: 12px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; max-height: 30vh; overflow: auto;
+}
+#hojaLocal .lcTag {
+  margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-style: normal; font-size: 11px; font-weight: 600;
+  background: var(--cian-suave, rgba(53,208,232,.15)); color: var(--cian, #35d0e8); vertical-align: 1px;
+}
+#hojaLocal .lcDesc { margin-top: 6px; font-size: 13px; line-height: 1.4; }

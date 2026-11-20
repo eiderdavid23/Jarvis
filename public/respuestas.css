@@ -1,0 +1,42 @@
+/* Formato de las respuestas de Jarvis (títulos, negritas, citas, listas, tablas, enlaces) */
+:root {
+  --md-enlace: #4fd8ff; --md-fuerte: #ffffff; --md-codigo: rgba(255,255,255,.09);
+  --md-borde: rgba(255,255,255,.14); --md-cita: rgba(0,229,255,.55);
+}
+.burbuja.md { white-space: normal; }
+.burbuja.md > :first-child { margin-top: 0; }
+.burbuja.md > :last-child { margin-bottom: 0; }
+.burbuja.md p { margin: 0 0 12px; }
+.burbuja.md strong { color: var(--md-fuerte); font-weight: 650; }
+.burbuja.md em { font-style: italic; }
+.burbuja.md a { color: var(--md-enlace); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; word-break: break-all; }
+.burbuja.md h1, .burbuja.md h2, .burbuja.md h3, .burbuja.md h4 {
+  margin: 18px 0 8px; line-height: 1.3; color: var(--md-fuerte); font-weight: 650;
+}
+.burbuja.md h1 { font-size: 20px; }
+.burbuja.md h2 { font-size: 18px; }
+.burbuja.md h3 { font-size: 16px; }
+.burbuja.md h4 { font-size: 15px; }
+.burbuja.md ul, .burbuja.md ol { margin: 0 0 12px; padding-left: 22px; }
+.burbuja.md li { margin: 4px 0; padding-left: 2px; }
+.burbuja.md li > ul, .burbuja.md li > ol { margin: 4px 0 4px; }
+.burbuja.md hr { border: 0; border-top: 1px solid var(--md-borde); margin: 16px 0; }
+.burbuja.md blockquote {
+  margin: 0 0 12px; padding: 4px 0 4px 14px; border-left: 3px solid var(--md-cita); color: var(--suave);
+}
+.burbuja.md blockquote p { margin: 0 0 8px; }
+.burbuja.md blockquote strong { color: inherit; }
+.burbuja.md code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: .9em;
+  background: var(--md-codigo); padding: 2px 6px; border-radius: 6px;
+}
+.burbuja.md pre {
+  margin: 0 0 12px; padding: 12px 14px; background: var(--md-codigo); border: 1px solid var(--md-borde);
+  border-radius: 12px; overflow-x: auto; white-space: pre;
+}
+.burbuja.md pre code { background: none; padding: 0; font-size: 13px; }
+.burbuja.md .tablaMd { overflow-x: auto; margin: 0 0 12px; border: 1px solid var(--md-borde); border-radius: 12px; }
+.burbuja.md table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.burbuja.md th, .burbuja.md td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--md-borde); }
+.burbuja.md th { color: var(--md-fuerte); font-weight: 650; background: var(--md-codigo); }
+.burbuja.md tr:last-child td { border-bottom: 0; }

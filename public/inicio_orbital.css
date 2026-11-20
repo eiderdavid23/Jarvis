@@ -1,0 +1,102 @@
+/* Inicio orbital de Jarvis (v1.38, solo web).
+   El orbe queda al centro como nucleo y alrededor van los satelites. */
+
+/* --- El orbe sube al centro y se achica --- */
+body.m-inicio #orbWrap {
+  transform: translate3d(0, calc(var(--oiCy, 300px) - var(--orbG) / 2), 0) scale(var(--oiEsc, .58));
+  cursor: pointer;
+}
+body.m-inicio #bienvenida { display: none; }
+body.m-inicio #estado { opacity: 0; }
+body.m-inicio #inputArea { transform: translateY(140%); opacity: 0; pointer-events: none; }
+
+/* --- Capa orbital --- */
+#inicioOrbital {
+  position: fixed; inset: 0; z-index: 4; pointer-events: none;
+  opacity: 0; transition: opacity .6s ease;
+}
+body.m-inicio #inicioOrbital { opacity: 1; }
+#oiCentro { position: absolute; left: 50%; top: var(--oiCy, 300px); width: 0; height: 0; }
+#oiAnillos { position: absolute; pointer-events: none; }
+#oiAnillos svg { display: block; width: 100%; height: 100%; }
+
+/* --- Satelites --- */
+.oiSat {
+  position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px;
+  opacity: 0; transform: scale(.6); pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+}
+body.m-inicio .oiSat {
+  opacity: 1; transform: none; pointer-events: auto;
+  transition: opacity .5s ease var(--d, 0s), transform .6s cubic-bezier(.2,.8,.2,1) var(--d, 0s);
+}
+.oiBtn {
+  width: 56px; height: 56px; padding: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(7,16,24,.88); border: 1px solid rgba(0,229,255,.3); color: var(--cian);
+  box-shadow: 0 0 18px rgba(0,229,255,.08); -webkit-tap-highlight-color: transparent;
+  transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
+  animation: oiFlota 5s ease-in-out infinite; animation-delay: var(--d, 0s);
+}
+.oiBtn:active { transform: scale(.9); background: rgba(0,229,255,.16); box-shadow: 0 0 22px rgba(0,229,255,.35); }
+.oiEt {
+  position: absolute; top: 62px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--suave); white-space: nowrap; pointer-events: none;
+}
+@keyframes oiFlota { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+
+/* --- Texto de estado abajo --- */
+#oiEstado {
+  position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 34px);
+  z-index: 4; text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s ease;
+}
+body.m-inicio #oiEstado { opacity: 1; }
+#oiEstado b { display: block; font-size: 13px; font-weight: 800; letter-spacing: 4px; color: var(--suave); }
+#oiEstado small { display: block; margin-top: 6px; font-size: 12px; letter-spacing: 1.5px; color: var(--suave); opacity: .85; }
+
+/* --- Hoja inferior (la usan los satelites con opciones) --- */
+#oiVelo {
+  position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.55);
+  opacity: 0; pointer-events: none; transition: opacity .3s ease;
+}
+#oiVelo.abierta { opacity: 1; pointer-events: auto; }
+#oiHoja {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; max-width: 560px; margin: 0 auto;
+  background: #0b141d; border: 1px solid var(--linea); border-bottom: none;
+  border-radius: 22px 22px 0 0; color: var(--texto);
+  padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  transform: translateY(105%); transition: transform .35s cubic-bezier(.2,.8,.2,1);
+}
+#oiHoja.abierta { transform: none; }
+.oiAgarre { width: 38px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); margin: 0 auto 12px; }
+.oiTit { margin: 0 0 6px; font-size: 16px; font-weight: 700; }
+.oiFila {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; margin-top: 8px; padding: 13px 14px; text-align: left;
+  background: rgba(0,229,255,.05); border: 1px solid var(--linea); border-radius: 14px; color: var(--texto);
+  font-size: 15px; -webkit-tap-highlight-color: transparent;
+}
+.oiFila:active { background: rgba(0,229,255,.14); }
+.oiFila small { display: block; margin-top: 3px; font-size: 12px; color: var(--suave); }
+.oiSw { flex: 0 0 42px; height: 24px; border-radius: 12px; background: #24323d; position: relative; transition: background .2s ease; }
+.oiSw::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+  border-radius: 50%; background: #9fb4bd; transition: transform .2s ease, background .2s ease;
+}
+.oiSw.on { background: rgba(0,229,255,.35); }
+.oiSw.on::after { transform: translateX(18px); background: var(--cian); }
+.oiInput {
+  width: 100%; box-sizing: border-box; margin-top: 8px; padding: 13px 14px; font-size: 16px;
+  background: rgba(255,255,255,.05); border: 1px solid var(--linea); border-radius: 14px;
+  color: var(--texto); outline: none;
+}
+.oiNota { margin: 10px 2px 0; font-size: 12px; line-height: 1.45; color: var(--suave); }
+
+/* --- Tema claro --- */
+[data-tema="claro"] .oiBtn { background: #fff; color: #0a7c8f; border-color: rgba(10,124,143,.35); }
+[data-tema="claro"] #oiHoja { background: #fff; color: #12303a; }
+[data-tema="claro"] .oiFila, [data-tema="claro"] .oiInput { color: #12303a; background: rgba(10,124,143,.06); }
+
+/* La bolita de arriba abre la orbita al tocarla */
+body.m-chat #orbWrap { cursor: pointer; }

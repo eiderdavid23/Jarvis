@@ -1,0 +1,107 @@
+/* Ajustes estilo Claude: pagina completa en celular, ventana con menu lateral en pantallas grandes */
+#overlayAjustes {
+  --aj-fondo: #090d14; --aj-card: #141b27; --aj-fila: #141b27; --aj-borde: rgba(255,255,255,.1);
+  --aj-texto: #f0fbff; --aj-suave: #a9c7d0; --aj-sel: rgba(0,229,255,.14); --aj-acento: var(--cian);
+}
+:root[data-tema="claro"] #overlayAjustes {
+  --aj-fondo: #ffffff; --aj-card: #f6f6f6; --aj-fila: #f6f6f6; --aj-borde: rgba(0,0,0,.12);
+  --aj-texto: #1a1a1a; --aj-suave: #5c5c5c; --aj-sel: rgba(0,0,0,.07); --aj-acento: #0b7fa6;
+}
+#overlayAjustes { padding: 0; background: var(--aj-fondo); backdrop-filter: none; align-items: stretch; justify-content: stretch; }
+#overlayAjustes #panelAjustes {
+  width: 100%; max-height: none; height: 100%; border: 0; border-radius: 0; box-shadow: none;
+  background: var(--aj-fondo); color: var(--aj-texto);
+  transform: translateX(28px); opacity: 0; transition: transform .4s var(--ease), opacity .3s ease;
+}
+#overlayAjustes.abierto #panelAjustes { transform: none; opacity: 1; }
+#overlayAjustes #panelHeader {
+  gap: 10px; justify-content: flex-start; border-bottom: 1px solid var(--aj-borde);
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 12px; min-height: 56px;
+}
+#overlayAjustes #panelHeader > span { flex: 1; font-size: 18px; font-weight: 600; letter-spacing: 0; color: var(--aj-texto); }
+#overlayAjustes #btnCerrarPanel, #ajBack {
+  width: 40px; height: 40px; flex: 0 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--aj-borde); color: var(--aj-texto); font-size: 22px; padding: 0;
+}
+#ajBack { display: none; }
+#ajBack svg { width: 20px; height: 20px; }
+
+/* Menu de secciones */
+#overlayAjustes #tabsAjustes { flex-direction: column; gap: 0; padding: 14px 16px; overflow-y: auto; border-bottom: 0; }
+#overlayAjustes .tabAjuste {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 14px; min-height: 58px;
+  border: 0; border-radius: 0; background: var(--aj-fila); color: var(--aj-texto);
+  font-size: 16px; letter-spacing: 0; text-transform: none; text-align: left; font-weight: 500;
+  border-bottom: 1px solid var(--aj-borde);
+}
+#overlayAjustes .tabAjuste:first-child { border-radius: 16px 16px 0 0; }
+#overlayAjustes .tabAjuste:last-child { border-radius: 0 0 16px 16px; border-bottom: 0; }
+#overlayAjustes .tabAjuste:active { background: var(--aj-sel); }
+#overlayAjustes .tabAjuste.activo { background: var(--aj-fila); color: var(--aj-texto); font-weight: 500; }
+.tabIco { width: 22px; height: 22px; flex: 0 0 auto; color: var(--aj-acento); }
+.tabTxt { flex: 1; }
+.tabFlecha { width: 18px; height: 18px; color: var(--aj-suave); flex: 0 0 auto; }
+
+/* Contenido */
+#overlayAjustes #contenidoAjustes { padding: 18px 16px calc(env(safe-area-inset-bottom, 0px) + 28px); font-size: 15px; color: var(--aj-texto); }
+#overlayAjustes .vistaAjuste h3 { font-size: 13px; letter-spacing: .6px; color: var(--aj-suave); margin: 4px 4px 12px; }
+#overlayAjustes .vistaAjuste p { color: var(--aj-suave); }
+#overlayAjustes .vistaAjuste p[style*="opacity"] { opacity: 1 !important; color: var(--aj-suave); font-size: 12.5px !important; line-height: 1.5; }
+#overlayAjustes .card { background: var(--aj-card); border: 1px solid var(--aj-borde); border-radius: 16px; padding: 16px; }
+#overlayAjustes .cardHead strong, #overlayAjustes .card strong { color: var(--aj-texto); font-size: 15px; }
+#overlayAjustes .filaSwitch { color: var(--aj-texto); }
+#overlayAjustes .badge { border-color: var(--aj-borde); color: var(--aj-suave); font-size: 11px; }
+#overlayAjustes .campoTexto, #overlayAjustes .campoMeta {
+  background: var(--aj-fondo); border: 1px solid var(--aj-borde); color: var(--aj-texto); font-size: 16px; border-radius: 12px; padding: 12px 14px;
+}
+#overlayAjustes .campoMeta { font-size: 14px; padding: 4px 8px; width: 72px; }
+#overlayAjustes .campoTexto::placeholder { color: var(--aj-suave); opacity: .75; }
+#overlayAjustes .btnPanel { min-height: 42px; border-radius: 12px; padding: 10px 16px; }
+#overlayAjustes .btnPanel.secundario { color: var(--aj-texto); border-color: var(--aj-borde); }
+#overlayAjustes .usoBarraFondo { background: var(--aj-fondo); border-color: var(--aj-borde); }
+#overlayAjustes .opcionesTema { background: var(--aj-fondo); border-color: var(--aj-borde); }
+#overlayAjustes .opTema { color: var(--aj-suave); }
+#overlayAjustes .opTema.on { background: var(--aj-acento); color: #fff; }
+:root:not([data-tema="claro"]) #overlayAjustes .opTema.on { color: #05070d; }
+
+/* Celular: menu o detalle, una pantalla a la vez */
+@media (max-width: 819px) {
+  #panelAjustes[data-vista="menu"] #contenidoAjustes { display: none; }
+  #panelAjustes[data-vista="detalle"] #tabsAjustes { display: none; }
+  #panelAjustes[data-vista="detalle"] #ajBack { display: flex; }
+  #panelAjustes[data-vista="detalle"] #contenidoAjustes { animation: ajEntra .35s var(--ease) both; }
+  @keyframes ajEntra { from { opacity: 0; transform: translateX(24px); } }
+}
+
+/* Pantalla grande: ventana con menu a la izquierda */
+@media (min-width: 820px) {
+  #overlayAjustes { background: rgba(0,0,0,.6); backdrop-filter: blur(3px); align-items: center; justify-content: center; padding: 24px; }
+  #overlayAjustes #panelAjustes {
+    width: min(920px, 94vw); height: min(640px, 88vh); border-radius: 20px; border: 1px solid var(--aj-borde);
+    box-shadow: 0 24px 80px rgba(0,0,0,.55); transform: translateY(14px) scale(.98);
+    display: grid; grid-template-columns: 250px 1fr; grid-template-rows: auto 1fr; grid-template-areas: "head head" "tabs content";
+  }
+  #overlayAjustes.abierto #panelAjustes { transform: none; }
+  #overlayAjustes #panelHeader { grid-area: head; padding-top: 14px; }
+  #overlayAjustes #tabsAjustes { grid-area: tabs; padding: 12px; gap: 4px; border-right: 1px solid var(--aj-borde); }
+  #overlayAjustes #contenidoAjustes { grid-area: content; min-height: 0; padding: 22px 26px; }
+  #overlayAjustes .tabAjuste, #overlayAjustes .tabAjuste:first-child, #overlayAjustes .tabAjuste:last-child {
+    border: 0; border-radius: 12px; background: transparent; min-height: 46px; padding: 10px 12px;
+  }
+  #overlayAjustes .tabAjuste:hover { background: var(--aj-sel); }
+  #overlayAjustes .tabAjuste.activo { background: var(--aj-sel); font-weight: 600; }
+  .tabFlecha { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { #overlayAjustes #panelAjustes { transition-duration: .01ms; } }
+
+/* Etiquetas (En uso / Inactiva / Sin conectar): centradas y con buen contraste */
+#overlayAjustes .badge {
+  display: inline-flex; align-items: center; align-self: center; line-height: 1.2;
+  padding: 6px 12px; height: auto; border-radius: 999px;
+}
+#overlayAjustes .badge.on {
+  background: rgba(74,222,128,.16); color: #4ade80; border-color: rgba(74,222,128,.55); font-weight: 600;
+}
+:root[data-tema="claro"] #overlayAjustes .badge.on {
+  background: rgba(21,128,61,.12); color: #15803d; border-color: rgba(21,128,61,.5);
+}

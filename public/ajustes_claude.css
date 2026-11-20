@@ -1,0 +1,40 @@
+/* Ajustes estilo Claude: filas agrupadas en tarjetas (se carga despues de dialogo.css) */
+#overlayAjustes .ajFila {
+  display: flex; align-items: center; gap: 14px; width: 100%; margin: 0; padding: 12px 18px;
+  font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  color: var(--aj-texto); background: var(--aj-fila); border: 0;
+}
+#overlayAjustes .ajFila.pronto { opacity: .55; cursor: default; }
+#overlayAjustes .ajFila.salir .tabIco, #overlayAjustes .ajFila.salir .tabTxt b { color: var(--rojo, #ff6b6b); }
+#overlayAjustes .ajFila .chipPronto { margin-left: auto; flex: 0 0 auto; }
+#overlayAjustes .ajFila .tabTxt small:empty { display: none; }
+
+/* El menu ahora es mas largo que la pantalla: tiene que poder hacer scroll */
+#overlayAjustes #tabsAjustes { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#overlayAjustes #tabsAjustes > * { flex-shrink: 0; }
+
+@media (max-width: 819px) {
+  #overlayAjustes #tabsAjustes { flex: 1 1 0; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); }
+  :root:root:root #overlayAjustes #tabsAjustes { gap: 0; }
+  :root:root:root #overlayAjustes .ajGrupo { margin: 0 0 14px; border-radius: 20px; overflow: hidden; background: var(--aj-fila); }
+  :root:root:root #overlayAjustes .ajGrupo > .tabAjuste,
+  :root:root:root #overlayAjustes .ajGrupo > .ajFila {
+    min-height: 68px; padding: 12px 18px; border: 0; border-bottom: 2px solid var(--aj-fondo);
+    border-radius: 0 !important; background: var(--aj-fila); box-shadow: none;
+  }
+  :root:root:root #overlayAjustes .ajGrupo > :last-child { border-bottom: 0; }
+  :root:root:root #overlayAjustes .ajGrupo > .tabAjuste:active,
+  :root:root:root #overlayAjustes .ajGrupo > .ajFila:not(.pronto):active { background: var(--aj-sel); }
+}
+
+@media (min-width: 820px) {
+  :root:root:root #overlayAjustes .ajGrupo { margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--aj-borde); }
+  :root:root:root #overlayAjustes .ajGrupo:last-child { border-bottom: 0; }
+  :root:root:root #overlayAjustes .ajGrupo > .ajFila {
+    min-height: 54px; padding: 8px 10px; border-radius: 14px; background: transparent; box-shadow: none;
+  }
+  :root:root:root #overlayAjustes .ajGrupo > .ajFila:not(.pronto):hover { background: var(--aj-sel); }
+  #overlayAjustes .ajFila .tabTxt small, #overlayAjustes .ajFila .chipPronto { display: none; }
+  #overlayAjustes .ajFila .tabTxt b { font-size: 15px; }
+  #overlayAjustes .ajFila .tabIco { width: 20px; height: 20px; }
+}

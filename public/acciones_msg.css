@@ -1,0 +1,27 @@
+/* Botones bajo cada respuesta de Jarvis y barra de los bloques de código */
+.accMsg { display: flex; gap: 2px; margin-top: 6px; margin-left: -8px; }
+.accBtn {
+  width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 0; border-radius: 8px; color: inherit; opacity: .55;
+}
+.accBtn svg { width: 19px; height: 19px; pointer-events: none; }
+.accBtn:active, .accBtn.activo, .accBtn.marcado { opacity: 1; background: rgba(127,127,127,.2); }
+.accBtn.activo { color: var(--cian); }
+.codBloque {
+  margin: 0 0 12px; border: 1px solid var(--md-borde); border-radius: 12px;
+  overflow: hidden; background: var(--md-codigo);
+}
+.codCab {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 2px 6px 2px 14px; font-size: 13px; background: rgba(127,127,127,.14);
+}
+.codCab span { opacity: .8; }
+.codAcc { display: flex; gap: 2px; }
+.burbuja.md .codBloque pre { margin: 0; border: 0; border-radius: 0; background: none; }
+.codAmplio {
+  position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column;
+  background: var(--fondo); color: var(--texto);
+}
+.codAmplio .codCab { padding-top: calc(env(safe-area-inset-top, 0px) + 6px); font-size: 14px; }
+.codAmplio pre { flex: 1; margin: 0; padding: 14px; overflow: auto; font-size: 13px; line-height: 1.5; white-space: pre; }
+.codAmplio code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }

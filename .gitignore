@@ -21,5 +21,3 @@ jarvis.apk
 *.bak
 *.bak[0-9]
 parche_*.py
-*.bak*
-p[0-9].py
