@@ -1,0 +1,33 @@
+/* Piezas reutilizables: boton, campo, panel. Cada modulo las usa tal cual. */
+.panel {
+  padding: var(--espacio);
+  border-radius: var(--radio);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.campo {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--radio-chico);
+  outline: none;
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 18px;
+  border-radius: var(--radio-chico);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+}
+.boton:active { transform: scale(0.98); }
+.boton:disabled { opacity: 0.5; cursor: default; }
+
+.boton--icono { padding: 10px 14px; }
+
+.mensaje { min-height: 1.2em; font-size: 14px; }

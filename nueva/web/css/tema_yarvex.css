@@ -1,0 +1,52 @@
+/* Tema Yarvex: negro azulado, cian y vidrio. Aqui se cambia TODO el color. */
+:root {
+  --fondo: #05070d;
+  --fondo-2: #0a1220;
+  --texto: #e8f4fb;
+  --texto-suave: #8fa8b8;
+  --cian: #4fd8ff;
+  --cian-oscuro: #0e5f78;
+  --vidrio: rgba(16, 30, 46, 0.65);
+  --borde: rgba(79, 216, 255, 0.22);
+  --error: #ff6b6b;
+}
+
+body {
+  background: radial-gradient(120% 70% at 50% 0%, var(--fondo-2) 0%, var(--fondo) 60%);
+  color: var(--texto);
+}
+
+.panel {
+  background: var(--vidrio);
+  border: 1px solid var(--borde);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.campo {
+  background: rgba(5, 12, 22, 0.7);
+  border: 1px solid var(--borde);
+}
+.campo::placeholder { color: var(--texto-suave); }
+.campo:focus { border-color: var(--cian); box-shadow: 0 0 0 3px rgba(79, 216, 255, 0.15); }
+
+.boton {
+  background: var(--vidrio);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+}
+.boton--primario {
+  background: linear-gradient(180deg, #6fe3ff, var(--cian));
+  border-color: transparent;
+  color: #031018;
+}
+
+.mensaje { color: var(--error); }
+.mensaje--ok { color: var(--cian); }
+
+/* Anillos y nucleo de la pantalla de inicio */
+:root {
+  --cian-tenue: rgba(79, 216, 255, 0.18);
+  --cian-medio: rgba(79, 216, 255, 0.4);
+  --cian-brillo: rgba(79, 216, 255, 0.55);
+}

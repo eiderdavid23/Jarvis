@@ -1,0 +1,150 @@
+.inicio {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--arriba) + 16px) 16px calc(var(--abajo) + 20px);
+}
+
+.inicio__cabecera { text-align: center; }
+
+.inicio__titulo {
+  font-size: 26px;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
+  color: var(--cian);
+}
+
+.inicio__sub {
+  margin-top: 4px;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+/* ---- Orbita: el centro es el punto 50% / 50% y --R es el radio de los satelites ---- */
+.orbita {
+  --R: clamp(80px, 31vw, 140px);
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.orbita__anillos {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--R) * 2.6);
+  height: calc(var(--R) * 2.6);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.anillo {
+  fill: none;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.anillo--orbita { stroke: var(--cian-tenue); stroke-width: 0.8; }
+.anillo--puntos { stroke: var(--cian-tenue); stroke-width: 1; stroke-dasharray: 1 7; animation: giro 90s linear infinite; }
+.anillo--arcos { stroke: var(--cian-medio); stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 110 40 60 90 30 160; animation: giro 40s linear infinite reverse; }
+.anillo--fino { stroke: var(--cian-tenue); stroke-width: 2; stroke-dasharray: 2 5; animation: giro 60s linear infinite; }
+.anillo--centro { stroke: var(--cian-tenue); stroke-width: 0.8; }
+
+@keyframes giro { to { transform: rotate(360deg); } }
+
+/* ---- Nucleo ---- */
+.nucleo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--R) * 0.62);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--cian-medio);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d5f6ff, #4aaecf 38%, #0b3b52 78%);
+  box-shadow: 0 0 28px var(--cian-brillo), inset 0 0 14px rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  animation: respirar 4s ease-in-out infinite;
+}
+
+@keyframes respirar {
+  50% { box-shadow: 0 0 42px var(--cian-brillo), inset 0 0 18px rgba(255, 255, 255, 0.35); }
+}
+
+/* ---- Satelites: giran al angulo --ang, se alejan --R y vuelven a quedar derechos ---- */
+.sat {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cian);
+  cursor: pointer;
+  transform: rotate(var(--ang)) translateX(var(--R)) rotate(calc(var(--ang) * -1));
+}
+
+.sat__icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--vidrio);
+  border: 1px solid var(--borde);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.15s;
+}
+.sat:active .sat__icono { transform: scale(0.92); }
+
+.sat__icono svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sat__nombre {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-top: 5px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+/* ---- Estado ---- */
+.inicio__estado { text-align: center; }
+
+.inicio__estado b {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--texto);
+}
+
+.inicio__estado small {
+  display: block;
+  margin-top: 4px;
+  min-height: 1.2em;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--texto-suave);
+}
