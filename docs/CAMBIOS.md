@@ -83,3 +83,7 @@
 - `nueva/` ahora es la raiz del repo (server.py, servidor/, web/, requirements.txt) para que Vercel la tome sin cambiar Root Directory.
 - El proyecto anterior queda intacto en `v1/` como respaldo (no se despliega).
 - Docs en `docs/`. `app/` y `.github/` siguen en la raiz; `apk.yml` toma el icono de `web/icon.svg`; `build-pc.yml` compila `v1/agente_pc.py`.
+
+## 20 nov 2026 - arreglo pantalla negra
+- Faltaba `web/js/nucleo/google.js` (lo importaban principal.js y auth/logica.js): sin el, la app no arrancaba.
+- `sesion.js` ahora tiene `avisar()` y `tomarAviso()`, que usa la pantalla de acceso.

@@ -19,6 +19,16 @@ export const sesion = {
     [ACCESO, REFRESCO, CORREO].forEach((k) => localStorage.removeItem(k));
   },
 
+  // Aviso corto para la pantalla de acceso (por ejemplo, sesion vencida).
+  avisar(texto) { try { sessionStorage.setItem('jv_aviso', texto); } catch (e) { /* sin almacenamiento */ } },
+  tomarAviso() {
+    try {
+      const t = sessionStorage.getItem('jv_aviso') || '';
+      sessionStorage.removeItem('jv_aviso');
+      return t;
+    } catch (e) { return ''; }
+  },
+
   // Al volver de entrar con Google, Supabase deja los tokens en el # de la direccion.
   leerDeLaDireccion() {
     const h = new URLSearchParams(location.hash.replace(/^#/, ''));
