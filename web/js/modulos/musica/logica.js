@@ -74,3 +74,7 @@ export function iniciar(raiz) {
   armarLista();
   pintar();
 }
+
+// Control desde otros modulos (por ejemplo Gestos).
+export const control = { alternar, siguiente: () => mover(1), anterior: () => mover(-1) };
+export function volumen(v) { audio.volume = Math.max(0, Math.min(1, v)); }

@@ -93,3 +93,11 @@
 - Ahora: anillos giran en 12-28 s, ondas tipo radar salen del nucleo, el nucleo late (escala + brillo), los satelites entran escalonados y flotan, el titulo brilla.
 - Reaccionan al estado: ESCUCHANDO (ondas rapidas), PENSANDO (arcos rapidos), HABLANDO (anillo central rapido).
 - Solo usa transform/opacity/filter. "Reducir animaciones" en Ajustes las apaga todas.
+
+## 20 nov 2026 - Gestos (camara)
+- Nuevo modulo `web/js/modulos/gestos/` (vista, estilo, logica) y `web/js/nucleo/gesto.js` (clasificador puro de 21 puntos).
+- Gestos: palma = reproducir/pausar, un dedo = siguiente, dos dedos = anterior, pellizco = volumen segun la altura de la mano. Se sostienen 0,8 s; 1,2 s de enfriamiento.
+- MediaPipe Hand Landmarker (tasks-vision 0.10.14) se carga de jsDelivr solo al activar la camara; el video no sale del celular.
+- `musica/logica.js` exporta `control` y `volumen`. El satelite Gestos del inicio ya abre el modulo.
+- `app/parches.py` agrega el permiso CAMERA: requiere APK nueva.
+- Pendiente probar en el celular.

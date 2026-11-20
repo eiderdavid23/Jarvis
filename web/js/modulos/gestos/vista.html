@@ -1,0 +1,27 @@
+<section class="pantalla">
+  <header class="pantalla__barra">
+    <button class="boton boton--icono" type="button" data-ir="inicio">Inicio</button>
+    <h1 class="pantalla__titulo">GESTOS</h1>
+    <span></span>
+  </header>
+  <div class="pantalla__cuerpo">
+    <div class="tarjeta">
+      <div class="ges__visor">
+        <video id="ges-video" playsinline muted></video>
+        <canvas id="ges-lienzo"></canvas>
+        <div id="ges-gesto" class="ges__gesto" hidden></div>
+      </div>
+      <b id="ges-estado">Camara apagada</b>
+      <small id="ges-sub">Controle la música con la mano frente a la cámara</small>
+      <button id="ges-boton" class="boton boton--primario" type="button">Activar cámara</button>
+    </div>
+    <div class="tarjeta">
+      <b>Gestos</b>
+      <div class="ges__fila"><span>✋ Palma abierta</span><small>Reproducir / pausar</small></div>
+      <div class="ges__fila"><span>☝️ Un dedo</span><small>Canción siguiente</small></div>
+      <div class="ges__fila"><span>✌️ Dos dedos</span><small>Canción anterior</small></div>
+      <div class="ges__fila"><span>👌 Pellizco</span><small>Volumen: suba o baje la mano</small></div>
+      <small>Mantenga cada gesto casi un segundo. La imagen de la cámara no sale de su celular.</small>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,35 @@
+.ges__visor {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radio-chico);
+  overflow: hidden;
+  background: #02060c;
+  border: 1px solid var(--borde);
+}
+.ges__visor video,
+.ges__visor canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* espejo, como un espejo de verdad */
+}
+.ges__gesto {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--vidrio);
+  border: 1px solid var(--borde);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--cian);
+  white-space: nowrap;
+}
+.ges__gesto--ok { animation: ges-ok 0.5s ease-out; }
+@keyframes ges-ok { 0% { scale: 1.25; } 100% { scale: 1; } }
+.ges__fila { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
