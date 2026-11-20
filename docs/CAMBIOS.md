@@ -87,3 +87,9 @@
 ## 20 nov 2026 - arreglo pantalla negra
 - Faltaba `web/js/nucleo/google.js` (lo importaban principal.js y auth/logica.js): sin el, la app no arrancaba.
 - `sesion.js` ahora tiene `avisar()` y `tomarAviso()`, que usa la pantalla de acceso.
+
+## 20 nov 2026 - animaciones de inicio
+- `web/js/modulos/inicio/estilo.css` reescrito: antes los anillos tardaban 40-90 s en dar una vuelta y el nucleo solo cambiaba la sombra, por eso parecia estatico.
+- Ahora: anillos giran en 12-28 s, ondas tipo radar salen del nucleo, el nucleo late (escala + brillo), los satelites entran escalonados y flotan, el titulo brilla.
+- Reaccionan al estado: ESCUCHANDO (ondas rapidas), PENSANDO (arcos rapidos), HABLANDO (anillo central rapido).
+- Solo usa transform/opacity/filter. "Reducir animaciones" en Ajustes las apaga todas.
