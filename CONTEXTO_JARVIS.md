@@ -2,8 +2,8 @@
 
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
-Última actualización: 2 nov 2026
-Versión actual: 1.47 (ver CAMBIOS.md)
+Última actualización: 21 nov 2026
+Versión actual: 1.48 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -31,6 +31,7 @@ David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y 
 
 Pedido de David sobre la burbuja y las funciones:
 
+- [x] Barra lateral fija y buscador de chats (pedido el 21 nov 2026, v1.48, solo web): en pantallas de 900 px o mas (y 600 px de alto) la barra queda anclada a la izquierda y se pliega con el boton de panel, como la de Gemini (la eleccion se guarda en `jarvisSbFija`); en celular sigue siendo el panel que se desliza. Buscador de chats por titulo (sin mayusculas ni tildes, Ctrl+K). Archivos: `public/sidebar_fija.js` y `public/sidebar_fija.css`, enlazados en `public/index.html`. Pendiente: probarla en el navegador real y, si se quiere, buscar tambien dentro de los mensajes.
 - [x] La burbuja también habla: lee la respuesta en voz alta (v1.15).
 - [x] Activar/desactivar funciones con la voz o el chat («Jarvis, desactiva el modo escucha»):
   - [x] Parte 1: el servidor entiende la orden (`funciones_voz.py`).

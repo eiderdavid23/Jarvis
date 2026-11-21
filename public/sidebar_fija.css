@@ -1,0 +1,72 @@
+/* Barra lateral fija (escritorio) + buscador de chats.
+   En pantallas grandes la barra queda anclada a la izquierda y se pliega con un boton, como la de Gemini.
+   En celular no cambia nada: sigue siendo el panel que se desliza. */
+
+:root { --sbW: 300px; }
+
+/* ---------- Buscador de chats ---------- */
+#sbBuscaCaja {
+  display: flex; align-items: center; gap: 8px; height: 40px; margin: 2px 0 6px; padding: 0 6px 0 12px;
+  border-radius: 14px; border: 1px solid var(--linea);
+  background: var(--vidrio, rgba(255,255,255,.05)); transition: border-color .2s, background .2s;
+}
+#sbBuscaCaja:focus-within { border-color: var(--cian-borde, rgba(0,229,255,.45)); background: var(--vidrio2, rgba(255,255,255,.08)); }
+#sbBuscaCaja > svg { width: 17px; height: 17px; flex: none; color: var(--suave); }
+#sbBusca {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: transparent;
+  color: var(--texto); font: inherit; font-size: 16px;
+}
+#sbBusca::placeholder { color: var(--suave); opacity: .85; }
+#sbBuscaX {
+  display: none; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
+  align-items: center; justify-content: center; background: transparent; color: var(--suave);
+}
+#sbBuscaX svg { width: 14px; height: 14px; }
+#sbBuscaX:active { background: rgba(127,127,127,.22); }
+@media (hover: hover) { #sbBuscaX:hover { background: rgba(127,127,127,.18); color: var(--texto); } }
+#sbBuscaCaja.conTexto #sbBuscaX { display: flex; }
+
+#sbResultados { overflow-y: auto; max-height: 60vh; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--linea) transparent; }
+#sbResultados[hidden] { display: none !important; }
+#sbResultados .sbResTit { padding: 10px 10px 6px; font-size: 12.5px; font-weight: 600; color: var(--suave); }
+#sbResultados mark { background: var(--cian-suave, rgba(0,229,255,.22)); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+/* Mientras se busca, solo quedan visibles: titulo, Nuevo chat, el buscador, los resultados y la cuenta */
+#sidebar.sbBuscando > *:not(.sbTop):not(#sbNuevo):not(#sbBuscaCaja):not(#sbResultados):not(#sbAjustes):not(.sbPie) { display: none !important; }
+
+/* ---------- Barra fija en escritorio (la clase sb-esc la pone sidebar_fija.js) ---------- */
+#btnCerrarSidebar .icoPanel { display: none; }
+body.sb-esc #btnCerrarSidebar > svg:not(.icoPanel) { display: none; }
+body.sb-esc #btnCerrarSidebar .icoPanel { display: block; }
+
+/* El panel ya no se desliza encima del chat ni oscurece la pantalla */
+:root:root body.sb-esc #velo { display: none; }
+:root:root body.sb-esc #sidebar {
+  width: var(--sbW); transform: translateX(-102%); transition: none; box-shadow: none; visibility: hidden;
+  overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--linea) transparent;
+}
+:root:root body.sb-esc.sb-fijo #sidebar { transform: none; visibility: visible; }
+
+/* La lista de chats ocupa el espacio que sobra y se desplaza sola; Ajustes y la cuenta quedan abajo */
+:root:root body.sb-esc #listaChats,
+:root:root body.sb-esc #sbResultados {
+  flex: 1 1 0; min-height: 96px; max-height: none !important; overflow-y: auto !important;
+  scrollbar-width: thin; scrollbar-color: var(--linea) transparent;
+}
+:root:root body.sb-esc #sidebar > #listaChats,
+:root:root body.sb-esc #sidebar > #sbResultados { flex-shrink: 1; }
+:root:root body.sb-esc #listaProyectos { max-height: 30vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--linea) transparent; }
+
+/* Con la barra fija, el contenido se corre a la derecha */
+body.sb-fijo { --sbOff: var(--sbW); padding-left: var(--sbW); }
+body.sb-fijo #btnMenu { visibility: hidden; pointer-events: none; }
+body.sb-fijo #orbWrap { left: calc(var(--sbOff) + (100% - var(--sbOff)) / 2 - var(--orbG) / 2); }
+body.sb-fijo #estado,
+body.sb-fijo #bienvenida,
+body.sb-fijo #panelVoz,
+body.sb-fijo #pieVoz,
+body.sb-fijo #oiEstado,
+body.sb-fijo #inicioOrbital,
+body.sb-fijo .hoja,
+body.sb-fijo #oiHoja { left: var(--sbOff); }
+body.sb-fijo #toastAdj { left: calc(50% + var(--sbOff) / 2); }
