@@ -123,7 +123,7 @@
     if (typeof recognition !== 'undefined' && !recognition) { aviso('Este navegador no tiene reconocimiento de voz'); return; }
     if (typeof entrarVoz === 'function') entrarVoz();
   };
-  acciones.ajustes = function () { abrirAjustesTab('llave'); };
+  acciones.ajustes = function () { if (typeof abrirAjustes === 'function') abrirAjustes(); };
   acciones.manos = function () { abrirAjustesTab('manos'); };
 
   function construir() {

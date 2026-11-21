@@ -1,0 +1,66 @@
+/* Ajustes estilo Yarvex (v1.47): tarjetas plegables en una sola pantalla.
+   Todo va dentro de #overlayAjustes para conservar los estilos de cada vista. */
+#overlayAjustes #tabsAjustes,
+#overlayAjustes #contenidoAjustes,
+#overlayAjustes #ajBack { display: none !important; }
+#overlayAjustes #panelAjustes { grid-template-columns: 1fr !important; }
+
+#overlayAjustes #ajyLista {
+  flex: 1 1 0; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  grid-column: 1 / -1; padding: 14px 16px calc(env(safe-area-inset-bottom, 0px) + 28px);
+}
+#ajyLista .ajyCard {
+  margin: 0 0 12px; border-radius: 22px; overflow: hidden;
+  background: var(--aj-fila, #141b27);
+  border: 1px solid var(--linea, rgba(0,229,255,.16));
+}
+#ajyLista .ajyCard.abierta { border-color: var(--cian, #00e5ff); box-shadow: 0 0 0 1px rgba(0,229,255,.12), 0 8px 26px rgba(0,229,255,.06); }
+#ajyLista .ajyCab {
+  display: flex; align-items: center; gap: 14px; width: 100%; margin: 0; min-height: 74px;
+  padding: 12px 16px; font: inherit; text-align: left; cursor: pointer; border: 0;
+  background: transparent; color: var(--aj-texto, #f0fbff); -webkit-tap-highlight-color: transparent;
+}
+#ajyLista .ajyIco {
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center;
+  color: var(--cian, #00e5ff); background: rgba(0,229,255,.10); border: 1px solid rgba(0,229,255,.18);
+}
+#ajyLista .ajyTxt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#ajyLista .ajyTxt b { font-size: 16.5px; font-weight: 700; letter-spacing: .1px; }
+#ajyLista .ajyTxt small { font-size: 12.5px; color: var(--aj-suave, #a9c7d0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ajyLista .ajyTxt small:empty { display: none; }
+#ajyLista .ajyFlecha { flex: 0 0 auto; width: 20px; height: 20px; color: var(--aj-suave, #a9c7d0); transition: transform .25s ease; }
+#ajyLista .ajyCard.abierta .ajyFlecha { transform: rotate(180deg); }
+#ajyLista .ajyCard[data-accion] .ajyFlecha { transform: none; }
+#ajyLista .ajyCuerpo { padding: 4px 16px 18px; font-size: 14px; line-height: 1.55; color: var(--aj-texto, #f0fbff); }
+#ajyLista .ajyCuerpo[hidden] { display: none; }
+#ajyLista .ajyCuerpo .vistaAjuste,
+#ajyLista .ajyCuerpo .vistaAjuste.activo,
+#ajyLista .ajyCuerpo .sbOculto { display: block !important; animation: none; }
+#ajyLista .ajyCuerpo .vistaAjuste > h3:first-child { margin-top: 6px; }
+
+#ajyLista .ajyPerfil { display: flex; align-items: center; gap: 14px; padding: 6px 0 14px; }
+#ajyLista .ajyAv {
+  width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 700;
+  color: #05222a; background: var(--cian, #00e5ff);
+}
+#ajyLista .ajyPerfil b { display: block; font-size: 16px; }
+#ajyLista .ajyPerfil small { display: block; color: var(--aj-suave, #a9c7d0); word-break: break-all; }
+#ajyLista .ajyFila {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 8px; padding: 14px 14px; min-height: 52px;
+  font: inherit; font-size: 15px; text-align: left; cursor: pointer; border-radius: 14px;
+  color: var(--aj-texto, #f0fbff); background: rgba(255,255,255,.04); border: 1px solid var(--aj-borde, rgba(255,255,255,.1));
+}
+#ajyLista .ajyFila:active { background: rgba(0,229,255,.12); }
+#ajyLista .ajyFila.salir { color: var(--rojo, #ff6b6b); justify-content: center; font-weight: 600; }
+#ajyLista .ajyFila small { display: block; color: var(--aj-suave, #a9c7d0); font-size: 12px; }
+#ajyLista .ajyVacio { color: var(--aj-suave, #a9c7d0); font-size: 13px; padding: 6px 2px; }
+
+/* Barra lateral limpia: lo suelto vive ahora en Ajustes o en la orbita */
+body.ajy-limpio #sbVoz,
+body.ajy-limpio #sbRecordatorios,
+body.ajy-limpio #modSeccion,
+body.ajy-limpio #modLista { display: none !important; }
+
+[data-tema="claro"] #ajyLista .ajyFila { background: rgba(0,0,0,.04); }
+[data-tema="claro"] #ajyLista .ajyIco { color: #0b7fa6; background: rgba(11,127,166,.08); border-color: rgba(11,127,166,.2); }
+[data-tema="claro"] #ajyLista .ajyAv { color: #fff; background: #0b7fa6; }
