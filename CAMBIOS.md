@@ -93,3 +93,4 @@
 - Conectores con animaciones: tarjetas que entran y se despliegan suave, barra de carga, mensajes y botones con transiciones.
 - Esfera de Jarvis nueva (estilo erizo): miles de particulas que giran, respiran y se disparan en picos con la voz.
 - Esfera mas grande y con mas puntos: los picos se disparan mas fuerte cuanto mas fuerte habla Jarvis.
+- Esfera rehecha: puntos redondos que brillan, picos en racimos y un solo color cian que no cambia.
