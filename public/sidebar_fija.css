@@ -39,13 +39,21 @@
 body.sb-esc #btnCerrarSidebar > svg:not(.icoPanel) { display: none; }
 body.sb-esc #btnCerrarSidebar .icoPanel { display: block; }
 
-/* El panel ya no se desliza encima del chat ni oscurece la pantalla */
+/* Animacion: --sbOff es el ancho que ocupa la barra y se anima; todo lo demas se calcula a partir de el */
+@property --sbOff { syntax: '<length>'; inherits: true; initial-value: 0px; }
+body.sb-esc { --sbOff: 0px; transition: --sbOff .4s cubic-bezier(.65, 0, .25, 1); }
+body.sb-esc.sb-fijo { --sbOff: var(--sbW); }
+body.sb-quieto { transition: none !important; }
+
+/* El panel ya no oscurece la pantalla: entra y sale empujando el contenido */
 :root:root body.sb-esc #velo { display: none; }
 :root:root body.sb-esc #sidebar {
-  width: var(--sbW); transform: translateX(-102%); transition: none; box-shadow: none; visibility: hidden;
+  width: var(--sbW); left: calc(var(--sbOff) - var(--sbW)); transform: none; box-shadow: none;
+  visibility: hidden; transition: visibility 0s linear .4s;
   overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--linea) transparent;
 }
-:root:root body.sb-esc.sb-fijo #sidebar { transform: none; visibility: visible; }
+:root:root body.sb-esc.sb-fijo #sidebar { visibility: visible; transition: none; }
+body.sb-quieto #sidebar { transition: none !important; }
 
 /* La lista de chats ocupa el espacio que sobra y se desplaza sola; Ajustes y la cuenta quedan abajo */
 :root:root body.sb-esc #listaChats,
@@ -57,16 +65,16 @@ body.sb-esc #btnCerrarSidebar .icoPanel { display: block; }
 :root:root body.sb-esc #sidebar > #sbResultados { flex-shrink: 1; }
 :root:root body.sb-esc #listaProyectos { max-height: 30vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--linea) transparent; }
 
-/* Con la barra fija, el contenido se corre a la derecha */
-body.sb-fijo { --sbOff: var(--sbW); padding-left: var(--sbW); }
+/* El contenido se corre a la derecha segun --sbOff (con la barra plegada vale 0 y todo queda como antes) */
+body.sb-esc { padding-left: var(--sbOff); }
 body.sb-fijo #btnMenu { visibility: hidden; pointer-events: none; }
-body.sb-fijo #orbWrap { left: calc(var(--sbOff) + (100% - var(--sbOff)) / 2 - var(--orbG) / 2); }
-body.sb-fijo #estado,
-body.sb-fijo #bienvenida,
-body.sb-fijo #panelVoz,
-body.sb-fijo #pieVoz,
-body.sb-fijo #oiEstado,
-body.sb-fijo #inicioOrbital,
-body.sb-fijo .hoja,
-body.sb-fijo #oiHoja { left: var(--sbOff); }
-body.sb-fijo #toastAdj { left: calc(50% + var(--sbOff) / 2); }
+body.sb-esc #orbWrap { left: calc(var(--sbOff) + (100% - var(--sbOff)) / 2 - var(--orbG) / 2); }
+body.sb-esc #estado,
+body.sb-esc #bienvenida,
+body.sb-esc #panelVoz,
+body.sb-esc #pieVoz,
+body.sb-esc #oiEstado,
+body.sb-esc #inicioOrbital,
+body.sb-esc .hoja,
+body.sb-esc #oiHoja { left: var(--sbOff); }
+body.sb-esc #toastAdj { left: calc(50% + var(--sbOff) / 2); }

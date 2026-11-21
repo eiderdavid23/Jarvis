@@ -63,7 +63,10 @@
     aplicar();
   }
 
+  /* sin animacion al cargar la pagina: solo se anima cuando se abre o cierra la barra */
+  body.classList.add('sb-quieto');
   aplicar();
+  requestAnimationFrame(function () { requestAnimationFrame(function () { body.classList.remove('sb-quieto'); }); });
   if (mq) {
     if (mq.addEventListener) mq.addEventListener('change', aplicar); else if (mq.addListener) mq.addListener(aplicar);
   }
