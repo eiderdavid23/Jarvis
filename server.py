@@ -58,8 +58,8 @@ app.register_blueprint(conectores_api.bp)
 
 # --- Gemini (API en la nube) ---
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.5-flash')
-GEMINI_MODEL_RESPALDO = os.environ.get('GEMINI_MODEL_RESPALDO', 'gemini-3.5-flash-lite')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.5-flash-lite')
+GEMINI_MODEL_RESPALDO = os.environ.get('GEMINI_MODEL_RESPALDO', 'gemini-3.5-flash')
 
 
 def url_gemini(modelo):
@@ -1239,7 +1239,7 @@ MAX_ADJUNTOS = 5
 MAX_TOTAL_ADJUNTOS = 3300000   # caracteres base64 sumados (Vercel limita el cuerpo a ~4.5 MB)
 MAX_TEXTO_ADJUNTO = 20000      # caracteres que se leen de cada archivo de texto o PDF
 MAX_PAGINAS_PDF = 40
-TIMEOUT_IA = int(os.environ.get('TIMEOUT_IA', '30'))
+TIMEOUT_IA = int(os.environ.get('TIMEOUT_IA', '10'))
 TIMEOUT_RESPALDO = int(os.environ.get('TIMEOUT_RESPALDO', '60'))
 
 IMAGENES_OK = {'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'}

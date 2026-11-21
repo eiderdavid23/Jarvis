@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 2 nov 2026
-Versión actual: 1.44 (ver CAMBIOS.md)
+Versión actual: 1.45 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -58,6 +58,6 @@ Pedido de David sobre la burbuja y las funciones:
   - [x] Parte 1 (v1.31, servidor y web, sin APK nueva): `supabase_tareas.sql`, `tareas_api.py` (herramientas crear_tarea, listar_tareas, cancelar_tarea; reclamar atomico: se ejecuta una sola vez, sin reintentos), `public/tareas.js` (ejecuta con la app abierta) y `public/tareas.html` (modulo Tareas automaticas). Probada el 2 nov 2026: funciona.
   - [ ] Parte 2 (v1.32, APK): que el celular las dispare con la app cerrada (alarma exacta + sesion renovada con el refresh token guardado en la APK + `/chat?tarea=1`). Requiere APK nueva. Codigo entregado el 2 nov 2026 (`app/nativo/TareasAuto.java` + plugin + `auth.js`); pendiente: compilar la APK y probarla. Si la APK renueva la sesion con la app cerrada, el refresh token de la web queda viejo: `auth.js` lo adopta desde la parte nativa antes de renovar. Si se pasa la hora por mas de 30 minutos no se ejecuta (queda fallida). Para mensajes sin que David mire: Manos activas y modo automatico de las Manos.
   - [ ] Parte 3 (v1.33, servidor y web, sin APK nueva): elegir en que dispositivo se hace una tarea («manana a las 8, en el celular 2, mandale un WhatsApp a Mama»). Columna `dispositivo` en `tareas_auto` (`supabase_tareas2.sql`); `crear_tarea` valida el nombre contra las Manos y, si hay varios celulares y no se dijo cual, pregunta. A la hora, el mensaje a `/chat` lleva el dispositivo y la orden va a ESE celular, aunque la alarma suene en otro. Pendiente: probarla.
-- [x] Respuestas más rápidas (pedido el 20 nov 2026, v1.44, solo servidor): no se mandan las herramientas de seguridad, Minecraft, PC y TV salvo que el mensaje hable de eso; tiempo máximo por modelo 30 s (antes 85). Pendiente medir en uso real. Ideas siguientes: streaming real, guardar y resumir sin hacer esperar la respuesta.
+- [x] Respuestas más rápidas (pedido el 20 nov 2026, v1.44, solo servidor): no se mandan las herramientas de seguridad, Minecraft, PC y TV salvo que el mensaje hable de eso; tiempo máximo por modelo 30 s (antes 85). v1.45 (21 nov 2026): Flash Lite pasa a ser el modelo principal, espera maxima 10 s y un modelo que no responde se descarta 10 min; un hola tardaba 32 s. Pendiente medir en uso real. Ideas siguientes: streaming real, guardar y resumir sin hacer esperar la respuesta.
 
 ---

@@ -166,7 +166,7 @@ def _clasificar(e):
     if isinstance(e, FalloModelo):
         return e.segundos, e.motivo
     if isinstance(e, (requests.exceptions.Timeout, requests.exceptions.ConnectionError)):
-        return 60, 'no responde'
+        return 600, 'no responde'
     if isinstance(e, requests.exceptions.HTTPError) and e.response is not None:
         c = e.response.status_code
         if c == 429:
