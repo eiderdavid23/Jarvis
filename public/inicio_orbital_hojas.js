@@ -102,11 +102,17 @@
     ]);
   };
   acc.automatizaciones = function () {
-    abrirHoja('Automatizaciones', [
+    var filas = [
+      fila('Agentes en segundo plano', 'Lo que Jarvis hace solo y si algo falló', function () { modulo('trabajos'); }),
       fila('Tareas automáticas', 'Que Jarvis haga algo solo a una hora', function () { modulo('tareas'); }),
       fila('Recordatorios', 'Ver los que tienes pendientes', function () { alChat('Muéstrame mis recordatorios', true); }),
       fila('Crear una tarea', 'La describes y Jarvis la programa', function () { alChat('Programa una tarea automática: ', false); })
-    ]);
+    ];
+    var fallos = (window.orbitaAgentes && window.orbitaAgentes.fallos()) || [];
+    fallos.forEach(function (f, i) {
+      filas.splice(i, 0, fila('⚠ ' + f.titulo, f.resultado, function () { modulo('trabajos'); }));
+    });
+    abrirHoja('Automatizaciones', filas);
   };
 
   /* --- Musica: en la app de Android busca Y REPRODUCE; en el navegador solo abre la busqueda --- */
