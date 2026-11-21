@@ -93,7 +93,7 @@
     transition: transform .9s var(--ease), opacity .4s ease, font-size .9s var(--ease), color .4s ease;
   }
   body.m-voz #estado { transform: translateY(calc(var(--yVoz) + var(--orbG) + 4px)); font-size: 14px; color: var(--cian); }
-  body.m-chat #estado { transform: translateY(calc(var(--yChat) + var(--orbG) / 2 + 26px)); font-size: 10px; }
+  body.m-chat #estado { transform: translateY(calc(var(--yChat) + var(--orbG) / 2 + 44px)); font-size: 10px; }
   body.m-chat.est-reposo #estado { opacity: 0; }
 
   /* --- Bienvenida --- */
@@ -913,10 +913,10 @@ function medirOrbe() {
   const G = Math.round(Math.max(180, Math.min(W * 0.66, H * 0.34, 300)));
   const raiz = document.documentElement.style;
   raiz.setProperty('--orbG', G + 'px');
-  raiz.setProperty('--sChat', (46 / G).toFixed(4));
+  raiz.setProperty('--sChat', (84 / G).toFixed(4));
   raiz.setProperty('--yInicio', Math.round(H * 0.31 - G / 2) + 'px');
   raiz.setProperty('--yVoz', Math.round(H * 0.33 - G / 2) + 'px');
-  raiz.setProperty('--yChat', Math.round(safe + 36 - G / 2) + 'px');
+  raiz.setProperty('--yChat', Math.round(safe + 44 - G / 2) + 'px');
 }
 window.addEventListener('resize', medirOrbe);
 medirOrbe();

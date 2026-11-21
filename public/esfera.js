@@ -6,7 +6,7 @@
    Cambiar de estilo: abrir la app con ?esfera=clasica o ?esfera=erizo (se guarda). */
 (function () {
   'use strict';
-  var N_MAX = 1500, cuenta = N_MAX;
+  var N_MAX = 3200, cuenta = 2400;
   var px = new Float32Array(N_MAX), py = new Float32Array(N_MAX), pz = new Float32Array(N_MAX);
   var fase = new Float32Array(N_MAX), kk = new Float32Array(N_MAX);
 
@@ -30,6 +30,7 @@
   var cubos = [], nc = [0, 0, 0, 0], i;
   for (i = 0; i < 4; i++) cubos.push(new Float32Array(N_MAX * 2));
   var lineas = new Float32Array(N_MAX * 4), nl = 0;
+  var lienzo = document.getElementById('orbCanvas'), escala = 1, nEsc = 0;
 
   var estilo = 'erizo';
   try {
@@ -38,6 +39,12 @@
     var s = localStorage.getItem('jarvisEsfera');
     if (s === 'clasica' || s === 'erizo') estilo = s;
   } catch (e) {}
+
+  /* El lienzo se dibuja mas grande que el orbe para que los picos tengan espacio */
+  function aplicarLienzo() {
+    if (lienzo) lienzo.style.cssText = estilo === 'erizo' ? 'position:absolute;left:-45%;top:-45%;width:190%;height:190%;pointer-events:none' : '';
+  }
+  aplicarLienzo();
 
   function rgb(c, a) { return 'rgba(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ',' + a + ')'; }
 
@@ -51,20 +58,20 @@
     cuadros++; acum += dt;
     if (cuadros === 60) {
       var prom = acum / 60;
-      if (prom > 26 && cuenta > 600) cuenta = Math.max(600, cuenta - 300);
-      else if (prom < 17.5 && cuenta < N_MAX) cuenta = Math.min(N_MAX, cuenta + 100);
+      if (prom > 26 && cuenta > 900) cuenta = Math.max(900, cuenta - 300);
+      else if (prom < 17.5 && cuenta < N_MAX) cuenta = Math.min(N_MAX, cuenta + 200);
       cuadros = 0; acum = 0;
     }
 
     var tm = ahora / 1000;
     var pulso = (typeof ondaPulso === 'number') ? ondaPulso : 0;
     var obj;
-    if (estado === 'hablando') obj = 0.5 + 0.2 * Math.sin(tm * 5.1) + 0.12 * Math.sin(tm * 11.3 + 1) + pulso * 0.3;
+    if (estado === 'hablando') obj = 0.55 + 0.25 * Math.sin(tm * 5.1) + 0.15 * Math.sin(tm * 11.3 + 1) + pulso * 0.5;
     else if (estado === 'escuchando') obj = 0.12 + 0.05 * Math.sin(tm * 2.2) + pulso * 0.85;
     else if (estado === 'pensando') obj = 0.1 + 0.05 * Math.sin(tm * 3);
     else obj = 0.03 + 0.015 * Math.sin(tm * 1.3);
     obj = Math.max(0, Math.min(1, obj));
-    nivel += (obj - nivel) * Math.min(1, dt * 0.011);
+    nivel += (obj - nivel) * Math.min(1, dt * 0.016);
     if (typeof ondaPulso === 'number') ondaPulso *= 0.93;
     if (typeof ondaNivel === 'number') ondaNivel = nivel;
 
@@ -77,9 +84,10 @@
     giro += vGiro * dt / 1000;
 
     var cx = w / 2, cy = h / 2;
-    var R = Math.min(w, h) * 0.22 * (1 + 0.03 * Math.sin(tm * 1.6) + nivel * 0.08);
+    var R = Math.min(w, h) * 0.16 * (1 + 0.03 * Math.sin(tm * 1.6) + nivel * 0.1 + pulso * 0.18);
     var cg = Math.cos(giro), sg = Math.sin(giro), ct = 0.94, st = 0.34;
     var pensando = estado === 'pensando';
+    var cl = document.body.classList, tope = cl.contains('m-inicio') ? 0.45 : (cl.contains('m-voz') ? 0.7 : 1.1);
     nc[0] = nc[1] = nc[2] = nc[3] = 0; nl = 0;
 
     for (var n = 0; n < cuenta; n++) {
@@ -88,9 +96,9 @@
       var y2 = y * ct - z1 * st, z2 = y * st + z1 * ct;
       var k = kk[n];
       var onda = 0.5 + 0.5 * Math.sin(tm * (2.5 + k * 3) + fase[n]);
-      var pico = nivel * k * k * k * (0.35 + 0.65 * onda) * 1.1;
+      var pico = nivel * k * k * (0.3 + 0.7 * onda) * 2.6;
       if (pensando) pico += 0.16 * Math.max(0, Math.sin(y * 5 - tm * 4));
-      if (pico > 0.5) pico = 0.5;
+      if (pico > tope) pico = tope;
       var f = 1 / (1 - z2 * 0.2);
       var sx = cx + x1 * R * (1 + pico) * f, sy = cy + y2 * R * (1 + pico) * f;
       var b = Math.min(3, ((0.3 + 0.7 * (z2 * 0.5 + 0.5)) * 4) | 0);
@@ -124,10 +132,11 @@
       ctx.stroke();
     }
     /* Puntos: del fondo al frente, mas claros y grandes los de adelante */
-    var sz0 = Math.max(1.4, w * 0.0042);
+    if (lienzo && (nEsc++ % 20 === 0)) { var rw = lienzo.getBoundingClientRect().width; if (rw > 0) escala = rw / w; }
+    var sz0 = Math.min(w * 0.012, Math.max(w * 0.0042, 1.3 / escala));
     ctx.fillStyle = rgb(col, 1);
     for (var c = 0; c < 4; c++) {
-      ctx.globalAlpha = 0.25 + 0.25 * c;
+      ctx.globalAlpha = claro ? 0.45 + 0.17 * c : 0.25 + 0.25 * c;
       var sz = sz0 * (0.8 + 0.17 * c), arr = cubos[c], m = nc[c] * 2;
       for (var p = 0; p < m; p += 2) ctx.fillRect(arr[p] - sz / 2, arr[p + 1] - sz / 2, sz, sz);
     }
@@ -140,7 +149,7 @@
     dibujar: dibujar,
     estilo: function (nuevo) {
       if (nuevo === 'erizo' || nuevo === 'clasica') {
-        estilo = nuevo;
+        estilo = nuevo; aplicarLienzo();
         try { localStorage.setItem('jarvisEsfera', nuevo); } catch (e) {}
       }
       return estilo;

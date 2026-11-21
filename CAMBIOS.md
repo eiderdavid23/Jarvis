@@ -92,3 +92,4 @@
 - v1.51 (21 nov 2026): la hoja «Conectores» del inicio orbital tiene la fila nueva «Gmail y más», que abre el modulo Conectores (donde se conecta Gmail con la contraseña de aplicacion). Solo web: `public/inicio_orbital_hojas.js`.
 - Conectores con animaciones: tarjetas que entran y se despliegan suave, barra de carga, mensajes y botones con transiciones.
 - Esfera de Jarvis nueva (estilo erizo): miles de particulas que giran, respiran y se disparan en picos con la voz.
+- Esfera mas grande y con mas puntos: los picos se disparan mas fuerte cuanto mas fuerte habla Jarvis.

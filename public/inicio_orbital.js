@@ -80,7 +80,7 @@
     var cy = Math.round(arriba + libre / 2 + 4);
     var G = parseFloat(getComputedStyle(raiz).getPropertyValue('--orbG')) || 240;
     raiz.style.setProperty('--oiCy', cy + 'px');
-    raiz.style.setProperty('--oiEsc', ((R * 1.05) / G).toFixed(4));
+    raiz.style.setProperty('--oiEsc', ((R * 1.3) / G).toFixed(4));
     var S = R * 2.6;
     anillos.style.width = S + 'px'; anillos.style.height = S + 'px';
     anillos.style.left = (-S / 2) + 'px'; anillos.style.top = (-S / 2) + 'px';
