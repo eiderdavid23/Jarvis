@@ -1,0 +1,5 @@
+/* Ajustes directos (v1.50): solo se ve la seccion pedida, sin su cabecera ni las otras tarjetas */
+body.ajy-solo #ajyLista .ajyCard:not(.ajySolo) { display: none !important; }
+body.ajy-solo #ajyLista .ajySolo { background: transparent; border: 0; box-shadow: none; border-radius: 0; }
+body.ajy-solo #ajyLista .ajySolo .ajyCab { display: none; }
+body.ajy-solo #ajyLista .ajySolo .ajyCuerpo { padding: 0 2px 18px; }
