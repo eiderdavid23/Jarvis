@@ -40,7 +40,7 @@ jobs:
         run: |
           sudo apt-get install -y librsvg2-bin
           mkdir -p assets
-          rsvg-convert -w 1024 -h 1024 -b '#05070d' ../nueva/web/icon.svg -o assets/icon.png
+          rsvg-convert -w 1024 -h 1024 -b '#05070d' ../public/icon.svg -o assets/icon.png
           npx --yes @capacitor/assets generate --android --iconBackgroundColor '#05070d'
       - name: Sincronizar
         working-directory: app

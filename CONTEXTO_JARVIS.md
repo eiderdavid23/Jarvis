@@ -61,11 +61,3 @@ Pedido de David sobre la burbuja y las funciones:
 - [x] Respuestas más rápidas (pedido el 20 nov 2026, v1.44, solo servidor): no se mandan las herramientas de seguridad, Minecraft, PC y TV salvo que el mensaje hable de eso; tiempo máximo por modelo 30 s (antes 85). Pendiente medir en uso real. Ideas siguientes: streaming real, guardar y resumir sin hacer esperar la respuesta.
 
 ---
-
-## 3. Reescritura `nueva/` (en curso, 20 nov 2026)
-
-- Misma cuenta de Supabase y mismas variables de entorno que la versión vieja (`SUPABASE_URL`, `SUPABASE_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`).
-- Cada pantalla es un módulo en `nueva/web/js/modulos/<nombre>/` con `vista.html`, `estilo.css` y `logica.js`. Para ir a otra: `data-ir="nombre"`. El servidor registra cada módulo en `nueva/servidor/app.py`.
-- Colores solo en `nueva/web/css/tema_yarvex.css`; las preferencias (tema, animaciones) en `nucleo/preferencias.js`.
-- Satélites hechos: Chat, Música, Tareas (Automatizaciones), Ajustes, Manos. Voz: el núcleo conversa, pero el micrófono web no existe dentro de la APK (WebView): ahí se usa la burbuja nativa.
-- Pendiente: Gestos, Conectores, portar `manos_api.py` (órdenes de tocar la pantalla) y cambiar Vercel a `nueva`.
