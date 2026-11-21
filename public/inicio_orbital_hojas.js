@@ -97,7 +97,6 @@
 
   acc.conectores = function () {
     abrirHoja('Conectores', [
-      fila('Plataformas', 'Nexus y tus plataformas', function () { modulo('nexus'); }),
       fila('TV y PC', 'Controlar tu TV o tu PC desde Jarvis', function () { ajustes('herramientas'); }),
       fila('Llaves de IA', 'Gemini, Groq y otros modelos', function () { ajustes('llave'); })
     ]);

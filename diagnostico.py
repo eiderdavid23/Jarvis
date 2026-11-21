@@ -31,5 +31,5 @@ linea('import web_api' in srv, 'server.py tiene el parche de buscar_web aplicado
 
 print()
 print('--- SQL ejecutados (solo puedo ver si el archivo existe en el repo, no si lo corriste en Supabase) ---')
-for sql in ['supabase_modelos.sql', 'supabase_nexus.sql', 'supabase_archivos_proyecto.sql']:
+for sql in ['supabase_modelos.sql', 'supabase_archivos_proyecto.sql']:
     linea(os.path.exists(sql), sql + ' (archivo en el repo; confirma tu si ya lo corriste en Supabase)')

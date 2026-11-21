@@ -813,9 +813,8 @@
             <li>Buscar en la web y leer paginas para responder con datos actuales</li>
             <li>Recordar datos permanentes por tema y resumir chats largos</li>
             <li>Ver fotos y leer PDF o ZIP que adjuntes</li>
-            <li>Ubicar estructuras de Minecraft con la semilla del mundo y crear add-ons</li>
             <li>Crear, listar y borrar recordatorios, y avisarte a su hora</li>
-            <li>Abrir sitios web y tus plataformas de NEXUS por nombre</li>
+            <li>Abrir sitios web</li>
           </ul>
         </div>
         <div class="card">
@@ -835,8 +834,6 @@
   </div>
 </div>
 <script src="/ondas.js"></script>
-<script src="/mapa_mc.js"></script>
-<script src="/addon_mc_ui.js"></script>
 <script src="/archivo_ui.js"></script>
 <script>
 /* ========== Orbe ========== */
@@ -1674,8 +1671,6 @@ async function enviarMensaje(desdeVoz) {
       const busq = (data.busqueda && Array.isArray(data.busqueda.resultados) && data.busqueda.resultados.length) ? data.busqueda : null;
       if (busq) mostrarBusqueda(busq);
       mostrarImagenes(data.imagenes);
-      if (data.mapa_mc) mostrarMapaMc(data.mapa_mc);
-      if (data.addons && window.mostrarAddonMc) window.mostrarAddonMc(data.addons);
       if (data.pdfs && window.mostrarPdf) window.mostrarPdf(data.pdfs);
       if (data.archivos && window.mostrarArchivo) window.mostrarArchivo(data.archivos);
       const aAbrir = Array.from(new Set(urls.concat(data.urls_abrir || [])));

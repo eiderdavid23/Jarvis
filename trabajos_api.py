@@ -192,3 +192,29 @@ def herramienta(nombre, args):
     except supa.SupaError as e:
         print('[TRABAJOS]', e)
         return {'ok': False, 'error': 'no pude crear el trabajo: ' + str(e)}
+
+
+# ---------- Avisos: Jarvis te cuenta con su voz lo que fallo en segundo plano ----------
+
+def avisos_pendientes():
+    """Texto para el prompt de Jarvis con los trabajos que fallaron y el usuario aun no sabe.
+    Los marca como avisados para decirlo una sola vez. Si falta supabase_trabajos2.sql, no hace nada."""
+    try:
+        _limpiar_caidos()
+        desde = (_ahora() - timedelta(hours=24)).isoformat()
+        filas = supa._rest('GET', TABLA, {
+            'estado': 'eq.fallido', 'avisado': 'eq.false', 'actualizado': 'gte.' + desde,
+            'select': 'id,titulo,resultado', 'order': 'actualizado.asc', 'limit': '3'}) or []
+        for f in filas:
+            supa._rest('PATCH', TABLA, {'id': 'eq.' + f['id']}, {'avisado': True})
+    except supa.SupaError as e:
+        print('[TRABAJOS] avisos:', e)
+        return ''
+    if not filas:
+        return ''
+    lista = ' | '.join('"%s": %s' % (f.get('titulo') or 'sin titulo', f.get('resultado') or 'sin detalle')
+                       for f in filas)
+    return (' AVISO PENDIENTE: mientras el usuario no miraba, fallaron estos trabajos en segundo plano: ' + lista +
+            '. ANTES de responder lo que pide ahora, avisale con tus palabras y tu tono de siempre, en una o dos frases '
+            '(por ejemplo: Señor, el trabajo tal fallo porque ...), traduciendo el motivo a lenguaje simple, sin copiar '
+            'errores tecnicos. Dilo una sola vez y despues responde a lo que pidio.')

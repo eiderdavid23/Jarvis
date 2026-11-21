@@ -2,14 +2,11 @@
    Lo apagado se guarda en este dispositivo y se manda al servidor en cada mensaje. */
 (function () {
   var GRUPOS = [
-    { id: 'minecraft', nombre: 'Minecraft', desc: 'Ubicar aldeas y estructuras con la semilla' },
     { id: 'memoria', nombre: 'Memoria', desc: 'Recordar datos tuyos entre chats' },
     { id: 'recordatorios', nombre: 'Recordatorios', desc: 'Crear, listar y borrar por chat' },
     { id: 'tareas', nombre: 'Tareas automáticas', desc: 'Programar acciones a una hora (mensajes, etc.)' },
-    { id: 'personas', nombre: 'Buscar personas', desc: 'Información pública en la web y redes' },
     { id: 'web', nombre: 'Buscar en la web', desc: 'Buscar en internet y leer páginas' },
     { id: 'enlaces', nombre: 'Abrir enlaces', desc: 'Abrir sitios en el navegador' },
-    { id: 'nexus', nombre: 'Plataformas NEXUS', desc: 'Listar y abrir tus plataformas por nombre' },
     { id: 'archivos', nombre: 'Archivos', desc: 'Leer adjuntos y archivos del proyecto' },
     { id: 'manos', nombre: 'Manos', desc: 'Ver y usar la pantalla de tu celular (app Android)' },
     { id: 'telefono', nombre: 'Teléfono', desc: 'Linterna, vibración, batería y volumen del celular' },

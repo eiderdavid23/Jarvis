@@ -19,17 +19,14 @@ from flask import Flask, request, jsonify, send_from_directory, Response, g, cop
 
 from comandos_dispositivo import encender_linterna, apagar_linterna, vibrar, estado_bateria
 import supa
-import minecraft
 import recs_api
 import tareas_api
 import trabajos_api
 import proyectos_api
 import llaves_api
 import memoria_api
-import nexus_api
 import manos_api
 import seguridad_api
-import addon_mc
 import cancelar_api
 import funciones_voz
 import rotacion_ia
@@ -49,7 +46,6 @@ app.register_blueprint(trabajos_api.bp)
 app.register_blueprint(proyectos_api.bp)
 app.register_blueprint(llaves_api.bp)
 app.register_blueprint(memoria_api.bp)
-app.register_blueprint(nexus_api.bp)
 app.register_blueprint(manos_api.bp)
 app.register_blueprint(cancelar_api.bp)
 app.register_blueprint(rotacion_ia.bp)
@@ -146,7 +142,7 @@ HERRAMIENTAS = [
             'documentacion, cualquier cosa que no sepas con certeza o pueda haber cambiado. '
             'Devuelve titulos, enlaces y un extracto corto. Despues de usarla, llama leer_pagina '
             'con los 1 a 3 enlaces mas relevantes ANTES de responder; no te bases solo en los extractos. '
-            'No sirve para buscar personas (usa buscar_persona) ni para abrir un sitio al usuario (usa abrir_url).'
+            'No sirve para abrir un sitio al usuario (usa abrir_url).'
         ),
         'parameters': {
             'type': 'object',
@@ -172,47 +168,6 @@ HERRAMIENTAS = [
                 'inicio': {'type': 'integer', 'description': 'Caracter desde donde seguir leyendo (por defecto 0)'}
             },
             'required': ['url']
-        }
-    },
-    {
-        'name': 'listar_plataformas',
-        'description': (
-            'Lista las plataformas del usuario en NEXUS23 (su centro de mando: nombre y descripcion). '
-            'Usar cuando pregunte que plataformas tiene o cuando necesites saber cuales existen.'
-        ),
-        'parameters': {'type': 'object', 'properties': {}}
-    },
-    {
-        'name': 'abrir_plataforma',
-        'description': (
-            'Abre una plataforma del usuario guardada en NEXUS23 buscandola por su nombre '
-            '(por ejemplo Deli Mani). Usar cuando diga abre, entra o ve a una de sus plataformas, '
-            'sin pedirle la URL. Para sitios externos que no son sus plataformas usa abrir_url.'
-        ),
-        'parameters': {
-            'type': 'object',
-            'properties': {'nombre': {'type': 'string', 'description': 'Nombre de la plataforma, como lo dijo el usuario'}},
-            'required': ['nombre']
-        }
-    },
-    {
-        'name': 'buscar_persona',
-        'description': (
-            'Busca informacion publica sobre una PERSONA en la web y en redes sociales '
-            '(Instagram, Facebook, TikTok, X, LinkedIn). Usar SOLO cuando el usuario pida '
-            'buscar, investigar o consultar sobre alguien. NUNCA para productos, compras, '
-            'tiendas ni busquedas dentro de un sitio (Mercado Libre, Amazon, YouTube...): '
-            'para eso usa abrir_url. Solo devuelve '
-            'paginas publicas. Despues de usarla, di en que sitios encontraste algo '
-            '(Google, Instagram, Facebook...) y resume lo mas relevante.'
-        ),
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'consulta': {'type': 'string', 'description': 'Nombre de la persona a buscar, con el contexto que dio el usuario (ciudad, trabajo, etc.)'},
-                'redes': {'type': 'array', 'items': {'type': 'string'}, 'description': 'Redes a incluir: instagram, facebook, tiktok, x, linkedin. Si el usuario no dice, omitir y se usan instagram, facebook y linkedin.'}
-            },
-            'required': ['consulta']
         }
     },
     {
@@ -510,67 +465,6 @@ HERRAMIENTAS = [
         }
     },
     {
-        'name': 'buscar_estructuras_minecraft',
-        'description': (
-            'Localiza estructuras de Minecraft (aldeas, templos, monumentos oceanicos, mansiones, ciudades '
-            'ancestrales, portales, tesoros enterrados...) a partir de la SEMILLA del mundo y la posicion del '
-            'jugador, y muestra un mapa en el chat. Usar cuando el usuario pida encontrar o ubicar algo de su '
-            'mundo de Minecraft. Si no sabes la semilla, pidesela (Bedrock: Ajustes del mundo, Semilla; Java: '
-            'comando /seed). Si no sabes donde esta el jugador, pidele sus coordenadas (activar Mostrar '
-            'coordenadas); si no las da, usa 0 y 0 y avisalo. Por defecto Bedrock. No inventes coordenadas: '
-            'usa solo lo que devuelva esta herramienta.'
-        ),
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'semilla': {'type': 'string', 'description': 'Semilla numerica del mundo, como texto (puede ser negativa)'},
-                'tipos': {'type': 'string', 'description': 'Que buscar, separado por comas. Ej: "aldea" o "monumento oceanico, mansion". Opciones: aldea, templo del desierto, templo de la jungla, choza de bruja, iglu, ruina oceanica, naufragio, monumento oceanico, mansion, avanzada de saqueadores, portal en ruinas, ciudad ancestral, tesoro enterrado, mina abandonada, ruinas de sendero, camara de pruebas'},
-                'x': {'type': 'integer', 'description': 'Coordenada X actual del jugador'},
-                'z': {'type': 'integer', 'description': 'Coordenada Z actual del jugador'},
-                'radio': {'type': 'integer', 'description': 'Radio de busqueda en bloques (por defecto 3000, maximo 16000)'},
-                'cantidad': {'type': 'integer', 'description': 'Cuantas de cada tipo mostrar (por defecto 3, maximo 10)'},
-                'edicion': {'type': 'string', 'description': 'bedrock (por defecto) o java'}
-            },
-            'required': ['semilla', 'tipos']
-        }
-    },
-    {
-        'name': 'crear_addon_minecraft',
-        'description': (
-            'Crea un add-on de Minecraft BEDROCK (.mcaddon) que el usuario descarga desde un boton en el chat '
-            'y se abre en Minecraft. Tu escribes SOLO los archivos de contenido (JSON, .lang, .mcfunction); el '
-            'servidor crea los manifest y el zip. Paquete "bp" (comportamiento): carpetas entities, items, '
-            'recipes, loot_tables, trading, spawn_rules, functions, blocks, texts. Paquete "rp" (recursos): '
-            'entity, models, animations, animation_controllers, render_controllers, texts, textures (solo '
-            'json), attachables, particles. No se pueden crear imagenes ni sonidos: reutiliza los del juego. '
-            'Usa format_version actual (ej. "1.21.0"), identificadores con prefijo propio (ej. "mi:zombi_rey") '
-            'y nombres visibles en texts/en_US.lang (y es_ES.lang). Manten el add-on simple y el JSON valido; '
-            'si la herramienta devuelve un error, corrigelo y vuelve a llamarla. Usar cuando el usuario pida '
-            'un add-on, mod o pack para Minecraft Bedrock.'
-        ),
-        'parameters': {
-            'type': 'object',
-            'properties': {
-                'nombre': {'type': 'string', 'description': 'Nombre corto del add-on (maximo 40 letras)'},
-                'descripcion': {'type': 'string', 'description': 'Una frase que describe el add-on'},
-                'archivos': {
-                    'type': 'array',
-                    'description': 'Archivos del add-on (maximo 40)',
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'pack': {'type': 'string', 'description': 'bp o rp'},
-                            'ruta': {'type': 'string', 'description': 'Ruta dentro del paquete, ej. entities/zombi_rey.json'},
-                            'contenido': {'type': 'string', 'description': 'Texto completo del archivo (JSON valido si es .json)'}
-                        },
-                        'required': ['pack', 'ruta', 'contenido']
-                    }
-                }
-            },
-            'required': ['nombre', 'archivos']
-        }
-    },
-    {
         'name': 'anotar_paso',
         'description': (
             'Avisa en UNA linea corta que estas haciendo mientras trabajas, cuando en ese momento no '
@@ -621,55 +515,11 @@ def _tavily(consulta, dominios=None, max_resultados=4):
     return r.json().get('results', [])
 
 
-def buscar_persona(consulta, redes=None):
-    """Devuelve (lista_de_resultados, error). Cada resultado: red, titulo, url, extracto."""
-    if not TAVILY_API_KEY:
-        return [], 'Falta TAVILY_API_KEY (llave gratis en tavily.com) en el .env o en Vercel.'
-    dominios = []
-    for r in (redes or ['instagram', 'facebook', 'linkedin']):
-        d = REDES_DOMINIOS.get(str(r).strip().lower())
-        if d and d not in dominios:
-            dominios.append(d)
-    resultados, vistos = [], set()
-
-    def agregar(lista, red_forzada=None):
-        for x in lista:
-            url = x.get('url') or ''
-            if not url or url in vistos:
-                continue
-            vistos.add(url)
-            red = red_forzada
-            if not red:
-                red = 'Google'
-                for d, n in REDES_NOMBRE.items():
-                    if d in url:
-                        red = n
-            resultados.append({'red': red, 'titulo': (x.get('title') or url)[:120], 'url': url,
-                               'extracto': (x.get('content') or '')[:220]})
-
-    try:
-        agregar(_tavily(consulta, None, 4))
-        for d in dominios:
-            try:
-                agregar(_tavily(consulta, [d], 2), REDES_NOMBRE.get(d))
-            except Exception as e:
-                print(f'[BUSQUEDA] Fallo en {d}:', e)
-    except Exception as e:
-        print('[BUSQUEDA] Error:', e)
-        return [], 'La busqueda fallo en este momento.'
-    return resultados, None
-
-
 PASOS_HERRAMIENTAS = {
     'buscar_web': 'Buscando en la web: {consulta}',
     'leer_pagina': 'Leyendo {sitio}',
-    'buscar_persona': 'Buscando a {consulta} en la web',
-    'buscar_estructuras_minecraft': 'Calculando estructuras en tu semilla',
-    'crear_addon_minecraft': 'Armando el add-on',
     'leer_archivo': 'Leyendo el archivo',
     'abrir_url': 'Preparando el enlace',
-    'listar_plataformas': 'Revisando tus plataformas',
-    'abrir_plataforma': 'Buscando la plataforma',
     'ver_pantalla': 'Mirando tu pantalla',
     'controlar_pantalla': 'Usando tu celular',
     'controlar_pc': 'Usando tu PC',
@@ -877,42 +727,11 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         acciones_frontend['urls_abrir'].append(url)
         return {'ok': True, 'mensaje': f'Se abrira {url} en una pestana nueva del navegador del usuario.'}
 
-    if nombre in ('listar_plataformas', 'abrir_plataforma'):
-        res = nexus_api.herramienta(nombre, argumentos)
-        if nombre == 'abrir_plataforma' and res.get('ok'):
-            acciones_frontend['urls_abrir'].append(res.pop('url'))
-        return res
-
     if nombre == 'buscar_web':
         return web_api.buscar_web(argumentos.get('consulta'), argumentos.get('max_resultados'))
 
     if nombre == 'leer_pagina':
         return web_api.leer_pagina(argumentos.get('url'), argumentos.get('inicio'))
-
-    if nombre == 'buscar_persona':
-        consulta = (argumentos.get('consulta') or '').strip()
-        if not consulta:
-            return {'ok': False, 'error': 'falta la consulta'}
-        resultados, error = buscar_persona(consulta, argumentos.get('redes'))
-        if error:
-            return {'ok': False, 'error': error}
-        if not resultados:
-            return {'ok': True, 'resultados': [], 'mensaje': 'No se encontro nada publico.'}
-        acciones_frontend['busqueda'] = {'consulta': consulta, 'resultados': resultados}
-        return {'ok': True, 'resultados': resultados,
-                'mensaje': 'Los resultados ya se muestran al usuario en un panel; el primero se abre solo.'}
-
-    if nombre == 'buscar_estructuras_minecraft':
-        resultado, mapa = minecraft.buscar(argumentos)
-        if mapa:
-            acciones_frontend['mapa_mc'] = mapa
-        return resultado
-
-    if nombre == 'crear_addon_minecraft':
-        resultado, addon = addon_mc.crear(argumentos)
-        if addon:
-            acciones_frontend.setdefault('addons', []).append(addon)
-        return resultado
 
     if nombre == 'ver_pantalla':
         return manos_api.leer_pantalla(str(argumentos.get('dispositivo') or '').strip() or None, bool(argumentos.get('imagen')))
@@ -1061,14 +880,11 @@ HERRAMIENTA_AUDITAR = {
 
 # --- Panel Herramientas: grupos que el usuario puede apagar desde el sidebar ---
 GRUPOS_HERRAMIENTAS = {
-    'minecraft': ('Minecraft', ['buscar_estructuras_minecraft', 'crear_addon_minecraft']),
     'memoria': ('Memoria', ['guardar_recuerdo', 'olvidar_recuerdo']),
     'recordatorios': ('Recordatorios', ['crear_recordatorio', 'listar_recordatorios', 'borrar_recordatorio']),
     'tareas': ('Tareas automaticas', ['crear_tarea', 'listar_tareas', 'cancelar_tarea', 'crear_trabajo']),
-    'personas': ('Buscar personas', ['buscar_persona']),
     'web': ('Buscar en la web', ['buscar_web', 'leer_pagina']),
     'enlaces': ('Abrir enlaces', ['abrir_url']),
-    'nexus': ('Plataformas NEXUS', ['listar_plataformas', 'abrir_plataforma']),
     'archivos': ('Archivos', ['leer_archivo']),
     'manos': ('Manos', ['ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv']),
     'telefono': ('Telefono', ['encender_linterna', 'apagar_linterna', 'vibrar', 'consultar_bateria']),
@@ -1109,10 +925,8 @@ def _modo_seguridad():
 
 
 RE_HERR_HACK = re.compile(r'hack|pentest|vulnerab|sqli|inyecci|xss|ssrf|cors|jwt|cookie|puerto|subdominio|dns|certificad|login|sesi[oó]n|idor|escane|auditor|seguridad|rompe[rl]? hash|hash|payload|panel|api|token|admin', re.I)
-RE_HERR_MC = re.compile(r'minecraft|aldea|semilla|addon|mod\b|bioma|estructura', re.I)
 RE_HERR_PC = re.compile(r'\bpc\b|computador|compu|laptop|port[aá]til|escritorio', re.I)
 RE_HERR_TV = re.compile(r'\btv\b|tele\b|televisor|televisi[oó]n|chromecast|netflix|youtube', re.I)
-HERR_MC = ('buscar_estructuras_minecraft', 'crear_addon_minecraft')
 
 
 def _hay_contexto():
@@ -1123,8 +937,6 @@ def _hay_contexto():
 
 
 def _herr_pesada_sobra(nombre, ctx):
-    if nombre in HERR_MC:
-        return not RE_HERR_MC.search(ctx)
     if nombre == 'controlar_pc':
         return not RE_HERR_PC.search(ctx)
     if nombre == 'controlar_tv':
@@ -1176,7 +988,7 @@ def _vueltas():
         return MAX_VUELTAS_HERRAMIENTAS
 
 # --- Guardia v1.8: no dejar que Jarvis diga "ya lo hice" en el celular sin haber usado las manos ---
-HERR_CELULAR = ('ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv', 'abrir_url', 'abrir_plataforma')
+HERR_CELULAR = ('ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv', 'abrir_url')
 # programar una tarea ("manana a las 8 mandale un WhatsApp") tambien cuenta como haber hecho algo
 HERR_CUMPLEN = HERR_CELULAR + ('crear_tarea', 'listar_tareas', 'cancelar_tarea', 'crear_trabajo', 'whatsapp_preparar')
 _APPS = (r'whatsapp|youtube|instagram|tiktok|spotify|telegram|facebook|netflix|chrome|maps|mercado ?libre|'
@@ -2049,7 +1861,7 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
 # Con plan de pago pon GROQ_TPM en .env (ej. 30000) y se manda todo completo.
 GROQ_TPM = int(os.environ.get('GROQ_TPM', '8000'))
 HERR_ESENCIALES_GROQ = ('buscar_web', 'leer_pagina', 'guardar_recuerdo', 'crear_recordatorio',
-                        'listar_recordatorios', 'abrir_url', 'abrir_plataforma')
+                        'listar_recordatorios', 'abrir_url')
 HERR_CEL_GROQ = ('ver_pantalla', 'controlar_pantalla', 'encender_linterna', 'apagar_linterna',
                  'vibrar', 'consultar_bateria')
 
@@ -2305,13 +2117,10 @@ SYSTEM_PROMPT_BASE = (
     'cuando el usuario lo pida o cuando sea evidente que corresponde, y luego '
     'responde de forma natural con el resultado real que te devuelven. Nunca '
     'inventes un dato (como el porcentaje de bateria) sin haber llamado antes '
-    'a la herramienta correspondiente. Para buscar PERSONAS usa buscar_persona: '
+    'a la herramienta correspondiente. Para buscar PERSONAS usa buscar_web: '
     'solo informacion publica, sin inventar datos que no aparezcan en los resultados. '
-    'Si el usuario pide abrir o entrar a una de sus plataformas (Deli Mani, etc.) usa '
-    'abrir_plataforma con el nombre, sin pedirle la URL ni confirmacion; con listar_plataformas '
-    'ves cuales tiene. '
     'Si el usuario pide buscar un producto o algo en un sitio concreto (Mercado Libre, '
-    'Amazon, YouTube, Google Maps...), NO uses buscar_persona: primero pregunta si '
+    'Amazon, YouTube, Google Maps...), primero pregunta si '
     'confirma que abras ese sitio con esa busqueda (por ejemplo: Señor, ¿abro Mercado Libre '
     'con la busqueda de control de Xbox 360?) y solo cuando confirme usa abrir_url '
     'con la URL de resultados de ese sitio, sin abrir ningun otro (si ya dijo que lo '
@@ -2468,10 +2277,6 @@ def texto_capacidades():
         telefono = ('La linterna, la vibracion y la bateria solo funcionan cuando corres dentro del '
                     'telefono (Termux); en esta version en linea no estan disponibles, asi que si te '
                     'las piden explicalo sin intentarlo. ')
-    if TAVILY_API_KEY:
-        personas = 'Buscas informacion publica de personas en la web y en redes sociales (Instagram, Facebook, TikTok, X, LinkedIn); los resultados salen en un panel y se abre el primero. '
-    else:
-        personas = 'La busqueda de personas no esta activa por ahora. '
     web = ('Buscas en internet y lees paginas web (buscar_web y leer_pagina) para responder con informacion actual. '
            if os.environ.get('TAVILY_API_KEY') else
            'Buscas en internet y lees paginas web (buscar_web y leer_pagina) para responder con informacion actual, '
@@ -2495,14 +2300,14 @@ def texto_capacidades():
         'Groq no), PDF, archivos ZIP (lees su estructura y los archivos de texto, codigo y PDF de dentro, '
         'no las imagenes ni binarios) y archivos de texto o codigo, hasta 5 y unos 3 MB en total; lo que adjuntan queda guardado en ese chat y puedes volver a abrirlo con leer_archivo en los mensajes siguientes. (4) Abrir un sitio o la '
         'busqueda dentro de un sitio (Mercado Libre, Amazon, YouTube...) en una pestana nueva, '
-        'las busquedas dentro de un sitio se hacen tras pedir confirmacion. Con la semilla de un mundo de Minecraft (Bedrock o Java) localizas '
-        'aldeas, templos, monumentos y otras estructuras con buscar_estructuras_minecraft y muestras un mapa en el chat. Creas add-ons de Minecraft Bedrock (.mcaddon) con crear_addon_minecraft y los entregas como boton de descarga en el chat. ' + personas + web + telefono + seguridad +
+        'las busquedas dentro de un sitio se hacen tras pedir confirmacion. '
+        + web + telefono + seguridad +
         '(5) Recordatorios: los creas, listas y borras con las herramientas crear_recordatorio, listar_recordatorios y '
         'borrar_recordatorio; suenan a su hora mientras la app este abierta, no con la app cerrada. '
         'Tareas automaticas: con crear_tarea programas algo que haras tu solo a una hora (por ejemplo mandar un '
         'WhatsApp hoy o manana a tal hora); las ves con listar_tareas y las cancelas con cancelar_tarea. Trabajos en segundo plano: con crear_trabajo dejas una tarea larga trabajando ahora mismo mientras el usuario hace otra cosa. '
         '(6) Herramientas: el menu lateral tiene un panel con interruptores para activar o desactivar '
-        'Minecraft, memoria, recordatorios, tareas automaticas, busqueda de personas, busqueda en la web, enlaces, archivos y telefono; '
+        'memoria, recordatorios, tareas automaticas, busqueda en la web, enlaces, archivos y telefono; '
         'lo que esta apagado no lo puedes usar. '
         '(7) Ajustes: llaves propias de IA, elegir entre Gemini y Groq, nivel de pensamiento Bajo, '
         'Medio o Alto, tema claro u oscuro y contador de uso de la API. Aun no tienes: buscar dentro de '
@@ -2616,11 +2421,6 @@ rotacion_ia.srv = _sys.modules[__name__]   # la rotacion usa las funciones de es
 @app.route('/')
 def index():
     return send_from_directory('public', 'index.html')
-
-
-@app.route('/nexus')
-def nexus_pagina():
-    return send_from_directory('public', 'nexus.html')
 
 
 @app.route('/voz', methods=['POST'])
@@ -2814,14 +2614,17 @@ def _chat_interno():
             texto_proyecto = (' INSTRUCCIONES DEL PROYECTO al que pertenece ESTE chat (sigue estas indicaciones '
                               'junto con tu personalidad de siempre): ' + instr_proyecto)
         texto_seguridad = (' ' + PROMPT_SEGURIDAD) if g.modo_seguridad else ''
+        texto_avisos = ''
+        if not str(mensaje_usuario or '').startswith(('TRABAJO EN SEGUNDO PLANO', 'TAREA AUTOMATICA')):
+            texto_avisos = trabajos_api.avisos_pendientes()
         system_prompt = (SYSTEM_PROMPT_BASE + texto_capacidades() + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
                          + texto_recuerdos + texto_resumen + texto_archivos + texto_archivos_proy + texto_proyecto
-                         + texto_seguridad + texto_apagadas())
+                         + texto_seguridad + texto_apagadas() + texto_avisos)
         _i = SYSTEM_PROMPT_BASE.find('Tienes herramientas reales')
         g.system_compacto = ((SYSTEM_PROMPT_BASE[:_i] if _i > 0 else SYSTEM_PROMPT_BASE[:1200]).strip()
                              + ' Usa las herramientas que tengas cuando corresponda; si te falta una, dilo en una frase.'
                              + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
-                             + texto_recuerdos[:1500] + texto_resumen)
+                             + texto_recuerdos[:1500] + texto_resumen + texto_avisos)
 
         g.pide_celular = pide_celular(mensaje_usuario)
         turnos = list(historial[-UMBRAL_RESUMEN:])  # mensajes posteriores al resumen (maximo 30)
@@ -2890,8 +2693,6 @@ def _chat_interno():
                         'recordatorios_cambio': bool(acciones.get('recordatorios')),
                         'tareas_cambio': bool(acciones.get('tareas')),
                         'trabajos_cambio': bool(acciones.get('trabajos')),
-                        'mapa_mc': acciones.get('mapa_mc'),
-                        'addons': acciones.get('addons', []),
                         'pdfs': acciones.get('pdfs', []),
                         'archivos': acciones.get('archivos', []),
                         'modelo_usado': usado['nombre'],
