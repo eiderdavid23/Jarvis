@@ -39,6 +39,7 @@ import intruso_api
 import escalada_api
 import pasos_hack
 import narrador
+import conectores_api
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 app.register_blueprint(supa.bp)
@@ -52,6 +53,7 @@ app.register_blueprint(nexus_api.bp)
 app.register_blueprint(manos_api.bp)
 app.register_blueprint(cancelar_api.bp)
 app.register_blueprint(rotacion_ia.bp)
+app.register_blueprint(conectores_api.bp)
 
 
 # --- Gemini (API en la nube) ---
@@ -778,7 +780,7 @@ def _paso_herramienta(nombre, argumentos):
 # (celular, PC, TV, recordatorios...) NO se repite: se reutiliza el resultado de la primera vez. ---
 HERR_CON_EFECTO = ('controlar_pantalla', 'controlar_pc', 'controlar_tv', 'encender_linterna', 'apagar_linterna',
                    'vibrar', 'guardar_recuerdo', 'olvidar_recuerdo', 'crear_recordatorio', 'borrar_recordatorio',
-                   'crear_tarea', 'cancelar_tarea', 'crear_trabajo')
+                   'crear_tarea', 'cancelar_tarea', 'crear_trabajo') + conectores_api.CON_EFECTO
 ACCIONES_SOLO_LECTURA = ('capturar', 'esperar', 'bateria', 'estado')
 
 
@@ -1038,6 +1040,9 @@ def _ejecutar_herramienta(nombre, argumentos, acciones_frontend):
         return {'ok': True, 'ruta': fila['ruta'], 'parte': parte, 'partes': partes,
                 'contenido': texto[(parte - 1) * MAX_LECTURA_PARTE:parte * MAX_LECTURA_PARTE], 'nota': nota}
 
+    if nombre in conectores_api.NOMBRES:
+        return conectores_api.ejecutar(nombre, argumentos, acciones_frontend)
+
     return {'ok': False, 'error': f'herramienta desconocida: {nombre}'}
 
 
@@ -1068,6 +1073,7 @@ GRUPOS_HERRAMIENTAS = {
     'manos': ('Manos', ['ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv']),
     'telefono': ('Telefono', ['encender_linterna', 'apagar_linterna', 'vibrar', 'consultar_bateria']),
     'hack': ('Hacking web', list(hack_api.NOMBRES)),
+    'conectores': ('Conectores', list(conectores_api.NOMBRES)),
 }
 
 
@@ -1136,6 +1142,7 @@ def _activas():
         activas.extend(hack_api.HERRAMIENTAS)
     if _modo_seguridad():
         activas.append(HERRAMIENTA_AUDITAR)
+    activas.extend(conectores_api.activas(off, ctx))
     return activas
 
 
@@ -1171,7 +1178,7 @@ def _vueltas():
 # --- Guardia v1.8: no dejar que Jarvis diga "ya lo hice" en el celular sin haber usado las manos ---
 HERR_CELULAR = ('ver_pantalla', 'controlar_pantalla', 'controlar_pc', 'controlar_tv', 'abrir_url', 'abrir_plataforma')
 # programar una tarea ("manana a las 8 mandale un WhatsApp") tambien cuenta como haber hecho algo
-HERR_CUMPLEN = HERR_CELULAR + ('crear_tarea', 'listar_tareas', 'cancelar_tarea', 'crear_trabajo')
+HERR_CUMPLEN = HERR_CELULAR + ('crear_tarea', 'listar_tareas', 'cancelar_tarea', 'crear_trabajo', 'whatsapp_preparar')
 _APPS = (r'whatsapp|youtube|instagram|tiktok|spotify|telegram|facebook|netflix|chrome|maps|mercado ?libre|'
          r'minecraft|pantalla|celular|tel[eé]fono|app|aplicaci[oó]n|ajustes|configuraci[oó]n|wifi|bluetooth|'
          r'c[aá]mara|galer[ií]a')
@@ -2783,6 +2790,7 @@ def _chat_interno():
             turno_actual['partes_gemini'] = partes_gemini
         turnos.append(turno_actual)
         g.contexto_herr = ' '.join(t.get('texto', '') for t in turnos[-5:])[-3000:]
+        g.conf_envio = conectores_api.confirmacion_previa(historial)
 
         g.mensaje_largo = len(mensaje_usuario or '') > 1500
         g.temperatura = _temperatura(mensaje_usuario)

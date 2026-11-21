@@ -78,3 +78,9 @@
 - v1.44 (20 nov 2026): respuestas mas rapidas: ya no se mandan al modelo las 35 herramientas de seguridad ni las de Minecraft, PC y TV salvo que el mensaje (o los ultimos) hablen de eso, y el tiempo maximo por modelo baja de 85 s a 30 s para saltar mas rapido al siguiente. Solo servidor (reiniciar). Si en Vercel existe la variable TIMEOUT_IA, cambiarla a 30.
 
 - v2.0-nueva (20 nov 2026): reescritura en `nueva/` con el diseño Yarvex, por módulos (cada pantalla vive en `nueva/web/js/modulos/<nombre>/`). Hecho: acceso, chat, inicio orbital con voz (solo navegador), Ajustes (cuenta, 4 temas, reducir animaciones, llaves Gemini y Groq), Música (canciones del celular), Tareas (se ejecutan con la app abierta) y Manos (permisos y burbuja, solo APK). Pendiente: Gestos, Conectores y portar `manos_api.py` al servidor nuevo. Vercel sigue sirviendo la versión vieja hasta cambiar Root Directory a `nueva`.
+
+## 21 nov 2026 - Conectores
+- Nuevo `conectores_api.py`, `public/conectores.html` y `supabase_conectores.sql`.
+- Conectores: Clima, Noticias, WhatsApp (abre wa.me), Telegram (bot propio) y Gmail (IMAP/SMTP con contrasena de aplicacion).
+- Datos cifrados con LLAVES_SECRET. Enviar correo/Telegram exige borrador + «¿Lo envío?» + aprobacion en el mensaje siguiente.
+- Parches: server.py (8 puntos), herramientas.js (grupo «Conectores») y modulos.js (modulo «Conectores»).

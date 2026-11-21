@@ -12,7 +12,8 @@
     { id: 'nexus', nombre: 'Plataformas NEXUS', desc: 'Listar y abrir tus plataformas por nombre' },
     { id: 'archivos', nombre: 'Archivos', desc: 'Leer adjuntos y archivos del proyecto' },
     { id: 'manos', nombre: 'Manos', desc: 'Ver y usar la pantalla de tu celular (app Android)' },
-    { id: 'telefono', nombre: 'Teléfono', desc: 'Linterna, vibración, batería y volumen del celular' }
+    { id: 'telefono', nombre: 'Teléfono', desc: 'Linterna, vibración, batería y volumen del celular' },
+    { id: 'conectores', nombre: 'Conectores', desc: 'Clima, noticias, WhatsApp, Telegram y Gmail' }
   ];
   var CLAVE = 'jarvisHerramientasOff';
 

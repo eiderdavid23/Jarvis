@@ -8,7 +8,9 @@
     { id: 'tareas', nombre: 'Tareas automáticas', url: '/tareas.html?modulo=1',
       icono: ['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'M12 7v5l3 2'] },
     { id: 'trabajos', nombre: 'Trabajos en segundo plano', url: '/trabajos.html?modulo=1',
-      icono: ['M5 3l14 9-14 9z'] }
+      icono: ['M5 3l14 9-14 9z'] },
+    { id: 'conectores', nombre: 'Conectores', url: '/conectores.html?modulo=1',
+      icono: ['M9 7V3', 'M15 7V3', 'M6 7h12v4a6 6 0 0 1-12 0z', 'M12 17v4'] }
   ];
   var NS = 'http://www.w3.org/2000/svg';
   var panel = null, marco = null, titulo = null, activo = null;
