@@ -29,7 +29,54 @@ p { margin: 0 0 12px; }
 .tit small { display: block; color: var(--suave); }
 .est { padding: 1px 9px; border-radius: 99px; border: 1px solid var(--linea); font-size: 12px; color: var(--suave); white-space: nowrap; }
 .est.conectado, .est.listo { color: var(--cian); border-color: var(--cian); }
-.cuerpo { padding: 0 12px 12px; border-top: 1px solid var(--linea); }
+.cuerpo { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; box-shadow: inset 0 1px 0 transparent;
+  transition: grid-template-rows .38s cubic-bezier(.2,.8,.2,1), opacity .25s ease, box-shadow .3s ease, visibility 0s linear .38s; }
+.cuerpo.abierto { grid-template-rows: 1fr; opacity: 1; visibility: visible; box-shadow: inset 0 1px 0 var(--linea); transition-delay: 0s; }
+.int { overflow: hidden; min-height: 0; }
+.pad { padding: 0 12px 12px; }
+.pad > * { opacity: 0; transform: translateY(8px); transition: opacity .3s ease, transform .35s cubic-bezier(.2,.8,.2,1); }
+.cuerpo.abierto .pad > * { opacity: 1; transform: none; }
+.cuerpo.abierto .pad > :nth-child(2) { transition-delay: .05s; }
+.cuerpo.abierto .pad > :nth-child(3) { transition-delay: .1s; }
+.cuerpo.abierto .pad > :nth-child(4) { transition-delay: .15s; }
+.cuerpo.abierto .pad > :nth-child(5) { transition-delay: .2s; }
+.cuerpo.abierto .pad > :nth-child(n+6) { transition-delay: .25s; }
+
+/* Animaciones y transiciones (v1.52) */
+@keyframes entra { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes latido { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.7); } }
+@keyframes barra { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@keyframes msgEn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes pulso { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+body > h1, body > p { animation: entra .5s cubic-bezier(.2,.8,.2,1) both; }
+body > p { animation-delay: .06s; }
+#lista > p.suave { animation: pulso 1.4s ease-in-out infinite; }
+.tarjeta { position: relative; transition: border-color .3s ease, box-shadow .3s ease; }
+.tarjeta.entra { animation: entra .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms + 120ms); }
+.tarjeta.abierta { border-color: rgba(60,217,242,.45); box-shadow: 0 8px 24px rgba(0,0,0,.22); }
+.tarjeta::after { content: ''; position: absolute; left: 0; top: 0; height: 2px; width: 35%; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--cian), transparent); transition: opacity .25s ease; }
+.tarjeta.trab::after { opacity: 1; animation: barra 1.1s ease-in-out infinite; }
+.cab { transition: background .2s ease; -webkit-tap-highlight-color: transparent; }
+.cab:active { background: rgba(60,217,242,.07); }
+.ico { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.tarjeta.abierta .ico { transform: scale(1.12); }
+.fl { flex: none; width: 8px; height: 8px; margin: 0 4px 3px 2px; border-right: 2px solid var(--suave); border-bottom: 2px solid var(--suave);
+  transform: rotate(45deg); transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .3s ease; }
+.tarjeta.abierta .fl { transform: rotate(225deg) translate(-2px, -2px); border-color: var(--cian); }
+.est { transition: color .3s ease, border-color .3s ease; }
+.est.conectado::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%;
+  background: var(--cian); vertical-align: 1px; animation: latido 2s ease-in-out infinite; }
+.campo input, .campo textarea { transition: border-color .2s ease, box-shadow .2s ease; }
+.campo input:focus, .campo textarea:focus { outline: none; border-color: var(--cian); box-shadow: 0 0 0 3px rgba(60,217,242,.18); }
+button.b { transition: transform .15s ease, background .2s ease, border-color .2s ease, color .2s ease, opacity .25s ease; -webkit-tap-highlight-color: transparent; }
+button.b:active:not(:disabled) { transform: scale(.95); }
+button.b.fuerte:active:not(:disabled) { background: rgba(60,217,242,.14); }
+@media (hover: hover) { button.b:hover:not(:disabled) { border-color: var(--cian); } }
+.msg { animation: msgEn .3s ease; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
+}
 .campo { margin-top: 12px; }
 .campo label { display: block; font-weight: 600; margin-bottom: 4px; }
 .campo input, .campo textarea { width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--linea); background: var(--fondo); color: var(--texto); font: inherit; }
@@ -55,6 +102,7 @@ button.b:disabled { opacity: .5; cursor: default; }
   var ACC = 'jarvisAcceso', REF = 'jarvisRefresco', refrescando = null;
   var ETIQ = { conectado: 'Conectado', listo: 'Listo', sin_conectar: 'Sin conectar' };
   var $ = function (id) { return document.getElementById(id); };
+  var primera = true;
 
   function caduca(seg) {
     try {
@@ -102,16 +150,22 @@ button.b:disabled { opacity: .5; cursor: default; }
     return e;
   }
 
-  function tarjeta(c, abierta) {
-    var caja = el('div', 'tarjeta');
+  function tarjeta(c, abierta, i, anim) {
+    var caja = el('div', 'tarjeta' + (abierta ? ' abierta' : '') + (anim ? ' entra' : ''));
+    caja.style.setProperty('--i', i || 0);
     var cab = el('button', 'cab'); cab.type = 'button';
     var tit = el('span', 'tit');
     tit.appendChild(el('b', '', c.nombre));
     tit.appendChild(el('small', '', c.descripcion));
     var est = el('span', 'est ' + c.estado, ETIQ[c.estado] || c.estado);
     cab.appendChild(el('span', 'ico', c.icono)); cab.appendChild(tit); cab.appendChild(est);
+    cab.appendChild(el('span', 'fl'));
+    cab.setAttribute('aria-expanded', abierta ? 'true' : 'false');
 
-    var cuerpo = el('div', 'cuerpo'); cuerpo.hidden = !abierta;
+    var envoltura = el('div', 'cuerpo' + (abierta ? ' abierto' : ''));
+    var interior = el('div', 'int');
+    var cuerpo = el('div', 'pad');
+    interior.appendChild(cuerpo); envoltura.appendChild(interior);
     var entradas = {};
     var esGoogle = c.google && c.metodo === 'google';
     c.campos.forEach(function (k) {
@@ -135,7 +189,10 @@ button.b:disabled { opacity: .5; cursor: default; }
     });
 
     var msg = el('p', 'msg');
-    function decir(t, tipo) { msg.textContent = t; msg.className = 'msg' + (tipo ? ' ' + tipo : ''); }
+    function decir(t, tipo) {
+      msg.textContent = t; msg.className = 'msg' + (tipo ? ' ' + tipo : '');
+      msg.style.animation = 'none'; void msg.offsetWidth; msg.style.animation = '';
+    }
     var botones = el('div', 'botones');
     var guardar = el('button', 'b fuerte', 'Guardar'); guardar.type = 'button';
     var probar = el('button', 'b', 'Probar'); probar.type = 'button';
@@ -174,7 +231,7 @@ button.b:disabled { opacity: .5; cursor: default; }
     }
     cuerpo.appendChild(botones); cuerpo.appendChild(msg);
 
-    function ocupado(v) { guardar.disabled = probar.disabled = v; if (quitar) quitar.disabled = v; if (google) google.disabled = v; }
+    function ocupado(v) { caja.classList.toggle('trab', v); guardar.disabled = probar.disabled = v; if (quitar) quitar.disabled = v; if (google) google.disabled = v; }
     if (google) google.addEventListener('click', function () {
       ocupado(true); decir('Abriendo Google…');
       api('/conectores/google/iniciar', 'POST', {}).then(function (d) {
@@ -205,8 +262,14 @@ button.b:disabled { opacity: .5; cursor: default; }
         .then(function () { return cargar(c.id); })
         .catch(function (e) { decir(e.message, 'mal'); ocupado(false); });
     });
-    cab.addEventListener('click', function () { cuerpo.hidden = !cuerpo.hidden; });
-    caja.appendChild(cab); caja.appendChild(cuerpo);
+    cab.addEventListener('click', function () {
+      var abre = !caja.classList.contains('abierta');
+      caja.classList.toggle('abierta', abre);
+      envoltura.classList.toggle('abierto', abre);
+      cab.setAttribute('aria-expanded', abre ? 'true' : 'false');
+      if (abre) setTimeout(function () { caja.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 340);
+    });
+    caja.appendChild(cab); caja.appendChild(envoltura);
     return caja;
   }
 
@@ -215,7 +278,8 @@ button.b:disabled { opacity: .5; cursor: default; }
       var l = $('lista'); l.textContent = '';
       $('aviso').hidden = d.cifrado;
       if (!d.cifrado) $('aviso').textContent = 'Falta la variable LLAVES_SECRET en el servidor: sin ella no se pueden guardar contraseñas (Telegram y Gmail).';
-      d.conectores.forEach(function (c) { l.appendChild(tarjeta(c, c.id === abrirId)); });
+      d.conectores.forEach(function (c, i) { l.appendChild(tarjeta(c, c.id === abrirId, i, primera)); });
+      primera = false;
     }).catch(function (e) {
       var l = $('lista'); l.textContent = '';
       l.appendChild(el('p', 'msg mal', e.message));
