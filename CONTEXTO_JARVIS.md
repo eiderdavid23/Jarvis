@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 21 nov 2026
-Versión actual: 1.51 (ver CAMBIOS.md)
+Versión actual: 1.56 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -31,6 +31,7 @@ David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y 
 
 Pedido de David sobre la burbuja y las funciones:
 
+- [x] Burbuja flotante con la esfera de Jarvis (pedido el 21 nov 2026, v1.56, requiere APK nueva): `app/nativo/BurbujaEsfera.java` reemplaza la píldora (64 dp, 420 puntos, sin fondo). Pendiente: probarla en el celular (tamaño, fluidez y que el toque abra el panel).
 - [x] Animaciones y transiciones en Conectores (pedido el 21 nov 2026, v1.52, solo web): `public/conectores.html` (tarjetas que entran escalonadas, se despliegan suave con flecha que gira, barra de carga al guardar/probar, mensajes con fade, botones y campos con transicion, respeta «reducir movimiento»). Pendiente: probarla en el celular y llevar lo mismo al resto de pantallas.
 - [ ] Cambiar las animaciones de la esfera de Jarvis (pedido el 21 nov 2026, referencias de TikTok: esfera de particulas que se eriza al hablar, bola azul organica y barra de voz):
   - [x] Parte 1 (v1.53, solo web): estilo «erizo» de particulas en `public/esfera.js` (1500 puntos, picos segun la voz, color y giro por estado, baja puntos si el celular va lento); `index.html` la llama desde `animar`. Volver al de antes: abrir la app con `?esfera=clasica` (y `?esfera=erizo` para ponerlo). Pendiente: probarla en el celular.

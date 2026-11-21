@@ -7,7 +7,7 @@ PAQ = 'android/app/src/main/java/com/david/jarvis'
 RES = 'android/app/src/main/res'
 assert os.path.isdir(PAQ), 'manos: no existe ' + PAQ + ' (cambio el appId o la plantilla de Capacitor)'
 
-for f in ('ManosServicio.java', 'ManosPlugin.java', 'BurbujaManos.java', 'BurbujaUI.java', 'EscuchaServicio.java', 'BurbujaVoz.java',
+for f in ('ManosServicio.java', 'ManosPlugin.java', 'BurbujaManos.java', 'BurbujaUI.java', 'BurbujaEsfera.java', 'EscuchaServicio.java', 'BurbujaVoz.java',
             'TvRemoto.java', 'TvOrdenes.java', 'TvAgente.java', 'TareasAuto.java'):
     shutil.copy('nativo/' + f, PAQ + '/' + f)
 os.makedirs(RES + '/xml', exist_ok=True)

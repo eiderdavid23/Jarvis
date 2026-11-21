@@ -80,9 +80,8 @@ class BurbujaManos {
 
     private FrameLayout raiz;
     private LinearLayout pildora;
-    private BurbujaUI.Ondas ondasMini;
+    private BurbujaEsfera esferaMini;
     private BurbujaUI.Ondas ondasPanel;
-    private BurbujaUI.Logo logoMini;
     private TextView estadoTv;
     private BurbujaUI.Icono micBtn;
     private LinearLayout panel;
@@ -233,8 +232,8 @@ class BurbujaManos {
 
     // ---- La burbuja (pildora arrastrable, como la isla de la musica) ------------
 
-    private static final int PILDORA_W = 136;
-    private static final int PILDORA_H = 30;
+    private static final int PILDORA_W = 64;
+    private static final int PILDORA_H = 64;
 
     private BurbujaUI.Icono icono(int tipo, int color, int padDp, int fondo) {
         BurbujaUI.Icono ic = new BurbujaUI.Icono(cx, tipo, color);
@@ -270,13 +269,9 @@ class BurbujaManos {
         };
         pildora = new LinearLayout(cx);
         pildora.setOrientation(LinearLayout.HORIZONTAL);
-        pildora.setGravity(Gravity.CENTER_VERTICAL);
-        pildora.setPadding((int) (7 * d), 0, (int) (8 * d), 0);
-        ondasMini = new BurbujaUI.Ondas(cx, 6);
-        pildora.addView(ondasMini, new LinearLayout.LayoutParams((int) (28 * d), (int) (12 * d)));
-        pildora.addView(new View(cx), new LinearLayout.LayoutParams(0, 1, 1f));
-        logoMini = new BurbujaUI.Logo(cx);
-        pildora.addView(logoMini, cuadro(26, 0));
+        pildora.setGravity(Gravity.CENTER);
+        esferaMini = new BurbujaEsfera(cx);
+        pildora.addView(esferaMini, new LinearLayout.LayoutParams((int) (PILDORA_W * d), (int) (PILDORA_H * d)));
         raiz.addView(pildora, new FrameLayout.LayoutParams((int) (PILDORA_W * d), (int) (PILDORA_H * d)));
         pildora.setOnTouchListener(new View.OnTouchListener() {
             private float ox;
@@ -353,11 +348,9 @@ class BurbujaManos {
     /** Colores de la pildora: cian normal, verde con respuesta nueva; las ondas corren mas rapido mientras Jarvis piensa. */
     private void estiloCirculo() {
         int borde = pensando ? BurbujaUI.DORADO : (nuevo ? VERDE : CIAN);
-        pildora.setBackground(new BurbujaUI.Vidrio(d, PILDORA_H * d / 2f, borde));
-        ondasMini.color(borde);
-        ondasMini.modo(pensando ? 1 : (nuevo ? 3 : (voz.hablando() ? 4 : 0)));
-        logoMini.borde(nuevo ? VERDE : 0);
-        logoMini.pensando(pensando);
+        pildora.setBackground(null);
+        esferaMini.color(nuevo ? VERDE : Color.parseColor("#1ED7FF"));
+        esferaMini.modo(pensando ? 1 : (nuevo ? 3 : (voz.hablando() ? 4 : 0)));
         pildora.setAlpha(1f);
     }
 

@@ -94,3 +94,4 @@
 - Esfera de Jarvis nueva (estilo erizo): miles de particulas que giran, respiran y se disparan en picos con la voz.
 - Esfera mas grande y con mas puntos: los picos se disparan mas fuerte cuanto mas fuerte habla Jarvis.
 - Esfera rehecha: puntos redondos que brillan, picos en racimos y un solo color cian que no cambia.
+- v1.56 (21 nov 2026): la burbuja flotante ahora es la esfera de Jarvis (bolita de puntos cian que gira, respira y se eriza con la voz) en vez de la píldora; al tocarla se abre el panel para escribir o hablar, igual que antes. Verde con respuesta nueva. Archivos: `app/nativo/BurbujaEsfera.java` (nuevo), `BurbujaManos.java`, `app/manos_nativo.py`. Requiere APK nueva.
