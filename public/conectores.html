@@ -140,7 +140,7 @@ button.b:disabled { opacity: .5; cursor: default; }
     var guardar = el('button', 'b fuerte', 'Guardar'); guardar.type = 'button';
     var probar = el('button', 'b', 'Probar'); probar.type = 'button';
     var google = null;
-    if (c.google) {
+    if (c.google && (c.google_listo || esGoogle)) {
       var zona = el('div', 'campo');
       if (esGoogle) zona.appendChild(el('p', 'suave', 'Conectado con Google' + (c.valores && c.valores.correo ? ' (' + c.valores.correo + ')' : '') + '. No hace falta contraseña de aplicación.'));
       else if (!c.google_listo) zona.appendChild(el('p', 'msg mal', 'Falta GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el servidor (Vercel). Cuando estén, aquí aparece el botón.'));
@@ -151,6 +151,19 @@ button.b:disabled { opacity: .5; cursor: default; }
         google = el('button', 'b fuerte', esGoogle ? 'Reconectar con Google' : 'Conectar con Google'); google.type = 'button';
         botones.appendChild(google);
       }
+    }
+    if (c.id === 'correo' && !esGoogle) {
+      var URL_CLAVE = 'https://myaccount.google.com/apppasswords';
+      var sacar = el('button', 'b fuerte', 'Sacar mi contraseña de 16 letras →'); sacar.type = 'button';
+      sacar.addEventListener('click', function () {
+        var W = window.top || window, cap = W.Capacitor;
+        var nav = cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.Browser;
+        if (nav && nav.open) nav.open({ url: URL_CLAVE }); else window.open(URL_CLAVE, '_blank', 'noopener');
+      });
+      var nota = el('small', 'suave', '1) Toque el botón y entre con su cuenta de Google (necesita la verificación en 2 pasos). 2) Ponga un nombre (ej. Jarvis) y copie las 16 letras. 3) Péguelas aquí en «Contraseña de aplicación» y toque Guardar.');
+      nota.style.display = 'block'; nota.style.marginTop = '12px';
+      cuerpo.appendChild(nota);
+      botones.appendChild(sacar);
     }
     if (!esGoogle) botones.appendChild(guardar);
     botones.appendChild(probar);

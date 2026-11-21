@@ -10,6 +10,7 @@ import os
 import re
 import secrets
 import smtplib
+import time
 import unicodedata
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -389,10 +390,40 @@ def _correo_enviar(args, datos):
     return {'ok': True, 'estado': 'enviado', 'para': para}
 
 
+def _carpeta_borradores(m):
+    """Nombre de la carpeta de borradores de Gmail (cambia segun el idioma de la cuenta)."""
+    _, lista = m.list()
+    for linea in lista or []:
+        t = linea.decode('utf-8', 'replace') if isinstance(linea, bytes) else str(linea)
+        if '\\Drafts' in t:
+            nombre = t.rsplit(' "/" ', 1)[-1].strip().strip('"')
+            if nombre:
+                return nombre
+    return '[Gmail]/Drafts'
+
+
+def _borrador_imap(datos, para, asunto, cuerpo):
+    """Guarda el borrador en la carpeta de borradores por IMAP (contrasena de aplicacion). No envia nada."""
+    msg = EmailMessage()
+    msg['From'], msg['To'], msg['Subject'] = datos['correo'], para, asunto
+    msg['Date'] = email.utils.formatdate(localtime=True)
+    msg.set_content(cuerpo)
+    m = _imap(datos)
+    try:
+        carpeta = _carpeta_borradores(m)
+        estado, _ = m.append('"' + carpeta + '"', '\\Draft', imaplib.Time2Internaldate(time.time()), msg.as_bytes())
+        if estado != 'OK':
+            raise ErrorConector('Gmail no dejo guardar el borrador.')
+    finally:
+        try:
+            m.logout()
+        except Exception:
+            pass
+    return {'ver_en': 'https://mail.google.com/mail/u/0/#drafts'}
+
+
 def _correo_borrador(args, datos):
     """Deja un borrador en Gmail. NO envia nada: sirve tambien para los trabajos en segundo plano."""
-    if not _es_google(datos):
-        raise ErrorConector('Los borradores necesitan Gmail conectado con «Conectar con Google» (Modulos > Conectores).')
     para = str(args.get('para') or '').strip()
     asunto = ' '.join(str(args.get('asunto') or '').split())[:150]
     cuerpo = str(args.get('cuerpo') or '').strip()[:5000]
@@ -400,7 +431,10 @@ def _correo_borrador(args, datos):
         raise ErrorConector('El destinatario debe ser UN solo correo valido.')
     if not asunto or not cuerpo:
         raise ErrorConector('Faltan el asunto o el cuerpo del borrador.')
-    r = _gm(gmail_api.crear_borrador, datos, para, asunto, cuerpo, str(args.get('responder_a') or '').strip() or None)
+    if _es_google(datos):
+        r = _gm(gmail_api.crear_borrador, datos, para, asunto, cuerpo, str(args.get('responder_a') or '').strip() or None)
+    else:
+        r = _borrador_imap(datos, para, asunto, cuerpo)
     return {'ok': True, 'estado': 'borrador_guardado_en_gmail', 'para': para, 'asunto': asunto, 'ver_en': r['ver_en'],
             'nota': 'El borrador quedo en la carpeta Borradores de Gmail. NO se envio: el usuario lo revisa y lo envia.'}
 
@@ -467,9 +501,7 @@ def activas(apagadas, contexto):
         return []
     datos = _datos()
     ids = {c['id'] for c in CONECTORES if c['siempre']} | set(datos)
-    google = _es_google(datos.get('correo', {}))
-    return [h for h in HERRAMIENTAS if _DEF[h['name']][0] in ids and h['name'] not in apagadas
-            and (google or h['name'] != 'correo_borrador')]
+    return [h for h in HERRAMIENTAS if _DEF[h['name']][0] in ids and h['name'] not in apagadas]
 
 
 def ejecutar(nombre, argumentos, acciones_frontend):
