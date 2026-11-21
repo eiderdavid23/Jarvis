@@ -84,3 +84,4 @@
 - Datos cifrados con LLAVES_SECRET. Enviar correo/Telegram exige borrador + «¿Lo envío?» + aprobacion en el mensaje siguiente.
 - Parches: server.py (8 puntos), herramientas.js (grupo «Conectores») y modulos.js (modulo «Conectores»).
 - v1.45 (21 nov 2026): un hola tardaba 32 s porque Gemini 3.5 Flash era el principal y no respondia en 30 s. Ahora el principal es Gemini 3.5 Flash Lite, Flash 3.5 queda de respaldo, la espera maxima baja a 10 s y un modelo que no responde se descarta 10 min (antes 1). Solo servidor. Si en Vercel existen GEMINI_MODEL, GEMINI_MODEL_RESPALDO o TIMEOUT_IA, esas variables mandan: borrarlas o ponerles estos valores.
+- v1.46 (21 nov 2026): la respuesta se escribe con ritmo parejo (public/delta.js guarda los trozos del modelo y los muestra de a pocos caracteres). Solo web.
