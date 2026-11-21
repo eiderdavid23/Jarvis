@@ -1,0 +1,12 @@
+/* Boton "Descargar app" de la cabecera (v1.51) */
+#btnApp {
+  pointer-events: auto; height: 34px; margin-top: 3px; padding: 0 12px; gap: 6px;
+  display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+  border-radius: 17px; background: transparent; border: 1px solid var(--linea); color: var(--cian);
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#btnApp:active { background: rgba(0,229,255,.14); }
+#btnApp.ocupado { opacity: .55; pointer-events: none; }
+@media (max-width: 400px) { #btnApp span { display: none; } #btnApp { width: 40px; padding: 0; border-radius: 50%; height: 40px; margin-top: 0; } }
+body.m-voz #btnApp { pointer-events: none; }
