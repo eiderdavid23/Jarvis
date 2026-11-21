@@ -68,7 +68,31 @@
       });
     }).catch(function () {});
   }
+  function ticketGoogle(url) {
+    var m = /[?&]google_ticket=([^&#]+)/.exec(url || '');
+    if (!m) return false;
+    var ticket = decodeURIComponent(m[1]);
+    try { if (NAV && NAV.close) NAV.close(); } catch (e) {}
+    function guardar(tok) {
+      return fetch('/conectores/google/guardar', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ ticket: ticket }) });
+    }
+    var acc = '', ref = '';
+    try { acc = localStorage.getItem('jarvisAcceso') || ''; ref = localStorage.getItem('jarvisRefresco') || ''; } catch (e) {}
+    if (!acc) return true;
+    guardar(acc).then(function (r) {
+      if (r.status !== 401 || !ref) return r;
+      return fetch('/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: ref }) })
+        .then(function (x) { return x.ok ? x.json() : null; }).then(function (d) {
+          if (!d || !d.access_token) return r;
+          try { localStorage.setItem('jarvisAcceso', d.access_token); if (d.refresh_token) localStorage.setItem('jarvisRefresco', d.refresh_token); } catch (e) {}
+          return guardar(d.access_token);
+        });
+    }).then(function () { location.reload(); }).catch(function () {});
+    return true;
+  }
   function volverDeGoogle(url) {
+    if (ticketGoogle(url)) return;
     var i = (url || '').indexOf('#');
     var h = new URLSearchParams(i >= 0 ? url.slice(i + 1) : '');
     if (!h.get('access_token')) return;

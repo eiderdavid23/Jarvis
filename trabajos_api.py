@@ -37,9 +37,13 @@ def mensaje_de(f):
     """Lo que el ejecutor le manda a /chat para hacer el trabajo."""
     disp = f.get('dispositivo')
     donde = (' Usa el dispositivo "' + disp + '" en las herramientas de celular, PC o TV.') if disp else ''
+    correo = (' Si el trabajo toca el correo: lee con correo_leer (usa el id para abrir uno completo), resume lo importante y, '
+              'si hay que contestar, deja el borrador con correo_borrador (responder_a = id del correo). NUNCA envies correos '
+              'en un trabajo en segundo plano: el usuario revisa los borradores y los envia el.'
+              if re.search(r'correo|gmail|mail|bandeja', f['instruccion'], re.I) else '')
     return ('TRABAJO EN SEGUNDO PLANO: el usuario te lo dejo y esta haciendo otra cosa, asi que no hagas preguntas. '
             'Hazlo completo con tus herramientas y al final resume en pocas frases que hiciste y que resultado quedo. '
-            'Si algo falla, di cual fue el problema. Trabajo: ' + f['instruccion'] + donde)
+            'Si algo falla, di cual fue el problema. Trabajo: ' + f['instruccion'] + donde + correo)
 
 
 def _limpiar_caidos():

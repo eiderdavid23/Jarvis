@@ -113,7 +113,9 @@ button.b:disabled { opacity: .5; cursor: default; }
 
     var cuerpo = el('div', 'cuerpo'); cuerpo.hidden = !abierta;
     var entradas = {};
+    var esGoogle = c.google && c.metodo === 'google';
     c.campos.forEach(function (k) {
+      if (esGoogle) return;
       var campo = el('div', 'campo');
       var etiqueta = el('label', '', k.etiqueta);
       var entrada = k.tipo === 'textarea' ? el('textarea') : el('input');
@@ -137,7 +139,21 @@ button.b:disabled { opacity: .5; cursor: default; }
     var botones = el('div', 'botones');
     var guardar = el('button', 'b fuerte', 'Guardar'); guardar.type = 'button';
     var probar = el('button', 'b', 'Probar'); probar.type = 'button';
-    botones.appendChild(guardar); botones.appendChild(probar);
+    var google = null;
+    if (c.google) {
+      var zona = el('div', 'campo');
+      if (esGoogle) zona.appendChild(el('p', 'suave', 'Conectado con Google' + (c.valores && c.valores.correo ? ' (' + c.valores.correo + ')' : '') + '. No hace falta contraseña de aplicación.'));
+      else if (!c.google_listo) zona.appendChild(el('p', 'msg mal', 'Falta GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el servidor (Vercel). Cuando estén, aquí aparece el botón.'));
+      else zona.appendChild(el('p', 'suave', 'Un toque y Google le pide el permiso. Jarvis lee, deja borradores y solo envía con su «sí».'));
+      zona.appendChild(el('small', 'suave', 'Enlace de retorno para pegar en Google Cloud (URI de redireccionamiento autorizado): ' + (c.google_uri || '')));
+      cuerpo.appendChild(zona);
+      if (c.google_listo) {
+        google = el('button', 'b fuerte', esGoogle ? 'Reconectar con Google' : 'Conectar con Google'); google.type = 'button';
+        botones.appendChild(google);
+      }
+    }
+    if (!esGoogle) botones.appendChild(guardar);
+    botones.appendChild(probar);
     var quitar = null;
     if (c.estado === 'conectado') {
       quitar = el('button', 'b', 'Desconectar'); quitar.type = 'button';
@@ -145,7 +161,16 @@ button.b:disabled { opacity: .5; cursor: default; }
     }
     cuerpo.appendChild(botones); cuerpo.appendChild(msg);
 
-    function ocupado(v) { guardar.disabled = probar.disabled = v; if (quitar) quitar.disabled = v; }
+    function ocupado(v) { guardar.disabled = probar.disabled = v; if (quitar) quitar.disabled = v; if (google) google.disabled = v; }
+    if (google) google.addEventListener('click', function () {
+      ocupado(true); decir('Abriendo Google…');
+      api('/conectores/google/iniciar', 'POST', {}).then(function (d) {
+        var W = window.top || window, cap = W.Capacitor;
+        var nav = cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.Browser;
+        if (nav && nav.open) { nav.open({ url: d.url }); decir('Termine en Google y vuelva a Jarvis.'); ocupado(false); }
+        else W.location.href = d.url;
+      }).catch(function (e) { decir(e.message, 'mal'); ocupado(false); });
+    });
     guardar.addEventListener('click', function () {
       var datos = {};
       Object.keys(entradas).forEach(function (id) { datos[id] = entradas[id].value; });
