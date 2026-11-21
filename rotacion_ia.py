@@ -1,4 +1,4 @@
-"""Rotacion automatica de modelos de IA gratuitos (Gemini, Groq, Mistral y OpenRouter).
+"""Rotacion automatica de modelos de IA gratuitos (Gemini y Groq).
 
 Jarvis prueba los modelos en orden. Cuando uno se agota (429), no existe (404), falla (5xx),
 no responde o rechaza la llave, lo marca como agotado por un rato y pasa al siguiente.
@@ -20,19 +20,14 @@ srv = None   # lo asigna server.py (necesita sus herramientas, constantes y gene
 bp = Blueprint('rotacion', __name__)
 
 ORDEN = ('gemini', 'groq')
-MARCA = {'gemini': 'Gemini', 'groq': 'Groq', 'mistral': 'Mistral', 'openrouter': 'OpenRouter'}
-EMPRESA = {'gemini': 'Google', 'groq': 'Groq', 'mistral': 'Mistral', 'openrouter': 'OpenRouter'}
-CABECERA_LLAVE = {'gemini': 'X-Gemini-Key', 'groq': 'X-Groq-Key',
-                  'mistral': 'X-Mistral-Key', 'openrouter': 'X-OpenRouter-Key'}
-URL_OPENAI = {'mistral': 'https://api.mistral.ai/v1/chat/completions',
-              'openrouter': 'https://openrouter.ai/api/v1/chat/completions'}
+MARCA = {'gemini': 'Gemini', 'groq': 'Groq'}
+EMPRESA = {'gemini': 'Google', 'groq': 'Groq'}
+CABECERA_LLAVE = {'gemini': 'X-Gemini-Key', 'groq': 'X-Groq-Key'}
 NOMBRES = {
     'gemini-3.5-flash': 'Gemini 3.5 Flash', 'gemini-3.5-flash-lite': 'Gemini 3.5 Flash Lite',
     'gemini-2.5-flash': 'Gemini 2.5 Flash', 'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
     'openai/gpt-oss-120b': 'GPT-OSS 120B', 'openai/gpt-oss-20b': 'GPT-OSS 20B',
     'meta-llama/llama-4-scout-17b-16e-instruct': 'Llama 4 Scout',
-    'mistral-small-latest': 'Mistral Small', 'open-mistral-nemo': 'Mistral Nemo',
-    'openrouter/free': 'OpenRouter Free', 'poolside/laguna-s-2.1:free': 'Laguna S 2.1',
 }
 NOTAS = {
     'gemini-3.5-flash': 'El más capaz, con herramientas e imágenes',
@@ -42,23 +37,11 @@ NOTAS = {
     'openai/gpt-oss-120b': 'Razonamiento rápido en Groq',
     'openai/gpt-oss-20b': 'Más liviano, cuota aparte',
     'meta-llama/llama-4-scout-17b-16e-instruct': 'Rápido, cuota aparte',
-    'mistral-small-latest': 'Equilibrado y con herramientas',
-    'open-mistral-nemo': 'Ligero, cuota aparte',
-    'openrouter/free': 'Elige solo un modelo gratis disponible',
-    'poolside/laguna-s-2.1:free': 'Gratis, para tareas con herramientas',
 }
 
 
-MARCA['nvidia'] = 'NVIDIA'
-EMPRESA['nvidia'] = 'NVIDIA'
-CABECERA_LLAVE['nvidia'] = 'X-Nvidia-Key'
-URL_OPENAI['nvidia'] = 'https://integrate.api.nvidia.com/v1/chat/completions'
-NOMBRES.update({'qwen/qwen3.8-27b': 'Qwen 3.8 27B',
-                'qwen/qwen3-coder-480b-a35b-instruct': 'Qwen3 Coder 480B',
-                'meta/llama-3.3-70b-instruct': 'Llama 3.3 70B'})
-NOTAS.update({'qwen/qwen3.8-27b': 'Cuota propia en Groq',
-              'qwen/qwen3-coder-480b-a35b-instruct': 'Especialista en código (NVIDIA, gratis)',
-              'meta/llama-3.3-70b-instruct': 'General y estable (NVIDIA, gratis)'})
+NOMBRES['qwen/qwen3.8-27b'] = 'Qwen 3.8 27B'
+NOTAS['qwen/qwen3.8-27b'] = 'Cuota propia en Groq'
 
 
 class TodosAgotados(Exception):
@@ -122,9 +105,7 @@ def api_modelos():
 # ---------------------------------------------------------------- llaves
 def reunir_llaves(cabeceras, usa_servidor):
     """{'gemini': llave, ...} con las llaves disponibles: navegador, luego cuenta, luego servidor."""
-    env = {'gemini': srv.GEMINI_API_KEY, 'groq': srv.GROQ_API_KEY,
-           'mistral': os.environ.get('MISTRAL_API_KEY', ''), 'openrouter': os.environ.get('OPENROUTER_API_KEY', ''),
-           'nvidia': os.environ.get('NVIDIA_API_KEY', '')}
+    env = {'gemini': srv.GEMINI_API_KEY, 'groq': srv.GROQ_API_KEY}
     llaves = {p: (cabeceras.get(CABECERA_LLAVE[p], '') or '').strip() for p in ORDEN}
     if not all(llaves.values()):
         try:
@@ -210,75 +191,6 @@ def _cuanto(seg):
     return f'{round(seg / 3600)} h'
 
 
-# ---------------------------------------------------------------- proveedores compatibles con OpenAI
-def _texto_de(c):
-    if isinstance(c, list):
-        return ''.join(p.get('text', '') for p in c if isinstance(p, dict))
-    return c or ''
-
-
-def _generar_openai(prov, modelo, system_prompt, turnos, api_key, nivel):
-    mensajes = [{'role': 'system', 'content': system_prompt}]
-    for h in turnos:
-        mensajes.append({'role': 'user' if h['role'] == 'user' else 'assistant', 'content': h['texto']})
-    acciones = {'urls_abrir': [], 'busqueda': None, 'imagenes': []}
-    tools = srv.construir_tools_groq()   # mismo formato OpenAI
-    cab = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
-    if prov == 'openrouter':
-        cab['HTTP-Referer'] = os.environ.get('APP_URL', 'https://jarvis-mu-ebon-12.vercel.app')
-        cab['X-Title'] = 'Jarvis'
-    acumulado, continuaciones = '', 0
-    for _ in range(srv.MAX_VUELTAS_HERRAMIENTAS + srv.MAX_CONTINUACIONES):
-        cuerpo = {'model': modelo, 'messages': mensajes, 'temperature': srv._temp(),
-                  'max_tokens': max(srv.TOKENS_GROQ[nivel], 2048)}
-        if tools:
-            cuerpo['tools'] = tools
-            cuerpo['tool_choice'] = 'auto'
-        print(f'[{prov.upper()}] Llamando con modelo {modelo}...')
-        resp = requests.post(URL_OPENAI[prov], headers=cab, json=cuerpo, timeout=srv.TIMEOUT_IA)
-        print(f'[{prov.upper()}] Respuesta HTTP: {resp.status_code}')
-        if resp.status_code != 200:
-            print(f'[{prov.upper()}] Cuerpo del error: {resp.text[:1500]}')
-        resp.raise_for_status()
-        data = resp.json()
-        if not data.get('choices'):   # OpenRouter a veces responde 200 con {"error": ...}
-            raise FalloModelo(120, 'respondió con error')
-        eleccion = data['choices'][0]
-        msg = eleccion.get('message') or {}
-        tool_calls = msg.get('tool_calls') or []
-        mensajes.append({'role': 'assistant', 'content': _texto_de(msg.get('content')),
-                         **({'tool_calls': tool_calls} if tool_calls else {})})
-        if not tool_calls:
-            aviso_guardia = '' if acumulado else srv.exigir_herramienta(acciones)
-            if aviso_guardia:
-                mensajes.append({'role': 'user', 'content': aviso_guardia})
-                continue
-            acumulado += _texto_de(msg.get('content'))
-            if eleccion.get('finish_reason') == 'length':
-                if continuaciones < srv.MAX_CONTINUACIONES:
-                    continuaciones += 1
-                    mensajes.append({'role': 'user', 'content': srv.PROMPT_CONTINUAR})
-                    continue
-                acumulado += srv.NOTA_CORTADA
-            if not acumulado.strip():
-                raise FalloModelo(60, 'respondió vacío')
-            return acumulado.strip(), acciones
-        for tc in tool_calls:
-            nombre = tc['function']['name']
-            try:
-                args = json.loads(tc['function'].get('arguments') or '{}')
-            except json.JSONDecodeError:
-                args = {}
-            print(f'[{prov.upper()}] Herramienta solicitada: {nombre}({args})')
-            resultado = srv.ejecutar_herramienta(nombre, args, acciones)
-            fila = {'role': 'tool', 'tool_call_id': tc['id'], 'content': json.dumps(resultado, ensure_ascii=False)}
-            if prov == 'mistral':
-                fila['name'] = nombre
-            mensajes.append(fila)
-        srv._paso_final()
-    return 'Me enredé pensando demasiado en eso, señor. ¿Puede reformularlo?', acciones
-
-
 def _generar_uno(m, system_prompt, turnos, llave, nivel):
     g.modelo_gemini = m['modelo'] if m['prov'] == 'gemini' else None
     g.modelo_groq = m['modelo'] if m['prov'] == 'groq' else None
@@ -286,12 +198,11 @@ def _generar_uno(m, system_prompt, turnos, llave, nivel):
         return srv.generar_gemini(system_prompt, turnos, llave, nivel)
     if m['prov'] == 'groq':
         return srv.generar_groq(system_prompt, turnos, llave, nivel)
-    return _generar_openai(m['prov'], m['modelo'], system_prompt, turnos, llave, nivel)
 
 
 # ---------------------------------------------------------------- cadena
 # Modelos que en pruebas inventan acciones en vez de llamar herramientas: se evitan cuando piden algo del celular.
-SIN_HERRAMIENTAS_FIABLES = {'openrouter/free', 'open-mistral-nemo', 'meta-llama/llama-4-scout-17b-16e-instruct'}
+SIN_HERRAMIENTAS_FIABLES = {'meta-llama/llama-4-scout-17b-16e-instruct'}
 
 
 def _para_celular(lista):
