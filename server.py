@@ -2045,15 +2045,54 @@ def generar_gemini(system_prompt, turnos, api_key, nivel='medio'):
     return 'Me enrede pensando demasiado en eso, señor. ¿Puede reformularlo?', acciones
 
 
+# Groq gratis admite ~8000 tokens por minuto (entrada + salida) y rechaza (413) lo que no cabe.
+# Con plan de pago pon GROQ_TPM en .env (ej. 30000) y se manda todo completo.
+GROQ_TPM = int(os.environ.get('GROQ_TPM', '8000'))
+HERR_ESENCIALES_GROQ = ('buscar_web', 'leer_pagina', 'guardar_recuerdo', 'crear_recordatorio',
+                        'listar_recordatorios', 'abrir_url', 'abrir_plataforma')
+HERR_CEL_GROQ = ('ver_pantalla', 'controlar_pantalla', 'encender_linterna', 'apagar_linterna',
+                 'vibrar', 'consultar_bateria')
+
+
+def _tokens_aprox(obj):
+    return len(json.dumps(obj, ensure_ascii=False)) // 3
+
+
+def _ajustar_groq(system_prompt, turnos, max_tokens):
+    """Achica la peticion hasta que quepa en el limite de Groq: devuelve (system, turnos, tools, max_tokens)."""
+    max_tokens = min(max_tokens, max(800, GROQ_TPM // 4))
+    tope = GROQ_TPM - max_tokens - 300
+    try:
+        compacto = g.get('system_compacto') or ''
+        celular = bool(g.get('pide_celular'))
+    except RuntimeError:
+        compacto, celular = '', False
+    todas = construir_tools_groq()
+    nombres = HERR_ESENCIALES_GROQ + (HERR_CEL_GROQ if celular else ())
+    esenciales = [t for t in todas if t['function']['name'] in nombres]
+    intentos = [(system_prompt, todas, turnos), (system_prompt, todas, turnos[-8:]),
+                (system_prompt, esenciales, turnos[-6:])]
+    if compacto:
+        intentos += [(compacto, esenciales, turnos[-6:]), (compacto, esenciales if celular else [], turnos[-4:])]
+    else:
+        intentos += [(system_prompt, [], turnos[-4:])]
+    for i, (sp, tl, tn) in enumerate(intentos):
+        est = _tokens_aprox({'s': sp, 't': tl, 'h': [x['texto'] for x in tn]})
+        if est <= tope or i == len(intentos) - 1:
+            if i:
+                print(f'[GROQ] Peticion achicada (paso {i}): ~{est} tokens, tope {tope}.')
+            return sp, tn, tl, max_tokens
+
+
 def generar_groq(system_prompt, turnos, api_key, nivel='medio'):
+    system_prompt, turnos, tools, max_tok = _ajustar_groq(system_prompt, turnos, TOKENS_GROQ[nivel])
     mensajes = [{'role': 'system', 'content': system_prompt}]
     for h in turnos:
         rol = 'user' if h['role'] == 'user' else 'assistant'
         mensajes.append({'role': rol, 'content': h['texto']})
 
     acciones = {'urls_abrir': [], 'busqueda': None, 'imagenes': []}
-    tools = construir_tools_groq()
-    cfg_groq = {'max_tokens': TOKENS_GROQ[nivel], 'reasoning_effort': NIVEL_EN[nivel]}
+    cfg_groq = {'max_tokens': max_tok, 'reasoning_effort': NIVEL_EN[nivel]}
 
     acumulado, continuaciones = '', 0
     for _ in range(_vueltas() + MAX_CONTINUACIONES):
@@ -2778,6 +2817,11 @@ def _chat_interno():
         system_prompt = (SYSTEM_PROMPT_BASE + texto_capacidades() + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
                          + texto_recuerdos + texto_resumen + texto_archivos + texto_archivos_proy + texto_proyecto
                          + texto_seguridad + texto_apagadas())
+        _i = SYSTEM_PROMPT_BASE.find('Tienes herramientas reales')
+        g.system_compacto = ((SYSTEM_PROMPT_BASE[:_i] if _i > 0 else SYSTEM_PROMPT_BASE[:1200]).strip()
+                             + ' Usa las herramientas que tengas cuando corresponda; si te falta una, dilo en una frase.'
+                             + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
+                             + texto_recuerdos[:1500] + texto_resumen)
 
         g.pide_celular = pide_celular(mensaje_usuario)
         turnos = list(historial[-UMBRAL_RESUMEN:])  # mensajes posteriores al resumen (maximo 30)
@@ -2796,6 +2840,7 @@ def _chat_interno():
         g.temperatura = _temperatura(mensaje_usuario)
         nivel_usuario = nivel
         nivel = _nivel_automatico(nivel, mensaje_usuario, adj)
+        g.charla = (nivel == 'bajo' and nivel_usuario == 'medio')
         if nivel == 'alto' and nivel_usuario != 'alto':
             _paso('Pregunta difícil: cambiando a razonamiento ' + nivel)
             _evento_nivel(nivel)

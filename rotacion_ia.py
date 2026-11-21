@@ -175,7 +175,9 @@ def _clasificar(e):
             return 600, 'llave rechazada'
         if c in (404, 410):
             return 3600, 'no disponible'
-        if c in (400, 413, 422):
+        if c == 413:
+            return 30, 'petición demasiado grande'
+        if c in (400, 422):
             return 300, 'rechazó la petición'
         if c in (500, 502, 503, 504):
             return 90, 'saturado'
@@ -225,7 +227,18 @@ def cadena(llaves, eleccion='auto', cambio_auto=True, solo_gemini=False):
         fijo = [m for m in cat if m['id'] == eleccion] or [m for m in cat if m['prov'] == eleccion][:1]
         if fijo:
             return fijo + _para_celular([m for m in cat if m is not fijo[0]]) if cambio_auto else fijo
-    return _para_celular(cat)
+    return _para_celular(_ahorrar(cat))
+
+
+def _ahorrar(lista):
+    """Charla corta: primero los modelos ligeros de Gemini (mas cuota); el grande se guarda para lo dificil."""
+    try:
+        if not g.get('charla'):
+            return lista
+    except RuntimeError:
+        return lista
+    return sorted(lista, key=lambda m: 0 if (m['prov'] == 'gemini' and 'lite' in m['modelo'])
+                  else (1 if m['prov'] == 'gemini' else 2))
 
 
 def proveedor_de_texto(llaves, eleccion, cambio_auto, solo_gemini):
