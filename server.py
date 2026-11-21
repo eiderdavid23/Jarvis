@@ -1316,7 +1316,16 @@ def _nivel_automatico(nivel, mensaje, adj):
     claves = sum(1 for p in PALABRAS_DIFICILES if p in m)
     dificil = (adj.get('zips') or adj.get('pdfs')
                or claves >= 2 or (claves == 1 and len(m) > 120))
-    return 'alto' if dificil else nivel
+    if dificil:
+        return 'alto'
+    # Charla corta y sin nada raro: no hace falta pensar.
+    try:
+        celular = bool(g.get('pide_celular'))
+    except RuntimeError:
+        celular = False
+    if len(m) <= 160 and claves == 0 and not celular and not adj.get('nombres'):
+        return 'bajo'
+    return nivel
 
 
 def _evento_nivel(nivel):
@@ -2796,14 +2805,14 @@ def _chat_interno():
         g.temperatura = _temperatura(mensaje_usuario)
         nivel_usuario = nivel
         nivel = _nivel_automatico(nivel, mensaje_usuario, adj)
-        if nivel != nivel_usuario:
+        if nivel == 'alto' and nivel_usuario != 'alto':
             _paso('Pregunta difícil: cambiando a razonamiento ' + nivel)
             _evento_nivel(nivel)
         try:
             respuesta, acciones, usado = rotacion_ia.generar(
                 system_prompt, turnos, llaves, nivel, eleccion, cambio_auto, solo_gemini)
         finally:
-            if nivel != nivel_usuario:
+            if nivel == 'alto' and nivel_usuario != 'alto':
                 _paso('Volviendo a razonamiento ' + nivel_usuario)
                 _evento_nivel(None)
 

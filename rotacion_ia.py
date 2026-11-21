@@ -19,7 +19,7 @@ from flask import Blueprint, g, jsonify
 srv = None   # lo asigna server.py (necesita sus herramientas, constantes y generar_gemini/groq)
 bp = Blueprint('rotacion', __name__)
 
-ORDEN = ('gemini', 'groq', 'nvidia', 'mistral', 'openrouter')
+ORDEN = ('gemini', 'groq')
 MARCA = {'gemini': 'Gemini', 'groq': 'Groq', 'mistral': 'Mistral', 'openrouter': 'OpenRouter'}
 EMPRESA = {'gemini': 'Google', 'groq': 'Groq', 'mistral': 'Mistral', 'openrouter': 'OpenRouter'}
 CABECERA_LLAVE = {'gemini': 'X-Gemini-Key', 'groq': 'X-Groq-Key',
@@ -97,11 +97,7 @@ def catalogo():
             ('gemini', srv.GEMINI_MODEL), ('gemini', srv.GEMINI_MODEL_RESPALDO),
             ('gemini', 'gemini-2.5-flash'), ('gemini', 'gemini-2.5-flash-lite'),
             ('groq', srv.GROQ_MODEL), ('groq', 'openai/gpt-oss-20b'), ('groq', 'qwen/qwen3.8-27b'),
-            ('nvidia', 'openai/gpt-oss-120b'), ('nvidia', 'qwen/qwen3-coder-480b-a35b-instruct'),
-            ('nvidia', 'meta/llama-3.3-70b-instruct'),
             ('groq', 'meta-llama/llama-4-scout-17b-16e-instruct'),
-            ('mistral', os.environ.get('MISTRAL_MODEL', 'mistral-small-latest')), ('mistral', 'open-mistral-nemo'),
-            ('openrouter', 'openrouter/free'), ('openrouter', 'poolside/laguna-s-2.1:free'),
         ]
         vistos = set()
         for prov, modelo in base:
