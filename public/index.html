@@ -837,6 +837,7 @@
   </div>
 </div>
 <script src="/ondas.js"></script>
+<script src="/esfera.js"></script>
 <script src="/archivo_ui.js"></script>
 <script>
 /* ========== Orbe ========== */
@@ -864,6 +865,7 @@ function animar() {
   requestAnimationFrame(animar);
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
+  if (window.jarvisEsfera && window.jarvisEsfera.dibujar(ctx, w, h, estadoActual)) return;
   const cx = w / 2, cy = h / 2;
   const base = Math.min(w, h) * 0.28;
   let velocidad = 0.01, amplitud = 1, color = '0,229,255';

@@ -91,3 +91,4 @@
 - v1.50 (21 nov 2026): los borradores de correo (`correo_borrador`) funcionan tambien con la contraseña de aplicacion (se guardan por IMAP en la carpeta de borradores de Gmail, sin Google Cloud) y la tarjeta Gmail de Conectores tiene el boton «Sacar mi contraseña de 16 letras» con el enlace directo y los pasos. «Conectar con Google» solo aparece si el servidor tiene GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET. Archivos: `conectores_api.py`, `public/conectores.html`.
 - v1.51 (21 nov 2026): la hoja «Conectores» del inicio orbital tiene la fila nueva «Gmail y más», que abre el modulo Conectores (donde se conecta Gmail con la contraseña de aplicacion). Solo web: `public/inicio_orbital_hojas.js`.
 - Conectores con animaciones: tarjetas que entran y se despliegan suave, barra de carga, mensajes y botones con transiciones.
+- Esfera de Jarvis nueva (estilo erizo): miles de particulas que giran, respiran y se disparan en picos con la voz.
