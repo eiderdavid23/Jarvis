@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<style>html{background:#05070d}html[data-tema="claro"]{background:#f9f9f7}html.jvPausa *,html.jvPausa *::before,html.jvPausa *::after{animation-play-state:paused!important}html.apk *,html.apk *::before,html.apk *::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>J.A.R.V.I.S.</title>
 <link rel="manifest" href="/manifest.json">
@@ -10,8 +11,8 @@
 (function () {
   var mq = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
   function pref() {
-    try { var p = localStorage.getItem('jarvisTema'); return (p === 'claro' || p === 'oscuro') ? p : 'sistema'; }
-    catch (e) { return 'sistema'; }
+    try { var p = localStorage.getItem('jarvisTema'); return (p === 'claro' || p === 'oscuro' || p === 'sistema') ? p : 'oscuro'; }
+    catch (e) { return 'oscuro'; }
   }
   window.preferenciaTema = pref;
   window.aplicarTema = function () {
@@ -22,13 +23,14 @@
     if (m) m.setAttribute('content', t === 'claro' ? '#f9f9f7' : '#050505');
   };
   window.fijarTema = function (p) {
-    try { if (p === 'sistema') localStorage.removeItem('jarvisTema'); else localStorage.setItem('jarvisTema', p); } catch (e) {}
+    try { localStorage.setItem('jarvisTema', p); } catch (e) {}
     window.aplicarTema();
   };
   if (mq) { if (mq.addEventListener) mq.addEventListener('change', window.aplicarTema); else if (mq.addListener) mq.addListener(window.aplicarTema); }
   window.aplicarTema();
 })();
 </script>
+<script src="/rendimiento.js"></script>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <style>
   :root {

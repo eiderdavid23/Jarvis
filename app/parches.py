@@ -64,7 +64,7 @@ sp = 'android/app/src/main/res/values/styles.xml'
 st = open(sp, encoding='utf-8').read()
 mm = re.search(r'<style name="AppTheme[.]NoActionBar"[^>]*>', st)
 assert mm, 'styles.xml: no encontre AppTheme.NoActionBar'
-extra = '\n        <item name="android:statusBarColor">#050505</item>\n        <item name="android:windowLightStatusBar">false</item>'
+extra = '\n        <item name="android:statusBarColor">#050505</item>\n        <item name="android:windowLightStatusBar">false</item>\n        <item name="android:windowBackground">#05070d</item>\n        <item name="android:navigationBarColor">#05070d</item>'
 st = st[:mm.end()] + extra + st[mm.end():]
 open(sp, 'w', encoding='utf-8').write(st)
 print('Barra de estado oscura')

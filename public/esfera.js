@@ -80,12 +80,12 @@
     var tm = ahora / 1000;
     var pulso = (typeof ondaPulso === 'number') ? ondaPulso : 0;
     var obj;
-    if (estado === 'hablando') obj = 0.55 + 0.25 * Math.sin(tm * 5.1) + 0.15 * Math.sin(tm * 11.3 + 1) + pulso * 0.5;
+    if (estado === 'hablando') obj = 0.5 + 0.12 * Math.sin(tm * 3.2) + 0.06 * Math.sin(tm * 7.1 + 1) + pulso * 0.3;
     else if (estado === 'escuchando') obj = 0.12 + 0.05 * Math.sin(tm * 2.2) + pulso * 0.85;
     else if (estado === 'pensando') obj = 0.1 + 0.05 * Math.sin(tm * 3);
     else obj = 0.03 + 0.015 * Math.sin(tm * 1.3);
     obj = Math.max(0, Math.min(1, obj));
-    nivel += (obj - nivel) * Math.min(1, dt * 0.016);
+    nivel += (obj - nivel) * Math.min(1, dt * 0.009);
     if (typeof ondaPulso === 'number') ondaPulso *= 0.93;
     if (typeof ondaNivel === 'number') ondaNivel = nivel;
 
@@ -97,7 +97,7 @@
     var R = Math.min(w, h) * 0.16 * (1 + 0.03 * Math.sin(tm * 1.6) + nivel * 0.1 + pulso * 0.18);
     var cg = Math.cos(giro), sg = Math.sin(giro), ct = 0.94, st = 0.34;
     var pensando = estado === 'pensando';
-    var cl = document.body.classList, tope = cl.contains('m-inicio') ? 0.45 : (cl.contains('m-voz') ? 0.7 : 1.1);
+    var cl = document.body.classList, tope = cl.contains('m-inicio') ? 0.3 : (cl.contains('m-voz') ? 0.42 : 0.6);
     /* Orbe chico = menos puntos (si no, se ve como un disco liso) */
     var total = Math.min(cuenta, Math.max(700, Math.round(cuenta * Math.min(1, anchoCss * 0.32 / 150))));
     nc[0] = nc[1] = nc[2] = nc[3] = 0; nl = 0;
@@ -111,8 +111,8 @@
       var g = Math.sin(x * 2.7 + tm * 1.4) + Math.sin(y * 3.1 - tm * 1.1) + Math.sin(z * 2.3 + tm * 0.9);
       var lobo = (g + 0.4) / 2.4;
       lobo = lobo < 0 ? 0 : (lobo > 1 ? 1 : lobo * lobo);
-      var onda = 0.5 + 0.5 * Math.sin(tm * (2.5 + k * 3) + fase[n]);
-      var pico = nivel * (0.3 + 0.7 * k) * lobo * (0.35 + 0.65 * onda) * 3.4;
+      var onda = 0.5 + 0.5 * Math.sin(tm * (1.3 + k * 1.5) + fase[n]);
+      var pico = nivel * (0.3 + 0.7 * k) * lobo * (0.35 + 0.65 * onda) * 1.9;
       if (pensando) pico += 0.12 * Math.max(0, Math.sin(y * 5 - tm * 4));
       if (pico > tope) pico = tope;
       var f = 1 / (1 - z2 * 0.2);

@@ -8,7 +8,7 @@
 (function () {
   var p = '';
   try { p = localStorage.getItem('jarvisTema') || ''; } catch (e) {}
-  var t = (p === 'claro' || p === 'oscuro') ? p : (matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'oscuro');
+  var t = (p === 'claro' || p === 'oscuro') ? p : (p === 'sistema' && matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'oscuro');
   document.documentElement.setAttribute('data-tema', t);
 })();
 </script>
