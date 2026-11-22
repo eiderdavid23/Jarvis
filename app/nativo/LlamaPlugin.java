@@ -15,8 +15,6 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -44,8 +42,7 @@ public class LlamaPlugin extends Plugin {
     private static Process proceso;
     private static String idActivo = "";
     private static final LinkedList<String> registro = new LinkedList<>();
-    private static volatile boolean descargando = false;
-    private static volatile boolean cancelarDescarga = false;
+    private DescargaServicio.Oyente mio;
     private static volatile HttpURLConnection conexionChat;
 
     private static synchronized void log(String s) {
@@ -91,8 +88,16 @@ public class LlamaPlugin extends Plugin {
     }
 
     @Override
+    public void load() {
+        mio = (id, bytes, total, listo, error) -> evento(id, bytes, total, listo, error);
+        DescargaServicio.oyente = mio;
+    }
+
+    @Override
     protected void handleOnDestroy() {
         matar();
+        // La descarga sigue en el servicio; solo se suelta el oyente si todavia es el de esta pantalla.
+        if (DescargaServicio.oyente == mio) DescargaServicio.oyente = null;
     }
 
     @PluginMethod
@@ -106,7 +111,16 @@ public class LlamaPlugin extends Plugin {
         r.put("ramLibreMb", mi.availMem / 1048576L);
         r.put("activo", vivo());
         r.put("modelo", idActivo);
-        r.put("descargando", descargando);
+        r.put("descargando", DescargaServicio.activo);
+        if (DescargaServicio.activo) {
+            JSObject d = new JSObject();
+            long b = DescargaServicio.bytesActual, t = DescargaServicio.totalActual;
+            d.put("id", DescargaServicio.idActual);
+            d.put("bytes", b);
+            d.put("total", t);
+            d.put("pct", t > 0 ? (int) (b * 100L / t) : 0);
+            r.put("descarga", d);
+        }
         JSArray lista = new JSArray();
         for (String[] m : CATALOGO) {
             JSObject o = new JSObject();
@@ -137,65 +151,14 @@ public class LlamaPlugin extends Plugin {
     public void descargar(PluginCall call) {
         final String[] m = buscar(call.getString("id", ""));
         if (m == null) { call.reject("Modelo desconocido"); return; }
-        if (descargando) { call.reject("Ya hay una descarga en curso"); return; }
-        descargando = true;
-        cancelarDescarga = false;
+        String error = DescargaServicio.pedir(getContext(), m[0], m[1], m[3], archivo(m[2]).getPath());
+        if (error != null) { call.reject(error); return; }
         call.resolve();
-        new Thread(() -> bajar(m)).start();
-    }
-
-    private void bajar(String[] m) {
-        String id = m[0];
-        try {
-            File fin = archivo(m[2]);
-            fin.getParentFile().mkdirs();
-            File part = new File(fin.getPath() + ".part");
-            long ya = part.exists() ? part.length() : 0;
-            HttpURLConnection c = (HttpURLConnection) new URL(m[3]).openConnection();
-            c.setConnectTimeout(20000);
-            c.setReadTimeout(30000);
-            c.setInstanceFollowRedirects(true);
-            if (ya > 0) c.setRequestProperty("Range", "bytes=" + ya + "-");
-            int code = c.getResponseCode();
-            if (code == 416 && ya > 0) {
-                part.renameTo(fin);
-                evento(id, ya, ya, true, null);
-                return;
-            }
-            if (code != 200 && code != 206) throw new Exception("Descarga rechazada (codigo " + code + ")");
-            boolean sigue = code == 206 && ya > 0;
-            if (!sigue) ya = 0;
-            long total = ya + c.getContentLengthLong();
-            if (c.getContentLengthLong() > 0 && fin.getParentFile().getUsableSpace() < (total - ya) + 300L * 1048576L) {
-                throw new Exception("No hay espacio suficiente en el celular");
-            }
-            long hecho = ya;
-            long ultimo = 0;
-            try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(part, sigue)) {
-                byte[] buf = new byte[65536];
-                int n;
-                while ((n = in.read(buf)) > 0) {
-                    if (cancelarDescarga) throw new Exception("Descarga cancelada");
-                    out.write(buf, 0, n);
-                    hecho += n;
-                    long ahora = System.currentTimeMillis();
-                    if (ahora - ultimo > 800) { ultimo = ahora; evento(id, hecho, total, false, null); }
-                }
-            }
-            if (total > 0 && part.length() != total) throw new Exception("La descarga quedo incompleta; vuelve a tocar Descargar");
-            if (fin.exists()) fin.delete();
-            if (!part.renameTo(fin)) throw new Exception("No pude guardar el modelo");
-            evento(id, total, total, true, null);
-        } catch (Exception e) {
-            evento(id, 0, 0, false, String.valueOf(e.getMessage()));
-        } finally {
-            descargando = false;
-        }
     }
 
     @PluginMethod
     public void cancelarDescarga(PluginCall call) {
-        cancelarDescarga = true;
+        DescargaServicio.cancelar = true;
         call.resolve();
     }
 
@@ -203,6 +166,10 @@ public class LlamaPlugin extends Plugin {
     public void borrar(PluginCall call) {
         String[] m = buscar(call.getString("id", ""));
         if (m == null) { call.reject("Modelo desconocido"); return; }
+        if (DescargaServicio.activo && m[0].equals(DescargaServicio.idActual)) {
+            call.reject("Cancela la descarga antes de borrar");
+            return;
+        }
         if (m[0].equals(idActivo)) matar();
         archivo(m[2]).delete();
         new File(archivo(m[2]).getPath() + ".part").delete();

@@ -10,6 +10,7 @@ JNI = 'android/app/src/main/jniLibs/arm64-v8a'
 assert os.path.exists(JNI + '/libllama_server.so'), 'llama: falta libllama_server.so (fallo el paso del motor)'
 
 shutil.copy('nativo/LlamaPlugin.java', PAQ + '/LlamaPlugin.java')
+shutil.copy('nativo/DescargaServicio.java', PAQ + '/DescargaServicio.java')
 
 os.makedirs(RES + '/xml', exist_ok=True)
 open(RES + '/xml/red_local.xml', 'w', encoding='utf-8').write(
@@ -25,6 +26,14 @@ t = open(m, encoding='utf-8').read()
 assert 'networkSecurityConfig' not in t, 'llama: el manifiesto ya tenia networkSecurityConfig'
 t, n = re.subn(r'<application', '<application android:networkSecurityConfig="@xml/red_local"', t, count=1)
 assert n == 1, 'llama: no encontre <application'
+# Descarga de modelos en segundo plano (servicio en primer plano, tipo dataSync)
+assert 'DescargaServicio' not in t and t.count('</application>') == 1, 'llama: manifiesto inesperado (descarga)'
+t = t.replace('</application>',
+              '        <service\n'
+              '            android:name=".DescargaServicio"\n'
+              '            android:exported="false"\n'
+              '            android:foregroundServiceType="dataSync" />\n'
+              '    </application>')
 open(m, 'w', encoding='utf-8').write(t)
 
 a = PAQ + '/MainActivity.java'

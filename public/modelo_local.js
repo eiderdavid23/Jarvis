@@ -34,7 +34,13 @@
   }
 
   function refrescar() {
-    return L.estado().then(function (e) { estado = e; pintar(); })
+    return L.estado().then(function (e) {
+      estado = e;
+      /* La descarga sigue en segundo plano: al volver, se retoma la barra donde va. */
+      if (e.descarga && e.descarga.id) progreso[e.descarga.id] = e.descarga;
+      else if (e.descargando === false) progreso = {};
+      pintar();
+    })
       .catch(function (e) { mensaje = 'No pude leer el estado: ' + msg(e); pintar(); });
   }
 
@@ -74,7 +80,7 @@
       f.appendChild(boton('Cancelar', '', function () { L.cancelarDescarga(); }));
     } else if (!m.descargado) {
       f.appendChild(boton('Descargar', 'p', function () {
-        if (!window.confirm('Se descargan ' + tam(m.mb) + '. Mejor con WiFi. \u00bfSeguir?')) return;
+        if (!window.confirm('Se descargan ' + tam(m.mb) + '. Mejor con WiFi. Sigue en segundo plano aunque salgas de la app y ver\u00e1s el avance en la notificaci\u00f3n. \u00bfSeguir?')) return;
         mensaje = ''; progreso[m.id] = { pct: 0 };
         L.descargar({ id: m.id }).then(pintar).catch(function (e) { delete progreso[m.id]; mensaje = msg(e); pintar(); });
       }, estado.descargando));
