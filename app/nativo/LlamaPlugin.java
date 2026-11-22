@@ -4,7 +4,11 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.os.BatteryManager;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.Settings;
 import android.system.Os;
 import android.system.OsConstants;
 
@@ -20,6 +24,8 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -65,8 +71,26 @@ public class LlamaPlugin extends Plugin {
         return new File(getContext().getApplicationInfo().nativeLibraryDir, "libllama_server.so");
     }
 
-    private File archivo(String nombre) {
+    private boolean permisoArchivos() {
+        return Build.VERSION.SDK_INT >= 30 && Environment.isExternalStorageManager();
+    }
+
+    private File interna(String nombre) {
         return new File(new File(getContext().getFilesDir(), "modelos"), nombre);
+    }
+
+    private File publica(String nombre) {
+        return new File(new File(Environment.getExternalStorageDirectory(), "Jarvis/modelos"), nombre);
+    }
+
+    /* Con permiso usa la carpeta publica Jarvis/modelos (sobrevive a desinstalar la app).
+       Si el modelo solo esta en la memoria de la app, usa ese hasta que se mueva. */
+    private File archivo(String nombre) {
+        if (!permisoArchivos()) return interna(nombre);
+        File p = publica(nombre);
+        if (p.exists()) return p;
+        File i = interna(nombre);
+        return i.exists() ? i : p;
     }
 
     private static String[] buscar(String id) {
@@ -109,6 +133,7 @@ public class LlamaPlugin extends Plugin {
     public void estado(PluginCall call) {
         JSObject r = new JSObject();
         r.put("binario", binario().exists());
+        r.put("permisoArchivos", permisoArchivos());
         ActivityManager am = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
         ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
         if (am != null) am.getMemoryInfo(mi);
@@ -134,6 +159,8 @@ public class LlamaPlugin extends Plugin {
             o.put("mb", Integer.parseInt(m[4]));
             o.put("ramMinGb", Integer.parseInt(m[5]));
             o.put("descargado", archivo(m[2]).exists());
+            o.put("enInterna", interna(m[2]).exists());
+            o.put("enPublica", permisoArchivos() && publica(m[2]).exists());
             lista.put(o);
         }
         r.put("modelos", lista);
@@ -176,9 +203,81 @@ public class LlamaPlugin extends Plugin {
             return;
         }
         if (m[0].equals(idActivo)) matar();
-        archivo(m[2]).delete();
-        new File(archivo(m[2]).getPath() + ".part").delete();
+        for (File f : new File[]{interna(m[2]), publica(m[2])}) {
+            f.delete();
+            new File(f.getPath() + ".part").delete();
+        }
         call.resolve();
+    }
+
+    @PluginMethod
+    public void permiso(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("concedido", permisoArchivos());
+        r.put("carpeta", "Jarvis/modelos");
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void pedirPermiso(PluginCall call) {
+        if (Build.VERSION.SDK_INT < 30) { call.reject("Esta funcion pide Android 11 o mas"); return; }
+        try {
+            Intent i;
+            try {
+                i = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                    Uri.parse("package:" + getContext().getPackageName()));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+            } catch (Exception e) {
+                i = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+            }
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("No pude abrir los ajustes: " + e.getMessage());
+        }
+    }
+
+    /** Mueve a Jarvis/modelos los modelos que estan en la memoria de la app. Revisa el tamano antes de borrar el original. */
+    @PluginMethod
+    public void guardarAfuera(PluginCall call) {
+        if (!permisoArchivos()) { call.reject("Falta el permiso de archivos"); return; }
+        if (DescargaServicio.activo) { call.reject("Espera a que termine la descarga"); return; }
+        new Thread(() -> {
+            int movidos = 0;
+            try {
+                for (String[] m : CATALOGO) {
+                    File de = interna(m[2]);
+                    File a = publica(m[2]);
+                    if (!de.exists() || a.exists()) continue;
+                    if (m[0].equals(idActivo)) matar();
+                    File dir = a.getParentFile();
+                    if (dir != null) dir.mkdirs();
+                    if (dir != null && dir.getUsableSpace() < de.length() + 100L * 1048576L) {
+                        throw new Exception("No hay espacio para copiar " + m[1]);
+                    }
+                    File tmp = new File(a.getPath() + ".copia");
+                    try (FileInputStream in = new FileInputStream(de); FileOutputStream out = new FileOutputStream(tmp)) {
+                        byte[] buf = new byte[1 << 20];
+                        int n;
+                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                        out.getFD().sync();
+                    }
+                    if (tmp.length() != de.length() || !tmp.renameTo(a)) {
+                        tmp.delete();
+                        throw new Exception("La copia de " + m[1] + " no quedo completa");
+                    }
+                    de.delete();
+                    movidos++;
+                }
+                JSObject r = new JSObject();
+                r.put("movidos", movidos);
+                call.resolve(r);
+            } catch (Exception e) {
+                call.reject("No pude copiar: " + e.getMessage());
+            }
+        }).start();
     }
 
     @PluginMethod

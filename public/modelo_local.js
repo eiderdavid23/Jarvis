@@ -95,6 +95,37 @@
     return c;
   }
 
+  function guardado() {
+    var c = el('div', 'lcCard');
+    c.appendChild(el('div', 'lcNom', 'Guardar modelos fuera de la app'));
+    var adentro = estado.modelos.filter(function (m) { return m.enInterna; }).length;
+    var afuera = estado.modelos.filter(function (m) { return m.enPublica; }).length;
+    var f = el('div', 'lcFila');
+    if (!estado.permisoArchivos) {
+      c.appendChild(el('div', 'lcDesc', 'Así los modelos no se pierden si desinstalas la app: quedan en la carpeta Jarvis/modelos del celular. Necesita el permiso «Acceso a todos los archivos».'));
+      f.appendChild(boton('Dar permiso', 'p', function () {
+        mensaje = 'Activa «Permitir acceso a todos los archivos» y vuelve a Jarvis.';
+        L.pedirPermiso().catch(function (e) { mensaje = msg(e); }).then(pintar);
+      }));
+    } else if (adentro > 0) {
+      c.appendChild(el('div', 'lcDesc', 'Permiso listo. ' + adentro + ' modelo(s) siguen dentro de la app y se borrarían al desinstalarla.'));
+      f.appendChild(boton('Mover a Jarvis/modelos', 'p', function () {
+        if (!window.confirm('Se mueven los modelos a la carpeta Jarvis/modelos. Puede tardar un minuto y no debes cerrar la app. ¿Seguir?')) return;
+        ocupado = true; mensaje = 'Moviendo modelos...'; pintar();
+        L.guardarAfuera()
+          .then(function (r) { mensaje = r.movidos + ' modelo(s) guardados en Jarvis/modelos.'; })
+          .catch(function (e) { mensaje = msg(e); })
+          .then(function () { ocupado = false; return refrescar(); });
+      }, ocupado));
+    } else {
+      c.appendChild(el('div', 'lcDesc', afuera > 0
+        ? 'Listo: tus modelos están en Jarvis/modelos y siguen ahí aunque desinstales la app.'
+        : 'Permiso listo: lo que descargues se guardará en Jarvis/modelos.'));
+    }
+    c.appendChild(f);
+    return c;
+  }
+
   function pintar() {
     if (!hoja) return;
     hoja.textContent = '';
@@ -108,6 +139,7 @@
     hoja.appendChild(el('p', 'lcNota', 'Corre en tu celular, sin internet y sin gastar API. RAM: ' +
       Math.round(estado.ramTotalMb / 1024 * 10) / 10 + ' GB en total, ' + Math.round(estado.ramLibreMb / 1024 * 10) / 10 + ' GB libres.'));
     estado.modelos.forEach(function (m) { hoja.appendChild(tarjeta(m)); });
+    if (typeof estado.permisoArchivos === 'boolean') hoja.appendChild(guardado());
     if (estado.activo) {
       var f = el('div', 'lcFila');
       f.appendChild(boton('Probar el modelo', 'p', probar, ocupado));
@@ -132,6 +164,7 @@
     abrirHoja('hojaLocal');
   }
 
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && hoja) refrescar(); });
   window.modeloLocal = { abrir: abrir };
 
   L.addListener('descarga', function (ev) {

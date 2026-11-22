@@ -34,6 +34,9 @@ t = t.replace('</application>',
               '            android:exported="false"\n'
               '            android:foregroundServiceType="dataSync" />\n'
               '    </application>')
+perm = '<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />'
+t, n = re.subn(r'<application', perm + '\n    <application', t, count=1)
+assert n == 1, 'llama: no pude agregar el permiso de archivos'
 open(m, 'w', encoding='utf-8').write(t)
 
 a = PAQ + '/MainActivity.java'
