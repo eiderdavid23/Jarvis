@@ -1,0 +1,23 @@
+/* Monitor del modelo local (solo APK). Quitar este <link> y el <script> no rompe nada. */
+#mlChip {
+  display: none; flex: 0 0 auto; flex-direction: column; justify-content: center; gap: 3px;
+  min-width: 62px; height: 36px; padding: 0 9px; border: 0; border-radius: 12px;
+  background: var(--panel2, #1d2430); color: var(--suave, #8a94a6); font: 600 10px/1 system-ui, sans-serif;
+  font-variant-numeric: tabular-nums; cursor: pointer; text-align: left;
+}
+#filaControles.mlOn #mlChip { display: flex; }
+#filaControles.mlOn #pildora > span { max-width: 22vw; }
+#mlChip .mlL { display: flex; justify-content: space-between; gap: 6px; white-space: nowrap; }
+#mlChip .mlL b { color: var(--texto, #eef2f8); font-weight: 700; }
+#mlChip .mlB { height: 3px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; }
+#mlChip .mlB i { display: block; height: 100%; width: 0; background: var(--cian, #35d0e8); transition: width .6s ease, background .3s; }
+#mlChip.mlGen { box-shadow: 0 0 0 1px rgba(53,208,232,.45); }
+#mlPop {
+  display: none; position: fixed; z-index: 9600; min-width: 210px; padding: 12px 14px; border-radius: 16px;
+  border: 1px solid var(--linea2, rgba(255,255,255,.12)); background: var(--panel, #0b111b); color: var(--texto, #eef2f8);
+  font: 500 13px/1.5 system-ui, sans-serif; box-shadow: 0 8px 28px rgba(0,0,0,.45);
+}
+#mlPop .mlF { display: flex; justify-content: space-between; gap: 18px; }
+#mlPop .mlF span { color: var(--suave, #8a94a6); }
+#mlPop .mlT { margin-bottom: 6px; font-weight: 700; }
+#mlPop .mlN { margin-top: 8px; font-size: 11px; color: var(--suave, #8a94a6); }

@@ -2,6 +2,11 @@ package com.david.jarvis;
 
 import android.app.ActivityManager;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.BatteryManager;
+import android.system.Os;
+import android.system.OsConstants;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -253,6 +258,83 @@ public class LlamaPlugin extends Plugin {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private static long ticksAntes = -1, msAntes = 0;
+
+    private static int pidMotor() {
+        Process p = proceso;
+        if (p == null) return -1;
+        try {
+            return ((Number) Process.class.getMethod("pid").invoke(p)).intValue();
+        } catch (Throwable e) { /* Android anterior a 13 */ }
+        try {
+            java.lang.reflect.Field f = p.getClass().getDeclaredField("pid");
+            f.setAccessible(true);
+            return f.getInt(p);
+        } catch (Throwable e) {
+            return -1;
+        }
+    }
+
+    private static long ramMotorKb(int pid) {
+        try (BufferedReader r = new BufferedReader(new java.io.FileReader("/proc/" + pid + "/status"))) {
+            String l;
+            while ((l = r.readLine()) != null) {
+                if (l.startsWith("VmRSS:")) return Long.parseLong(l.replaceAll("[^0-9]", ""));
+            }
+        } catch (Throwable e) { /* sin lectura */ }
+        return 0;
+    }
+
+    private static long ticksMotor(int pid) {
+        try (BufferedReader r = new BufferedReader(new java.io.FileReader("/proc/" + pid + "/stat"))) {
+            String l = r.readLine();
+            if (l == null) return -1;
+            String[] f = l.substring(l.lastIndexOf(')') + 2).split(" ");
+            return Long.parseLong(f[11]) + Long.parseLong(f[12]);
+        } catch (Throwable e) {
+            return -1;
+        }
+    }
+
+    /** RAM y CPU reales del motor, RAM del celular y temperatura de la bateria (para el monitor en vivo). */
+    @PluginMethod
+    public void recursos(PluginCall call) {
+        JSObject r = new JSObject();
+        ActivityManager am = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+        if (am != null) am.getMemoryInfo(mi);
+        r.put("ramTotalMb", mi.totalMem / 1048576L);
+        r.put("ramLibreMb", mi.availMem / 1048576L);
+        boolean on = vivo();
+        r.put("activo", on);
+        r.put("modelo", idActivo);
+        double cpu = 0;
+        long ramMb = 0;
+        if (on) {
+            int pid = pidMotor();
+            if (pid > 0) {
+                ramMb = ramMotorKb(pid) / 1024L;
+                long t = ticksMotor(pid), ahora = System.currentTimeMillis();
+                if (t >= 0 && ticksAntes >= 0 && ahora > msAntes) {
+                    long tck = Os.sysconf(OsConstants._SC_CLK_TCK);
+                    int nucleos = Math.max(1, Runtime.getRuntime().availableProcessors());
+                    cpu = (t - ticksAntes) * 1000.0 / tck / (ahora - msAntes) / nucleos * 100.0;
+                    cpu = Math.max(0, Math.min(100, cpu));
+                }
+                ticksAntes = t;
+                msAntes = ahora;
+            }
+        } else {
+            ticksAntes = -1;
+        }
+        r.put("ramModeloMb", ramMb);
+        r.put("cpuPct", cpu);
+        Intent b = getContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        int tt = b == null ? -1 : b.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1);
+        r.put("tempC", tt < 0 ? -1 : tt / 10.0);
+        call.resolve(r);
     }
 
     @PluginMethod
