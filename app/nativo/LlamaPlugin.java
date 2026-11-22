@@ -390,7 +390,7 @@ public class LlamaPlugin extends Plugin {
                     if (ch == null || ch.length() == 0) continue;
                     JSONObject delta = ch.optJSONObject(0).optJSONObject("delta");
                     if (delta == null) continue;
-                    String t = delta.optString("content", "");
+                    String t = delta.isNull("content") ? "" : delta.optString("content", "");
                     if (t.isEmpty()) continue;
                     todo.append(t);
                     JSObject ev = new JSObject();
