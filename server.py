@@ -2638,7 +2638,9 @@ def _chat_interno():
         if not str(mensaje_usuario or '').startswith(('TRABAJO EN SEGUNDO PLANO', 'TAREA AUTOMATICA')):
             texto_avisos = trabajos_api.avisos_pendientes()
         texto_plataforma = (' El usuario te escribe desde un navegador de PC: sus pedidos (abrir programas, ver su pantalla, '
-                            'volumen, archivos) son del PC, usa controlar_pc. Solo usa el celular si el usuario lo menciona.'
+                            'volumen, archivos) son del PC, usa controlar_pc. Solo usa el celular si el usuario lo menciona. '
+                            'Para abrir una pagina web o buscar en un sitio usa abrir_url, que funciona sin instalar nada. '
+                            'Si controlar_pc dice que no hay PC conectado, explicalo con el tono de Jarvis (senor) y no insistas.'
                             if g.get('plataforma') == 'pc' else '')
         system_prompt = (SYSTEM_PROMPT_BASE + texto_capacidades() + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
                          + texto_recuerdos + texto_resumen + texto_archivos + texto_archivos_proy + texto_proyecto

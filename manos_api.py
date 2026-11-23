@@ -370,8 +370,17 @@ def _elegir(nombre=None, plataforma=None):
         return None, ('No hay ninguna TV conectada' + (f' llamada "{nombre}"' if nombre else '') +
                       '. El usuario debe vincular su TV en el panel Herramientas y tener la app de Jarvis abierta en un celular con el mismo WiFi que la TV.')
     if not vivos and plataforma == 'pc':
-        return None, ('No hay ningun PC conectado' + (f' llamado "{nombre}"' if nombre else '') +
-                      '. El usuario debe vincular su PC (Ajustes > Manos de Jarvis > Controlar un PC) y tener JarvisPC abierto en el PC.')
+        hubo_pc = any(f.get('plataforma') == 'pc' for f in filas)
+        quien = (' llamado "%s"' % nombre) if nombre else ''
+        if hubo_pc:
+            return None, ('Hay un PC vinculado' + quien + ' pero JarvisPC esta cerrado o sin internet. Dile al usuario, '
+                          'como Jarvis y llamandolo senor, que abra JarvisPC en su PC y que luego repita la orden. '
+                          'No insistas.')
+        return None, ('Todavia no hay ningun PC vinculado' + quien + '. Dile al usuario, como Jarvis y llamandolo '
+                      'senor, que para hacer eso necesita la aplicacion JarvisPC instalada en su PC: que la baje con '
+                      'el boton Descargar app de arriba (eligiendo PC) y la vincule en Ajustes > Manos de Jarvis > '
+                      'Controlar un PC. Si solo quiere abrir una pagina web, ofrecele hacerlo ahora con abrir_url, '
+                      'que no necesita la app. No insistas.')
     if not vivos:
         return None, ('No hay ningun dispositivo conectado' + (f' llamado "{nombre}"' if nombre else '') +
                       '. El usuario debe tener abierta la app de Jarvis en ese celular con las manos activadas.')
