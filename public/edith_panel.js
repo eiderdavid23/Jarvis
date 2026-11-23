@@ -1,15 +1,17 @@
-/* Panel de Edith: HUD aparte para las ordenes de PC, TV y celular (controlar_pc,
-   controlar_tv, controlar_pantalla, ver_pantalla). Se engancha a los "pasos en vivo"
-   que ya manda el servidor (pasos.js) sin tocar ese archivo: envuelve
-   window.jarvisPasos.crear y mira el texto de cada paso.
-   Se puede fijar (siempre visible, en espera) o dejar que aparezca y desaparezca solo,
-   igual que la barra lateral se fija con sidebar_fija.js. */
+/* Panel de Edith: HUD aparte (con su propia esferita dorada) para las ordenes de
+   PC, TV y celular (controlar_pc, controlar_tv, controlar_pantalla, ver_pantalla).
+   Se engancha a los "pasos en vivo" que ya manda el servidor (pasos.js) sin tocar
+   ese archivo: envuelve window.jarvisPasos.crear y mira el texto de cada paso.
+   Ademas: si escribis una frase para "activar" a Edith (sin pedirle ninguna accion
+   real), se muestra una demo de unos segundos para poder verla sin tener un
+   dispositivo (TV/PC/celular) vinculado todavia. */
 (function () {
   if (!window.jarvisPasos || typeof window.jarvisPasos.crear !== 'function') return;
 
   var CLAVE = 'jarvisEdithFija';
   var NS = 'http://www.w3.org/2000/svg';
   var OCULTAR_MS = 2600;
+  var DEMO_MS = 2200;
 
   function svg(html) {
     var s = document.createElementNS(NS, 'svg');
@@ -33,12 +35,12 @@
     try { localStorage.setItem(CLAVE, v ? '1' : '0'); } catch (e) {}
   }
 
-  /* ---------- construir el HUD una sola vez ---------- */
+  /* ---------- construir el HUD una sola vez (siempre va al DOM) ---------- */
   var hud = document.createElement('div');
   hud.className = 'edithHUD';
   hud.innerHTML =
     '<div class="edithCab">' +
-      '<span class="edithPunto"></span>' +
+      '<span class="edithEsfera"></span>' +
       '<span class="edithNombre">EDITH</span>' +
       '<span class="edithEstado">En espera</span>' +
       '<button type="button" class="edithFijar" aria-label="Fijar panel de Edith" title="Fijar panel de Edith"></button>' +
@@ -63,28 +65,26 @@
     lineaEl.appendChild(document.createTextNode(texto));
   }
 
-  function mostrarFija() {
-    hud.classList.remove('oculto', 'conAccion', 'trabajando', 'hecho');
-    hud.classList.add('visible', 'fija');
+  function enReposo() {
+    hud.classList.remove('conAccion', 'trabajando', 'hecho');
     estadoEl.textContent = 'En espera';
+    pintarLinea('cel', 'Edith lista.');
   }
-  function ocultarDelTodo() {
-    hud.classList.remove('visible', 'conAccion', 'trabajando', 'hecho');
-  }
+
   function aplicarFija() {
     hud.classList.toggle('fija', fija);
     btnFijar.setAttribute('aria-pressed', fija ? 'true' : 'false');
-    if (ocultarTimer) { clearTimeout(ocultarTimer); ocultarTimer = null; }
-    if (fija) mostrarFija(); else if (!hud.classList.contains('trabajando')) ocultarDelTodo();
   }
   btnFijar.addEventListener('click', function () {
     fija = !fija;
     guardar(fija);
     aplicarFija();
   });
-  aplicarFija();
 
-  /* ---------- detectar que Edith entro en accion ---------- */
+  aplicarFija();
+  enReposo();
+
+  /* ---------- detectar que Edith entro en accion de verdad ---------- */
   var MAPA = [
     { re: /^usando tu tv/i, icono: 'tv', dispositivo: 'tu TV' },
     { re: /^usando tu pc/i, icono: 'pc', dispositivo: 'tu PC' },
@@ -103,7 +103,7 @@
   function activar(info) {
     if (ocultarTimer) { clearTimeout(ocultarTimer); ocultarTimer = null; }
     hud.classList.remove('hecho');
-    hud.classList.add('visible', 'conAccion', 'trabajando');
+    hud.classList.add('conAccion', 'trabajando');
     estadoEl.textContent = 'Ejecutando';
     pintarLinea(info.icono, 'Trabajando en ' + info.dispositivo + '…');
     hud.setAttribute('data-activo', '1');
@@ -116,9 +116,7 @@
     hud.classList.add('hecho');
     estadoEl.textContent = 'Listo';
     pintarLinea('ok', 'Orden enviada.');
-    ocultarTimer = setTimeout(function () {
-      if (fija) { mostrarFija(); } else { ocultarDelTodo(); }
-    }, OCULTAR_MS);
+    ocultarTimer = setTimeout(enReposo, OCULTAR_MS);
   }
 
   /* ---------- enganche a los pasos en vivo (sin tocar pasos.js) ---------- */
@@ -139,5 +137,30 @@
     return panel;
   };
 
-  window.jarvisEdith = { activo: function () { return hud.getAttribute('data-activo') === '1'; } };
+  /* ---------- demo: "activa a Edith" sin tener un dispositivo vinculado ----------
+     Es solo visual (no llama a ninguna herramienta real): sirve para ver la
+     esferita y el panel funcionando mientras no tengas una TV/PC/celular conectado. */
+  var FRASE_DEMO = /\bedith\b/i;
+  var FRASE_ACCION = /activ|prend|enci/i;
+  function esPedidoDeDemo(msj) {
+    return FRASE_DEMO.test(msj) && FRASE_ACCION.test(msj);
+  }
+  function demo() {
+    activar({ icono: 'tv', dispositivo: 'modo demo (sin dispositivo real)' });
+    setTimeout(cerrar, DEMO_MS);
+  }
+  function revisarEnvio() {
+    var campo = document.getElementById('texto');
+    if (campo && esPedidoDeDemo(campo.value)) demo();
+  }
+  var campoTexto = document.getElementById('texto');
+  var btnAccion = document.getElementById('btnAccion');
+  if (campoTexto) {
+    campoTexto.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) revisarEnvio();
+    });
+  }
+  if (btnAccion) btnAccion.addEventListener('click', revisarEnvio);
+
+  window.jarvisEdith = { activo: function () { return hud.getAttribute('data-activo') === '1'; }, demo: demo };
 })();
