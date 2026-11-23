@@ -936,9 +936,22 @@ def _hay_contexto():
         return False
 
 
+RE_MENCION_CELULAR = re.compile(r'celular|tel[eé]fono|m[oó]vil|android', re.I)
+
+
+def _desde_pc():
+    """True si el chat viene de un navegador de PC y lo ultimo que escribio el usuario no habla del celular."""
+    try:
+        return g.get('plataforma') == 'pc' and not RE_MENCION_CELULAR.search(g.get('contexto_usuario') or '')
+    except RuntimeError:
+        return False
+
+
 def _herr_pesada_sobra(nombre, ctx):
     if nombre == 'controlar_pc':
-        return not RE_HERR_PC.search(ctx)
+        return not (_desde_pc() or RE_HERR_PC.search(ctx))
+    if nombre in ('ver_pantalla', 'controlar_pantalla') and _desde_pc():
+        return True
     if nombre == 'controlar_tv':
         return not RE_HERR_TV.search(ctx)
     return False
@@ -2559,6 +2572,7 @@ def _chat_interno():
         g.apagadas = herramientas_apagadas(request.headers.get('X-Herramientas-Off', ''))
         g.modo_seguridad = request.headers.get('X-Modo-Seguridad', '') == '1'
         g.narracion = request.headers.get('X-Narracion', '1') != '0'
+        g.plataforma = request.headers.get('X-Plataforma', '').strip().lower()
         if not data.get('adjuntos'):
             orden_voz = funciones_voz.interpretar(mensaje_usuario, request.headers.get('X-Herramientas-Off', ''))
             if orden_voz:
@@ -2623,9 +2637,12 @@ def _chat_interno():
         texto_avisos = ''
         if not str(mensaje_usuario or '').startswith(('TRABAJO EN SEGUNDO PLANO', 'TAREA AUTOMATICA')):
             texto_avisos = trabajos_api.avisos_pendientes()
+        texto_plataforma = (' El usuario te escribe desde un navegador de PC: sus pedidos (abrir programas, ver su pantalla, '
+                            'volumen, archivos) son del PC, usa controlar_pc. Solo usa el celular si el usuario lo menciona.'
+                            if g.get('plataforma') == 'pc' else '')
         system_prompt = (SYSTEM_PROMPT_BASE + texto_capacidades() + texto_nombre + f' La fecha y hora ACTUAL es: {fecha_hora_str}.'
                          + texto_recuerdos + texto_resumen + texto_archivos + texto_archivos_proy + texto_proyecto
-                         + texto_seguridad + texto_apagadas() + texto_avisos)
+                         + texto_seguridad + texto_apagadas() + texto_avisos + texto_plataforma)
         _i = SYSTEM_PROMPT_BASE.find('Tienes herramientas reales')
         g.system_compacto = ((SYSTEM_PROMPT_BASE[:_i] if _i > 0 else SYSTEM_PROMPT_BASE[:1200]).strip()
                              + ' Usa las herramientas que tengas cuando corresponda; si te falta una, dilo en una frase.'
@@ -2643,6 +2660,8 @@ def _chat_interno():
             turno_actual['partes_gemini'] = partes_gemini
         turnos.append(turno_actual)
         g.contexto_herr = ' '.join(t.get('texto', '') for t in turnos[-5:])[-3000:]
+        g.contexto_usuario = ' '.join(t.get('texto', '') for t in turnos[-5:] if t.get('role') == 'user')[-3000:]
+        g.pide_celular = g.pide_celular and not _desde_pc()
         g.conf_envio = conectores_api.confirmacion_previa(historial)
 
         g.mensaje_largo = len(mensaje_usuario or '') > 1500

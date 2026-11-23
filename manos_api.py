@@ -371,7 +371,7 @@ def _elegir(nombre=None, plataforma=None):
                       '. El usuario debe vincular su TV en el panel Herramientas y tener la app de Jarvis abierta en un celular con el mismo WiFi que la TV.')
     if not vivos and plataforma == 'pc':
         return None, ('No hay ningun PC conectado' + (f' llamado "{nombre}"' if nombre else '') +
-                      '. El usuario debe vincular su PC en el panel Herramientas y tener agente_pc.py corriendo.')
+                      '. El usuario debe vincular su PC (Ajustes > Manos de Jarvis > Controlar un PC) y tener JarvisPC abierto en el PC.')
     if not vivos:
         return None, ('No hay ningun dispositivo conectado' + (f' llamado "{nombre}"' if nombre else '') +
                       '. El usuario debe tener abierta la app de Jarvis en ese celular con las manos activadas.')

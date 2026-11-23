@@ -1647,7 +1647,9 @@ async function enviarMensaje(desdeVoz) {
         'X-Pensamiento': nivelPensamiento(),
         'X-Herramientas-Off': (window.herramientasOff ? window.herramientasOff() : ''),
         'X-Modo-Seguridad': (window.modoSeguridadOn && window.modoSeguridadOn() ? '1' : '0'),
-        'X-Narracion': (window.narracionOn && window.narracionOn() ? '1' : '0')
+        'X-Narracion': (window.narracionOn && window.narracionOn() ? '1' : '0'),
+        'X-Plataforma': ((window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ||
+                         /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) ? 'movil' : 'pc'
       },
       body: JSON.stringify(adj.length
         ? { mensaje, zona_horaria: zonaHoraria, adjuntos: adj.map((a) => ({ nombre: a.nombre, tipo: a.tipo, datos: a.datos })) }
