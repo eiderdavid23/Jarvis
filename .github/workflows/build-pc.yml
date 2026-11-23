@@ -1,12 +1,19 @@
 name: Compilar JarvisPC
 
-# Compila agente_pc.py como un solo ejecutable para Windows, Mac y Linux
-# y los sube a una Release de GitHub. Se dispara al crear una etiqueta
-# que empiece por "pc-" (ej. pc-v1) o a mano desde la pestaña Actions.
+# Compila la app de escritorio JarvisPC (jarvis_pc_app.py + agente_pc.py) para
+# Windows, Mac y Linux y la publica SIEMPRE en la misma Release: "pc-latest".
+# La web baja de ahi con enlaces fijos (igual que la APK con "apk-latest").
+# Se dispara solo al cambiar el codigo del PC en main, con una etiqueta "pc-v*"
+# o a mano desde la pestana Actions (Run workflow).
 on:
   push:
+    branches: [main]
+    paths:
+      - 'agente_pc.py'
+      - 'jarvis_pc_app.py'
+      - '.github/workflows/build-pc.yml'
     tags:
-      - 'pc-*'
+      - 'pc-v*'
   workflow_dispatch: {}
 
 permissions:
@@ -19,66 +26,103 @@ jobs:
       matrix:
         incluir:
           - so: windows-latest
-            nombre: JarvisPC-Windows.exe
+            salida: JarvisPC-Windows.exe
           - so: macos-latest
-            nombre: JarvisPC-Mac
+            salida: JarvisPC-Mac.zip
           - so: ubuntu-latest
-            nombre: JarvisPC-Linux
+            salida: JarvisPC-Linux.tar.gz
     runs-on: ${{ matrix.incluir.so }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Instalar Xvfb (solo Linux; pyautogui necesita una pantalla al compilar)
-        if: matrix.incluir.so == 'ubuntu-latest'
+      - name: Linux - Xvfb (pyautogui y tkinter necesitan una pantalla al compilar y probar)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb
 
       - name: Instalar dependencias
-        run: pip install pyinstaller requests mss pillow pyautogui
-
-      - name: Compilar en un solo archivo
         shell: bash
         run: |
-          if [ "${{ matrix.incluir.so }}" = "ubuntu-latest" ]; then
-            xvfb-run -a pyinstaller --onefile --name JarvisPC --console agente_pc.py
-          else
-            pyinstaller --onefile --name JarvisPC --console agente_pc.py
-          fi
+          python -m pip install --upgrade pip
+          pip install pyinstaller requests mss pillow pyautogui
 
-      - name: Nombrar el archivo de salida
+      - name: Comprobar que tkinter existe
+        shell: bash
+        run: python -c "import tkinter; print('tkinter', tkinter.TkVersion)"
+
+      - name: Compilar (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: pyinstaller --onefile --windowed --name JarvisPC --hidden-import agente_pc jarvis_pc_app.py
+
+      - name: Compilar (Mac)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: pyinstaller --windowed --name JarvisPC --hidden-import agente_pc jarvis_pc_app.py
+
+      - name: Compilar (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: xvfb-run -a pyinstaller --onefile --name JarvisPC --hidden-import agente_pc jarvis_pc_app.py
+
+      - name: Empaquetar
         shell: bash
         run: |
           mkdir -p salida
-          if [ -f dist/JarvisPC.exe ]; then
-            cp dist/JarvisPC.exe salida/${{ matrix.incluir.nombre }}
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp dist/JarvisPC.exe "salida/${{ matrix.incluir.salida }}"
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            ditto -c -k --keepParent dist/JarvisPC.app "salida/${{ matrix.incluir.salida }}"
           else
-            cp dist/JarvisPC salida/${{ matrix.incluir.nombre }}
+            tar -czf "salida/${{ matrix.incluir.salida }}" -C dist JarvisPC
           fi
+          ls -la salida
+
+      - name: Probar que abre (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          ./dist/JarvisPC --help
+          # Si la ventana abre, sigue viva a los 8 s y timeout la corta (codigo 124).
+          xvfb-run -a timeout 8 ./dist/JarvisPC || [ $? -eq 124 ]
+
+      - name: Probar que abre (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\JarvisPC.exe -PassThru
+          Start-Sleep -Seconds 8
+          if ($p.HasExited) { throw "JarvisPC se cerro solo (codigo $($p.ExitCode))" }
+          Stop-Process -Id $p.Id -Force
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.incluir.nombre }}
-          path: salida/${{ matrix.incluir.nombre }}
+          name: ${{ matrix.incluir.salida }}
+          path: salida/${{ matrix.incluir.salida }}
 
   publicar:
     needs: compilar
+    # Publica lo que si compilo aunque algun sistema falle; solo si no se cancelo.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/pc-')
     steps:
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           path: descargas
           merge-multiple: true
 
-      - name: Publicar en una Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: descargas/*
-          name: JarvisPC ${{ github.ref_name }}
-          body: |
-            Descarga el archivo de tu sistema operativo y ejecutalo (no hace falta
-            instalar nada mas). La primera vez te pedira el codigo que Jarvis te da
-            en Ajustes > Manos de Jarvis > Controlar un PC.
+      - name: Publicar en la Release pc-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la descargas || true
+          test -n "$(ls -A descargas 2>/dev/null)" || { echo "No hay ningun archivo compilado"; exit 1; }
+          gh release delete pc-latest --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh release create pc-latest descargas/* --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --latest=false \
+            --title "JarvisPC (PC)" \
+            --notes "build ${{ github.run_number }}. Windows: JarvisPC-Windows.exe. Mac: JarvisPC-Mac.zip (descomprime y abre JarvisPC). Linux: JarvisPC-Linux.tar.gz (tar xzf y ./JarvisPC). Abrelo y pega el texto de Jarvis: Ajustes > Manos de Jarvis > Controlar un PC > Vincular un PC."

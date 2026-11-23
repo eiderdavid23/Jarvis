@@ -31,7 +31,7 @@
     descarga.style.textAlign = 'center';
     descarga.style.textDecoration = 'none';
     descarga.style.boxSizing = 'border-box';
-    descarga.href = 'https://github.com/eiderdavidgarcia23/Jarvis/releases/latest';
+    descarga.href = 'https://github.com/eiderdavid23/Jarvis/releases/tag/pc-latest';
     descarga.target = '_blank';
     descarga.rel = 'noopener';
     descarga.textContent = 'Descargar JarvisPC (Windows, Mac o Linux)';
@@ -65,7 +65,7 @@
         cmd.value = 'python agente_pc.py --url ' + location.origin + ' --token ' + d.token;
         cmd.style.display = 'block';
         copiar.style.display = 'block';
-        nota.textContent = 'Si ya descargaste JarvisPC, \u00e1brelo y pega este texto cuando te lo pida. Si prefieres correr agente_pc.py con Python, p\u00e9galo igual como comando. Es secreto: no lo compartas. Si lo pierdes, vuelve a vincular.';
+        nota.textContent = 'Si ya descargaste JarvisPC, \u00e1brelo y pega este texto en su ventana. Si prefieres correr agente_pc.py con Python, p\u00e9galo igual como comando. Es secreto: no lo compartas. Si lo pierdes, vuelve a vincular.';
         btn.disabled = false;
       }).catch(function (e) {
         nota.textContent = e.message;

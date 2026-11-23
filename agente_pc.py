@@ -9,6 +9,9 @@ Opciones:     --control      Jarvis puede escribir, hacer clic y ver la pantalla
               --sin-control  vuelve a pedir permiso en cada accion (por defecto)
               --carpeta RUTA carpeta donde Jarvis puede buscar y mover archivos (por defecto ~/JarvisPC)
 Instalar:     pip install requests mss pillow pyautogui
+
+Sin argumentos y con pantalla, abre la ventana de JarvisPC (jarvis_pc_app.py). Este archivo es el
+motor: lo usan tanto la terminal como la ventana.
 """
 import argparse
 import base64
@@ -21,11 +24,17 @@ import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 import unicodedata
 import webbrowser
 from datetime import datetime
 from pathlib import Path
+
+# Un .exe compilado sin consola no tiene stdout/stderr/stdin: se reemplazan para que print() no falle.
+for _n in ('stdout', 'stderr'):
+    if getattr(sys, _n, None) is None:
+        setattr(sys, _n, open(os.devnull, 'w'))
 
 try:
     import requests
@@ -40,6 +49,21 @@ INDICE = {'Windows': 0, 'Darwin': 1}.get(SISTEMA, 2)
 MAX_ANCHO = 1280
 CFG = {'url': '', 'token': '', 'control': False, 'carpeta': ''}
 
+# Ganchos que la ventana (jarvis_pc_app.py) rellena. En la terminal quedan vacios y todo funciona como antes.
+GANCHOS = {
+    'confirmar': None,     # f(texto, segundos) -> bool
+    'portapapeles': None,  # f(texto) deja el texto en el portapapeles
+    'log': None,           # f(linea)
+    'estado': None,        # f(clave) con 'conectado', 'sin_conexion', 'token' o 'conectando'
+}
+
+
+def _tty():
+    try:
+        return bool(sys.stdin) and sys.stdin.isatty()
+    except Exception:
+        return False
+
 
 class Rechazada(Exception):
     pass
@@ -50,11 +74,33 @@ class Fallo(Exception):
 
 
 def aviso(texto):
-    print('[%s] %s' % (datetime.now().strftime('%H:%M:%S'), texto), flush=True)
+    linea = '[%s] %s' % (datetime.now().strftime('%H:%M:%S'), texto)
+    try:
+        print(linea, flush=True)
+    except Exception:
+        pass
+    if GANCHOS['log']:
+        try:
+            GANCHOS['log'](linea)
+        except Exception:
+            pass
+
+
+def estado(clave):
+    if GANCHOS['estado']:
+        try:
+            GANCHOS['estado'](clave)
+        except Exception:
+            pass
 
 
 def confirmar(texto, segundos=40):
     """Cuadro Si/No en la pantalla del PC. Sin respuesta a tiempo = No."""
+    if GANCHOS['confirmar']:
+        try:
+            return bool(GANCHOS['confirmar'](texto, segundos))
+        except Exception:
+            return False
     try:
         import tkinter as tk
         from tkinter import messagebox
@@ -360,6 +406,15 @@ def a_escribir(a):
         raise Fallo('Falta el texto.')
     pedir_permiso('escribir "%s"' % texto[:60])
     p = pg()
+    if GANCHOS['portapapeles']:
+        try:
+            GANCHOS['portapapeles'](texto)
+            p.hotkey('command' if SISTEMA == 'Darwin' else 'ctrl', 'v')
+            time.sleep(0.4)
+            return 'Escrib\u00ed el texto.'
+        except Exception:
+            p.write(texto, interval=0.02)
+            return 'Escrib\u00ed el texto.'
     try:
         import tkinter as tk
         raiz = tk.Tk()
@@ -466,6 +521,10 @@ def cargar_config(args):
         CFG['control'] = True
     if args.sin_control:
         CFG['control'] = False
+    guardar_config()
+
+
+def guardar_config():
     try:
         CONFIG.write_text(json.dumps(CFG), encoding='utf-8')
         os.chmod(CONFIG, 0o600)
@@ -473,9 +532,24 @@ def cargar_config(args):
         pass
 
 
+def leer_vinculo(texto):
+    """Saca la URL y el token de lo que Jarvis muestra al vincular
+    ('python agente_pc.py --url https://... --token ...'). Devuelve (url, token) o (None, None)."""
+    t = str(texto or '')
+    m_url = re.search(r'--url[\s=]+(\S+)', t)
+    m_tok = re.search(r'--token[\s=]+(\S+)', t)
+    if not (m_url and m_tok):
+        return None, None
+    url = m_url.group(1).strip('\'"').rstrip('/')
+    tok = m_tok.group(1).strip('\'"')
+    if not re.match(r'^https?://\S+$', url) or not tok:
+        return None, None
+    return url, tok
+
+
 def pedir_vinculo():
-    """Primera vez abriendo el programa (doble clic, sin argumentos): pide pegar lo que
-    Jarvis mostro al vincular, en vez de obligar a usar la terminal con --url y --token."""
+    """Primera vez abriendo el programa en terminal sin argumentos: pide pegar lo que
+    Jarvis mostro al vincular, en vez de obligar a usar --url y --token."""
     print('Este PC todavia no esta vinculado con Jarvis.')
     print('En Jarvis: Ajustes > Manos de Jarvis > Controlar un PC > Vincular un PC.')
     print('Pega aqui TODO el texto que te dio Jarvis y presiona Enter:')
@@ -483,62 +557,95 @@ def pedir_vinculo():
         pegado = input('> ').strip()
     except (EOFError, KeyboardInterrupt):
         pegado = ''
-    m_url = re.search(r'--url\\s+(\\S+)', pegado)
-    m_tok = re.search(r'--token\\s+(\\S+)', pegado)
-    if m_url and m_tok:
-        CFG['url'] = m_url.group(1).rstrip('/')
-        CFG['token'] = m_tok.group(1)
+    url, tok = leer_vinculo(pegado)
+    if url:
+        CFG['url'], CFG['token'] = url, tok
     else:
         if not CFG['url']:
             CFG['url'] = input('URL de tu Jarvis (ej. https://tu-jarvis.vercel.app): ').strip().rstrip('/')
         if not CFG['token']:
             CFG['token'] = input('Token que te dio Jarvis: ').strip()
     if CFG['url'] and CFG['token']:
+        guardar_config()
+
+
+def bucle(detener=None):
+    """Pregunta a Jarvis por ordenes hasta que 'detener' (threading.Event) se active.
+    Lo usan la terminal (principal) y la ventana (jarvis_pc_app.py)."""
+    detener = detener or threading.Event()
+    ultima = 0
+    estado('conectando')
+    while not detener.is_set():
         try:
-            CONFIG.write_text(json.dumps(CFG), encoding='utf-8')
-            os.chmod(CONFIG, 0o600)
-        except Exception:
-            pass
+            orden = http('GET', '/manos/d/cola').get('orden')
+            estado('conectado')
+            if orden:
+                atender(orden)
+                ultima = time.time()
+            else:
+                detener.wait(0.4 if time.time() - ultima < 60 else 1.0)
+        except PermissionError:
+            estado('token')
+            aviso('El token ya no es válido. Vincula el PC de nuevo desde Jarvis.')
+            detener.wait(30)
+        except KeyboardInterrupt:
+            aviso('Agente detenido.')
+            return
+        except Exception as e:
+            estado('sin_conexion')
+            aviso('Sin conexión con Jarvis (' + str(e)[:60] + '). Reintento...')
+            detener.wait(5)
 
 
-def principal():
+def leer_args():
     ap = argparse.ArgumentParser(description='Agente de Jarvis para PC')
     ap.add_argument('--url')
     ap.add_argument('--token')
     ap.add_argument('--carpeta')
     ap.add_argument('--control', action='store_true')
     ap.add_argument('--sin-control', action='store_true')
-    cargar_config(ap.parse_args())
+    ap.add_argument('--terminal', action='store_true', help='no abrir la ventana, correr en la terminal')
+    ap.add_argument('--minimizado', action='store_true', help='abrir la ventana ya minimizada (inicio con el PC)')
+    a, _desconocidos = ap.parse_known_args()
+    return a
+
+
+def principal(args=None):
+    """Modo terminal."""
+    args = args or leer_args()
+    cargar_config(args)
     if not CFG['url'] or not CFG['token']:
-        if sys.stdin.isatty():
+        if _tty():
             pedir_vinculo()
         if not CFG['url'] or not CFG['token']:
             print('Falta vincular este PC. Usa: python agente_pc.py --url https://TU-JARVIS.vercel.app --token EL_TOKEN')
-            if not sys.stdin.isatty():
+            if not _tty():
                 sys.exit(1)
             input('Presiona Enter para salir...')
             sys.exit(1)
-    aviso('Agente de Jarvis listo. Carpeta de archivos: %s | Control autom\u00e1tico: %s' % (
-        base(), 's\u00ed' if CFG['control'] else 'no (pide permiso)'))
-    ultima = 0
-    while True:
-        try:
-            orden = http('GET', '/manos/d/cola').get('orden')
-            if orden:
-                atender(orden)
-                ultima = time.time()
-            else:
-                time.sleep(0.4 if time.time() - ultima < 60 else 1.0)
-        except PermissionError:
-            aviso('El token ya no es v\u00e1lido. Vincula el PC de nuevo desde Jarvis.')
-            time.sleep(30)
-        except KeyboardInterrupt:
-            aviso('Agente detenido.')
-            return
-        except Exception as e:
-            aviso('Sin conexi\u00f3n con Jarvis (' + str(e)[:60] + '). Reintento...')
-            time.sleep(5)
+    aviso('Agente de Jarvis listo. Carpeta de archivos: %s | Control automático: %s' % (
+        base(), 'sí' if CFG['control'] else 'no (pide permiso)'))
+    bucle()
+
+
+def hay_pantalla():
+    if SISTEMA == 'Linux' and not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):
+        return False
+    try:
+        import tkinter  # noqa: F401
+        return True
+    except Exception:
+        return False
 
 
 if __name__ == '__main__':
-    principal()
+    _a = leer_args()
+    # Sin argumentos de vinculacion y con pantalla: ventana. Con --url/--token o --terminal: terminal.
+    if not (_a.terminal or _a.url or _a.token) and hay_pantalla():
+        try:
+            import jarvis_pc_app
+            jarvis_pc_app.main(_a)
+        except ImportError:
+            principal(_a)
+    else:
+        principal(_a)

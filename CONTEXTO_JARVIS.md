@@ -3,7 +3,7 @@
 > Para la IA que reciba este archivo: este es el contexto del proyecto y las reglas de trabajo de David. Síguelas al pie de la letra. Si algo no está aquí, pregunta; no lo inventes.
 
 Última actualización: 21 nov 2026
-Versión actual: 1.59 (ver CAMBIOS.md)
+Versión actual: 1.60 (ver CAMBIOS.md)
 Ubicación: este archivo vive en la raíz del repo (`~/jarvis/CONTEXTO_JARVIS.md`). No poner llaves ni contraseñas aquí: el repo es público.
 
 ---
@@ -31,6 +31,7 @@ David trabaja **desde un celular Android con Termux** (bash, Python, Node.js) y 
 
 Pedido de David sobre la burbuja y las funciones:
 
+- [ ] JarvisPC, app de escritorio + selector PC/Android en la web (pedido el 23 nov 2026, v1.60, web y GitHub Actions): `jarvis_pc_app.py` (ventana tkinter: vincular, Abrir Jarvis, control automatico, carpeta, inicio con el PC), `agente_pc.py` (motor), `.github/workflows/build-pc.yml` (publica en la Release `pc-latest`), `public/boton_app.js` y `.css` (ventanita Android/PC). Pendiente: correr el workflow (Actions > Compilar JarvisPC > Run workflow), bajar el .exe en un Windows real y probar vincular, Abrir Jarvis, permisos y las ordenes de PC. Mac solo Apple Silicon.
 - [x] Panel de Edith (pedido el 22 nov 2026, v1.59, solo web): HUD aparte (dorado, distinto del cian de Jarvis) que aparece cuando se usa controlar_tv, controlar_pc o controlar_pantalla/ver_pantalla; se puede fijar con la chincheta (se guarda en `jarvisEdithFija`) o dejar que aparezca y desaparezca solo. Archivos: `public/edith_panel.js` y `public/edith_panel.css` (enganchados a `pasos.js` sin tocarlo), y en `server.py` Jarvis ahora dice "Entendido, senor" antes de ejecutar y confirma con una frase especifica al terminar (ej. "Senor, su TV ha sido encendida."). Pendiente: probarlo en el navegador real.
 - [x] Burbuja flotante con la esfera de Jarvis (pedido el 21 nov 2026, v1.56, requiere APK nueva): `app/nativo/BurbujaEsfera.java` reemplaza la píldora (64 dp, 420 puntos, sin fondo). Pendiente: probarla en el celular (tamaño, fluidez y que el toque abra el panel).
 - [x] Animaciones y transiciones en Conectores (pedido el 21 nov 2026, v1.52, solo web): `public/conectores.html` (tarjetas que entran escalonadas, se despliegan suave con flecha que gira, barra de carga al guardar/probar, mensajes con fade, botones y campos con transicion, respeta «reducir movimiento»). Pendiente: probarla en el celular y llevar lo mismo al resto de pantallas.

@@ -1,6 +1,6 @@
 /* Service worker: guarda la pantalla y los archivos estaticos (primero lo guardado, luego actualiza por detras).
    Lo dinamico (chat, API, voz, login) siempre va a la red. Para forzar una actualizacion, sube el numero de V. */
-const V = 'jarvis-v158';
+const V = 'jarvis-v160';
 const ESTATICO = /\.(?:js|css|svg|png|jpg|jpeg|webp|woff2?|json)$/i;
 
 self.addEventListener('install', () => self.skipWaiting());
