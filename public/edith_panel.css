@@ -94,3 +94,16 @@
 @media (prefers-reduced-motion: reduce) {
   .edithHUD, .edithHUD * { transition: none !important; animation: none !important; }
 }
+
+/* v1.61: Edith ya no tapa la barra de arriba (va debajo, a la izquierda, mas chica);
+   se quitan de la barra la bocina, el atajo de burbuja y la orbita flotante:
+   solo queda el menu y el "+" de chat nuevo. */
+#btnSilencio, #btnBurbuja, #btnFlotar { display: none !important; }
+.edithHUD { top: calc(env(safe-area-inset-top, 0px) + 76px); right: auto; left: 10px; width: 140px; }
+.edithEstado { display: none; }
+.edithNombre { margin-right: auto; }
+@media (min-width: 481px) {
+  .edithHUD { left: auto; right: 14px; top: calc(env(safe-area-inset-top, 0px) + 70px); width: 216px; }
+  .edithEstado { display: block; }
+  .edithNombre { margin-right: 0; }
+}
