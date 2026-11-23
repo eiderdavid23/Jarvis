@@ -15,17 +15,33 @@ shutil.copy('nativo/manos_accesibilidad.xml', RES + '/xml/manos_accesibilidad.xm
 os.makedirs(RES + '/values', exist_ok=True)
 shutil.copy('nativo/manos_strings.xml', RES + '/values/manos_strings.xml')
 
-# MainActivity: registrar el plugin antes de iniciar el puente de Capacitor
+# MainActivity: registrar el plugin antes de iniciar el puente de Capacitor y forzar
+# los iconos de la barra de estado (hora, bateria, notificaciones) en blanco sobre fondo
+# oscuro. Sin esto, Android 15+ dibuja la app "de punta a punta" y a veces deja que el
+# sistema elija el color de esos iconos solo, y los deja negros sobre negro (invisibles).
 assert os.path.exists(PAQ + '/MainActivity.java'), 'manos: MainActivity no es Java: ' + str(os.listdir(PAQ))
 open(PAQ + '/MainActivity.java', 'w', encoding='utf-8').write(
     'package com.david.jarvis;\n\n'
+    'import android.graphics.Color;\n'
     'import android.os.Bundle;\n'
+    'import androidx.core.view.WindowCompat;\n'
+    'import androidx.core.view.WindowInsetsControllerCompat;\n'
     'import com.getcapacitor.BridgeActivity;\n\n'
     'public class MainActivity extends BridgeActivity {\n'
     '    @Override\n'
     '    public void onCreate(Bundle savedInstanceState) {\n'
     '        registerPlugin(ManosPlugin.class);\n'
     '        super.onCreate(savedInstanceState);\n'
+    '        // Vuelve al comportamiento clasico de barras de sistema (no "de punta a punta"),\n'
+    '        // asi los colores de abajo se aplican de verdad en Android 15+.\n'
+    '        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);\n'
+    '        getWindow().setStatusBarColor(Color.parseColor("#05070d"));\n'
+    '        getWindow().setNavigationBarColor(Color.parseColor("#05070d"));\n'
+    '        WindowInsetsControllerCompat controlador =\n'
+    '                new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());\n'
+    '        // false = iconos claros (blancos), para fondo oscuro.\n'
+    '        controlador.setAppearanceLightStatusBars(false);\n'
+    '        controlador.setAppearanceLightNavigationBars(false);\n'
     '    }\n'
     '}\n')
 
@@ -76,4 +92,4 @@ QUERIES = """    <queries>
 assert t.count('<application') == 1 and '<queries>' not in t, 'manos: manifiesto inesperado (queries)'
 t = t.replace('<application', QUERIES + '    <application', 1)
 open(m, 'w', encoding='utf-8').write(t)
-print('Manos nativas listas')
+print('Manos nativas listas (con barra de estado forzada)')
