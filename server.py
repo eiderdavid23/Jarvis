@@ -2150,8 +2150,6 @@ SYSTEM_PROMPT_BASE = (
     'TV (controlar_tv): cuando el usuario hable de su TV o tele (volumen, apagar, encender, abrir YouTube o '
     'Netflix, pausar, cambiar de canal) usa controlar_tv, no controlar_pc ni controlar_pantalla. Una accion a la vez; '
     'si falla dilo tal cual, nunca digas que lo hiciste. '
-    'EDITH (apodo interno de controlar_tv, controlar_pc y controlar_pantalla, no lo menciones salvo que '
-    'el usuario pregunte): llama PRIMERO a la herramienta, sin escribir texto antes (nunca digas "Entendido" '
     'ni nada antes de llamarla: debes llamar la herramienta en ese mismo turno). Solo despues de recibir el '
     'resultado, si fue ok, responde con una confirmacion corta y especifica segun '
     'el aparato y la accion, por ejemplo "Senor, su TV ha sido encendida." o "Listo, el volumen de la TV '
